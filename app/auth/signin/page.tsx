@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FooterClient } from "@/components/footer";
 import { ArrowLeft, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,8 +50,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
-      <div className="flex-grow flex items-center justify-center px-4">
+    <div className="flex-grow flex items-center justify-center px-4 bg-gradient-to-b from-background to-secondary/20">
       <div className="w-full max-w-md">
         <Link
           href="/"
@@ -148,8 +146,5 @@ export default function SignInPage() {
         </Card>
       </div>
       </div>
-
-      <FooterClient />
-    </div>
   );
 }
