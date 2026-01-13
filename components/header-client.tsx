@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { MobileMenu } from "@/components/mobile-menu";
 import { Button } from "@/components/ui/button";
-import { PenSquare, LogIn } from "lucide-react";
+import { PenSquare, LogIn, Sparkles } from "lucide-react";
 
 interface HeaderClientProps {
   siteName: string;
@@ -47,6 +47,7 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
                   <>
                     <Button asChild size="sm" className="gap-2" variant="outline">
                       <Link href="/dashboard/generator">
+                        <Sparkles className="w-4 h-4" />
                         <span className="hidden lg:inline">Генерация ИИ</span>
                         <span className="lg:hidden">ИИ</span>
                       </Link>
