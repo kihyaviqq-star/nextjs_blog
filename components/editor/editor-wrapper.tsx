@@ -56,15 +56,26 @@ export default function EditorWrapper({
 
   const initializeEditor = useCallback(() => {
     if (isInitialized.current) return;
+    
+    // Проверяем, что элемент существует
+    const holderElement = document.getElementById(holder);
+    if (!holderElement) {
+      console.error(`Editor holder element with id "${holder}" not found`);
+      return;
+    }
+
+    // Нормализуем data - если undefined или null, используем пустую структуру
+    const normalizedData = data && data.blocks && data.blocks.length > 0 
+      ? data 
+      : { blocks: [] };
 
     const editor = new EditorJS({
       holder: holder,
       placeholder: "Начните писать свой контент...",
-      data: data,
+      data: normalizedData,
       autofocus: false,
       readOnly: false,
       defaultBlock: "paragraph",
-      tunes: ["anchor"],
       i18n: {
         messages: {
           ui: {
@@ -310,6 +321,18 @@ export default function EditorWrapper({
         }
       },
       onReady: () => {
+        // Плагины инициализируются в initializeEditor после isReady
+      },
+      minHeight: 400,
+      inlineToolbar: ['bold', 'italic', 'link', 'marker', 'underline', 'inlineCode'],
+    });
+
+    editorRef.current = editor;
+    
+    // Инициализируем плагины после того, как редактор готов
+    editor.isReady
+      .then(() => {
+        isInitialized.current = true;
         if (editorRef.current) {
           try {
             new Undo({ editor: editorRef.current });
@@ -318,21 +341,36 @@ export default function EditorWrapper({
             console.error("Error initializing editor plugins:", error);
           }
         }
-      },
-      minHeight: 400,
-      inlineToolbar: ['bold', 'italic', 'link', 'marker', 'underline', 'inlineCode'],
-    });
-
-    editorRef.current = editor;
-    isInitialized.current = true;
+      })
+      .catch((error) => {
+        console.error("Editor initialization error:", error);
+        isInitialized.current = false;
+      });
   }, [data, holder, onChange]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !isInitialized.current) {
-      initializeEditor();
-    }
+    if (typeof window === "undefined") return;
+    
+    // Ждем, пока DOM элемент будет готов
+    const timer = setTimeout(() => {
+      if (!isInitialized.current) {
+        const holderElement = document.getElementById(holder);
+        if (holderElement) {
+          initializeEditor();
+        } else {
+          console.warn(`Editor holder "${holder}" not found, retrying...`);
+          // Повторная попытка через небольшую задержку
+          setTimeout(() => {
+            if (!isInitialized.current) {
+              initializeEditor();
+            }
+          }, 100);
+        }
+      }
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       if (editorRef.current && editorRef.current.destroy) {
         try {
           editorRef.current.destroy();
@@ -343,23 +381,31 @@ export default function EditorWrapper({
         isInitialized.current = false;
       }
     };
-  }, [initializeEditor]);
+  }, [initializeEditor, holder]);
 
   // Update editor when data prop changes (for editing existing posts)
   useEffect(() => {
-    if (!editorRef.current || !data || isInitialized.current === false) {
+    if (!editorRef.current || !data || !isInitialized.current) {
       return;
     }
 
-    // Check if editor is ready and data actually changed
+    // Проверяем, что данные действительно изменились
     editorRef.current.isReady
       .then(() => {
-        editorRef.current?.render(data).catch((error: Error) => {
-          console.error("Error rendering editor data:", error);
-        });
+        // Получаем текущие данные редактора
+        return editorRef.current?.save();
+      })
+      .then((currentData) => {
+        // Сравниваем только если данные действительно изменились
+        const currentDataStr = JSON.stringify(currentData);
+        const newDataStr = JSON.stringify(data);
+        
+        if (currentDataStr !== newDataStr) {
+          return editorRef.current?.render(data);
+        }
       })
       .catch((error: Error) => {
-        console.error("Editor not ready:", error);
+        console.error("Error updating editor data:", error);
       });
   }, [data]);
 
