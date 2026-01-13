@@ -46,7 +46,7 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
                 {canWrite && (
                   <>
                     <Button asChild size="sm" className="gap-2" variant="outline">
-                      <Link href="/dashboard/generator">
+                      <Link href="/admin/generator">
                         <span className="hidden lg:inline">Генерация ИИ</span>
                         <span className="lg:hidden">ИИ</span>
                       </Link>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { HeaderClientWrapper } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { FooterClient } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -325,7 +325,7 @@ export default function GeneratorPage() {
         </div>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }
