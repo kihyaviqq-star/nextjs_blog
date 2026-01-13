@@ -87,9 +87,9 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={profileLink} className="cursor-pointer">
+          <Link href="/settings" className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
-            <span>Мой профиль</span>
+            <span>Настройки</span>
           </Link>
         </DropdownMenuItem>
         {canManageContent && (
@@ -124,12 +124,6 @@ export function UserMenu() {
             </DropdownMenuItem>
           </>
         )}
-        <DropdownMenuItem asChild>
-          <Link href="/settings" className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            <span>Профиль</span>
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-red-600 focus:text-red-600"
