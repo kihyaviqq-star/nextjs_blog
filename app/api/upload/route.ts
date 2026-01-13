@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
     await writeFile(filepath, buffer);
 
     // Return the public URL
-    const folderName = type === "favicon" ? "favicons" : `${type}s`;
     const publicUrl = `/uploads/${folderName}/${uniqueFilename}`;
 
     return NextResponse.json({
