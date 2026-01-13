@@ -90,7 +90,7 @@ export default function SiteSettingsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <HeaderClientWrapper />
         <main className="container mx-auto px-4 py-12 max-w-4xl">
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
