@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useTheme } from "next-themes";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 // @ts-ignore
@@ -45,32 +45,84 @@ interface EditorWrapperProps {
   holder?: string;
 }
 
+// Helper function to normalize and validate editor data
+function normalizeEditorData(data?: OutputData): OutputData {
+  if (!data || !data.blocks || !Array.isArray(data.blocks)) {
+    return { blocks: [] };
+  }
+  
+  // Filter out invalid blocks that might cause "invalid data" errors
+  const validBlocks = data.blocks.filter((block) => {
+    return (
+      block &&
+      typeof block === "object" &&
+      block.type &&
+      typeof block.type === "string" &&
+      block.data &&
+      typeof block.data === "object"
+    );
+  });
+
+  return {
+    blocks: validBlocks,
+    ...(data.time ? { time: data.time } : {}),
+    ...(data.version ? { version: data.version } : {}),
+  };
+}
+
 export default function EditorWrapper({
   data,
   onChange,
   holder = "editorjs",
 }: EditorWrapperProps) {
   const { theme } = useTheme();
-  const editorRef = useRef<EditorJS | null>(null);
+  const ejInstance = useRef<EditorJS | null>(null);
   const isInitialized = useRef(false);
-  const isInternalChange = useRef(false);
   const onChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialDataRef = useRef<OutputData | null>(null);
+  const pluginsRef = useRef<{ undo?: any; dragDrop?: any }>({});
 
-  const initializeEditor = useCallback(() => {
-    if (isInitialized.current) return;
-    
-    // Проверяем, что элемент существует
+  // Store initial data once and never change it
+  if (initialDataRef.current === null) {
+    initialDataRef.current = normalizeEditorData(data);
+  }
+
+  // Memoize onChange callback to prevent re-creation
+  const handleChange = useMemo(() => {
+    return async () => {
+      if (!onChange || !ejInstance.current) return;
+
+      // Clear previous timeout
+      if (onChangeTimeoutRef.current) {
+        clearTimeout(onChangeTimeoutRef.current);
+      }
+
+      // Debounce the onChange call
+      onChangeTimeoutRef.current = setTimeout(async () => {
+        try {
+          const content = await ejInstance.current?.save();
+          if (content && onChange) {
+            onChange(content);
+          }
+        } catch (error) {
+          console.error("Error saving editor content:", error);
+        }
+      }, 500); // Increased debounce to 500ms for stability
+    };
+  }, [onChange]);
+
+  // Initialize editor only once
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (ejInstance.current || isInitialized.current) return;
+
     const holderElement = document.getElementById(holder);
     if (!holderElement) {
       console.error(`Editor holder element with id "${holder}" not found`);
       return;
     }
 
-    // Нормализуем data - если undefined или null, используем пустую структуру
-    // Используем только при первой инициализации
-    const normalizedData = (data && data.blocks && data.blocks.length > 0) 
-      ? data 
-      : { blocks: [] };
+    const normalizedData = normalizeEditorData(initialDataRef.current);
 
     const editor = new EditorJS({
       holder: holder,
@@ -79,6 +131,8 @@ export default function EditorWrapper({
       autofocus: false,
       readOnly: false,
       defaultBlock: "paragraph",
+      minHeight: 400,
+      inlineToolbar: ['bold', 'italic', 'link', 'marker', 'underline', 'inlineCode'],
       i18n: {
         messages: {
           ui: {
@@ -222,7 +276,7 @@ export default function EditorWrapper({
         linkTool: {
           class: LinkTool as any,
           config: {
-            endpoint: "/api/fetchUrl", // Mock endpoint
+            endpoint: "/api/fetchUrl",
           },
         },
         image: {
@@ -264,7 +318,6 @@ export default function EditorWrapper({
               },
               async uploadByUrl(url: string) {
                 try {
-                  // Проверяем, что URL валидный
                   if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
                     throw new Error("Неверный URL изображения");
                   }
@@ -317,55 +370,21 @@ export default function EditorWrapper({
         },
         underline: Underline as any,
       },
-      onChange: async () => {
-        if (onChange && editorRef.current && !isInternalChange.current) {
-          try {
-            // Устанавливаем флаг, чтобы предотвратить перерисовку
-            isInternalChange.current = true;
-            
-            // Используем debounce для уменьшения количества обновлений
-            if (onChangeTimeoutRef.current) {
-              clearTimeout(onChangeTimeoutRef.current);
-            }
-            
-            onChangeTimeoutRef.current = setTimeout(async () => {
-              try {
-                const content = await editorRef.current?.save();
-                if (content) {
-                  onChange(content);
-                }
-              } catch (error) {
-                console.error("Error saving editor content:", error);
-              } finally {
-                // Сбрасываем флаг после небольшой задержки
-                setTimeout(() => {
-                  isInternalChange.current = false;
-                }, 100);
-              }
-            }, 300);
-          } catch (error) {
-            console.error("Error saving editor content:", error);
-            isInternalChange.current = false;
-          }
-        }
-      },
-      onReady: () => {
-        // Плагины инициализируются в initializeEditor после isReady
-      },
-      minHeight: 400,
-      inlineToolbar: ['bold', 'italic', 'link', 'marker', 'underline', 'inlineCode'],
+      onChange: handleChange,
     });
 
-    editorRef.current = editor;
-    
-    // Инициализируем плагины после того, как редактор готов
+    ejInstance.current = editor;
+
+    // Initialize plugins after editor is ready
     editor.isReady
       .then(() => {
         isInitialized.current = true;
-        if (editorRef.current) {
+        
+        if (ejInstance.current) {
           try {
-            new Undo({ editor: editorRef.current });
-            new DragDrop(editorRef.current);
+            // Initialize plugins
+            pluginsRef.current.undo = new Undo({ editor: ejInstance.current });
+            pluginsRef.current.dragDrop = new DragDrop(ejInstance.current);
           } catch (error) {
             console.error("Error initializing editor plugins:", error);
           }
@@ -375,85 +394,64 @@ export default function EditorWrapper({
         console.error("Editor initialization error:", error);
         isInitialized.current = false;
       });
-  }, [data, holder, onChange]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    // Ждем, пока DOM элемент будет готов
-    const timer = setTimeout(() => {
-      if (!isInitialized.current) {
-        const holderElement = document.getElementById(holder);
-        if (holderElement) {
-          initializeEditor();
-        } else {
-          console.warn(`Editor holder "${holder}" not found, retrying...`);
-          // Повторная попытка через небольшую задержку
-          setTimeout(() => {
-            if (!isInitialized.current) {
-              initializeEditor();
-            }
-          }, 100);
-        }
-      }
-    }, 100);
-
+    // Cleanup function
     return () => {
-      clearTimeout(timer);
+      // Clear onChange timeout
       if (onChangeTimeoutRef.current) {
         clearTimeout(onChangeTimeoutRef.current);
       }
-      if (editorRef.current && editorRef.current.destroy) {
+
+      // Destroy editor instance
+      if (ejInstance.current) {
         try {
-          editorRef.current.destroy();
-          editorRef.current = null;
+          // Clean up plugins
+          if (pluginsRef.current.undo) {
+            pluginsRef.current.undo.destroy?.();
+          }
+          if (pluginsRef.current.dragDrop) {
+            pluginsRef.current.dragDrop.destroy?.();
+          }
+          
+          // Destroy editor
+          ejInstance.current.destroy();
+          ejInstance.current = null;
+          isInitialized.current = false;
         } catch (error) {
           console.error("Error destroying editor:", error);
         }
-        isInitialized.current = false;
       }
     };
-  }, [initializeEditor, holder]);
+  }, [holder, handleChange]); // Only depend on holder and handleChange
 
-  // Update editor when data prop changes (for editing existing posts)
-  // НЕ обновляем, если изменение было от пользователя (через onChange)
+  // Handle external data updates (e.g., when editing existing post)
+  // Only render if data is provided externally and different from current
   useEffect(() => {
-    if (!editorRef.current || !data || !isInitialized.current) {
+    if (!ejInstance.current || !isInitialized.current || !data) {
       return;
     }
 
-    // Пропускаем обновление, если изменение было внутренним (от пользователя)
-    if (isInternalChange.current) {
-      return;
-    }
-
-    // Проверяем, что данные действительно изменились
-    editorRef.current.isReady
-      .then(() => {
-        // Получаем текущие данные редактора
-        return editorRef.current?.save();
-      })
-      .then((currentData) => {
-        // Сравниваем только если данные действительно изменились
-        const currentDataStr = JSON.stringify(currentData);
-        const newDataStr = JSON.stringify(data);
-        
-        // Обновляем только если данные действительно отличаются и это не внутреннее изменение
-        if (currentDataStr !== newDataStr && !isInternalChange.current) {
-          isInternalChange.current = true;
-          return editorRef.current?.render(data).then(() => {
-            // Сбрасываем флаг после рендера
-            setTimeout(() => {
-              isInternalChange.current = false;
-            }, 200);
-          });
+    // Only update if data is provided and different from initial
+    ejInstance.current.isReady
+      .then(async () => {
+        try {
+          const currentData = await ejInstance.current?.save();
+          const currentDataStr = JSON.stringify(normalizeEditorData(currentData));
+          const newDataStr = JSON.stringify(normalizeEditorData(data));
+          
+          // Only render if data is truly different
+          if (currentDataStr !== newDataStr) {
+            const normalizedData = normalizeEditorData(data);
+            await ejInstance.current?.render(normalizedData);
+          }
+        } catch (error) {
+          console.error("Error updating editor data:", error);
         }
       })
-      .catch((error: Error) => {
-        console.error("Error updating editor data:", error);
-        isInternalChange.current = false;
+      .catch((error) => {
+        console.error("Error in data update:", error);
       });
-  }, [data]);
+  }, [data]); // Only run when data prop changes externally
 
   return (
     <div 
