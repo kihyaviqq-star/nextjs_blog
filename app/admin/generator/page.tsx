@@ -299,13 +299,14 @@ export default function GeneratorPage() {
                     </div>
                   ) : (
                     <div className="flex-1 flex items-center justify-center text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
-                      Нажмите "Сгенерировать статью", чтобы получить черновик от AI
+                      Нажмите «Сгенерировать статью», чтобы получить черновик от AI
                     </div>
                   )}
                 </>
               )}
             </CardContent>
           </Card>
+        </div>
         </div>
       </div>
     </div>

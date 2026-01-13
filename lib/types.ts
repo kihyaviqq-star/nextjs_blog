@@ -38,4 +38,5 @@ export interface BlogPost {
   readTime: string;
   tags: string[];
   content: EditorData;
+  views?: number;
 }

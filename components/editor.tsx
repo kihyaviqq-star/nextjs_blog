@@ -33,7 +33,7 @@ export default function Editor({ data, onChange, holder }: EditorProps) {
         holder: holder,
         tools: {
           header: {
-            class: Header,
+            class: Header as any,
             inlineToolbar: true,
             config: {
               placeholder: 'Enter a header',
@@ -42,22 +42,22 @@ export default function Editor({ data, onChange, holder }: EditorProps) {
             }
           },
           list: {
-            class: List,
+            class: List as any,
             inlineToolbar: true
           },
           quote: {
-            class: Quote,
+            class: Quote as any,
             inlineToolbar: true,
             config: {
               quotePlaceholder: 'Enter a quote',
               captionPlaceholder: 'Quote\'s author',
             },
           },
-          code: Code,
-          delimiter: Delimiter,
-          warning: Warning,
+          code: Code as any,
+          delimiter: Delimiter as any,
+          warning: Warning as any,
           paragraph: {
-            class: Paragraph,
+            class: Paragraph as any,
             inlineToolbar: true,
           }
         },

@@ -1,3 +1,4 @@
+import React from "react";
 import { EditorBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Check } from "lucide-react";
@@ -74,7 +75,7 @@ function HeaderBlock({ data }: { data: any }) {
   if (!data || !data.text) return null;
   
   const { text, level = 2 } = data;
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
   
   const styles = {
     1: "text-4xl font-bold tracking-tight mt-8 mb-4",
@@ -148,7 +149,7 @@ function QuoteBlock({ data }: { data: any }) {
   return (
     <blockquote className="border-l-4 border-primary pl-4 py-2 my-6 italic">
       <p className="text-lg text-foreground mb-2">
-        "{text}"
+        «{text}»
       </p>
       {caption && (
         <footer className="text-sm text-muted-foreground">
