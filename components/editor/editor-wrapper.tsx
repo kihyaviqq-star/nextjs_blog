@@ -455,10 +455,10 @@ export default function EditorWrapper({
 
   return (
     <div 
-      className="prose prose-invert dark:prose-invert max-w-none"
+      className="prose prose-invert dark:prose-invert max-w-none editor-container"
       data-theme={theme}
     >
-      <div id={holder} className="min-h-[300px]" />
+      <div id={holder} className="editor-holder" />
     </div>
   );
 }

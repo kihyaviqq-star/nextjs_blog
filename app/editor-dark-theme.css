@@ -1,17 +1,36 @@
 /* Editor.js Dark Theme */
 
+/* Editor Container */
+.editor-container {
+  width: 100%;
+  transition: min-height 0.3s ease;
+}
+
+.editor-holder {
+  min-height: 600px;
+  width: 100%;
+  transition: min-height 0.3s ease;
+}
+
 /* Main container */
 .codex-editor {
   color: hsl(var(--foreground));
+  min-height: 600px;
+  transition: min-height 0.3s ease, height 0.3s ease;
 }
 
 .codex-editor__redactor {
-  padding-bottom: 100px !important;
-  min-height: 400px;
+  padding-bottom: 500px !important;
+  min-height: 600px;
+  transition: min-height 0.3s ease, padding-bottom 0.3s ease;
+  /* Плавное расширение при добавлении контента */
+  will-change: min-height, padding-bottom;
 }
 
 .ce-redactor {
   outline: none;
+  min-height: 600px;
+  transition: min-height 0.3s ease;
 }
 
 /* Toolbar */

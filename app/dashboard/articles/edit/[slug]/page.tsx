@@ -438,7 +438,7 @@ export default function EditPostPage({ params }: PageProps) {
         </div>
 
         {/* Bottom Actions */}
-        <div className="mt-8 flex justify-end gap-4 pb-8">
+        <div className="mt-8 flex justify-end gap-4 pb-8 min-h-[100px]">
           <Link href="/dashboard/articles">
             <Button variant="outline" size="lg">
               Отмена
