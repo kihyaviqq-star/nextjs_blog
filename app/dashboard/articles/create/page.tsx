@@ -355,21 +355,21 @@ export default function CreatePostPage() {
           </Card>
 
           {/* Editor */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Содержимое статьи</CardTitle>
-              <CardDescription>
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Содержимое статьи</h2>
+              <p className="text-muted-foreground">
                 Используйте редактор для создания богатого контента
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div className="border border-border rounded-lg p-6 bg-background">
               <EditorWrapper
                 data={editorData}
                 onChange={setEditorData}
                 holder="editorjs-create"
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Bottom Actions */}
