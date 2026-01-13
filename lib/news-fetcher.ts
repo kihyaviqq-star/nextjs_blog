@@ -11,18 +11,34 @@ export interface NewsItem {
   source: string;
 }
 
-const SOURCES = [
-  'https://blogs.windows.com/feed/',
-  'https://azure.microsoft.com/en-us/blog/feed/'
+export interface RSSSource {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export const RSS_SOURCES: RSSSource[] = [
+  { id: 'comss', name: 'www.comss.ru', url: 'https://www.comss.ru/page/rss.php' },
+  { id: 'winaero', name: 'winaero.com', url: 'https://winaero.com/feed/' },
+  { id: 'microsoft', name: 'Microsoft Blog', url: 'https://blogs.windows.com/feed/' },
+  { id: 'azure', name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/' },
+  { id: 'wylsa', name: 'Wylsa.com', url: 'https://wylsa.com/feed/' }
 ];
 
-export async function fetchMicrosoftNews(): Promise<NewsItem[]> {
+export async function fetchNewsFromSources(enabledSourceIds: string[] = []): Promise<NewsItem[]> {
   const allNews: NewsItem[] = [];
 
-  for (const url of SOURCES) {
+  // If no sources enabled, return empty array
+  if (enabledSourceIds.length === 0) {
+    return [];
+  }
+
+  // Filter sources by enabled IDs
+  const enabledSources = RSS_SOURCES.filter(source => enabledSourceIds.includes(source.id));
+
+  for (const source of enabledSources) {
     try {
-      const feed = await parser.parseURL(url);
-      const sourceName = url.includes('azure') ? 'Azure Blog' : 'Windows Blog';
+      const feed = await parser.parseURL(source.url);
 
       feed.items.forEach(item => {
         if (item.title && item.link) {
@@ -31,17 +47,21 @@ export async function fetchMicrosoftNews(): Promise<NewsItem[]> {
             link: item.link,
             snippet: item.contentSnippet || item.content || '',
             pubDate: item.pubDate || new Date().toISOString(),
-            source: sourceName
+            source: source.name
           });
         }
       });
     } catch (error) {
-      console.error(`Error fetching RSS from ${url}:`, error);
+      console.error(`Error fetching RSS from ${source.name} (${source.url}):`, error);
     }
   }
 
   // Сортировка по дате (новые сверху)
   return allNews
-    .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
-    .slice(0, 5); // Возвращаем только 5 последних
+    .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
+}
+
+// Legacy function for backward compatibility
+export async function fetchMicrosoftNews(): Promise<NewsItem[]> {
+  return fetchNewsFromSources(['microsoft', 'azure']);
 }

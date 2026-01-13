@@ -14,7 +14,8 @@ export interface GeneratedArticle {
 export async function generateImagePrompt(topic: string, summary: string): Promise<string> {
   if (!OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY is not set');
 
-  const model = process.env.OPENROUTER_IMAGE_MODEL || 'google/gemini-2.0-flash-thinking:free';
+  // Use a text model to generate the image prompt
+  const model = process.env.OPENROUTER_ARTICLE_MODEL || 'google/gemini-2.0-flash-thinking:free';
   
   const systemPrompt = `Ты — арт-директор. Твоя задача — создать детальный промпт на английском языке для генерации обложки статьи (Text-to-Image).
   
@@ -113,8 +114,11 @@ export async function generateArticle(topic: string, context: string, model?: st
 
   const selectedModel = model || process.env.OPENROUTER_ARTICLE_MODEL || 'google/gemini-2.0-flash-thinking:free';
 
-  const systemPrompt = `Ты — профессиональный IT-журналист, эксперт по продуктам Microsoft. 
-  Твоя задача — взять техническую новость и написать увлекательную статью на русском языке. 
+  const systemPrompt = `Ты — профессиональный IT-журналист и редактор. 
+  Твоя задача — взять исходный контент (новость, статью или скрапленный текст) и написать увлекательную, структурированную статью на русском языке.
+  
+  Если исходный контент содержит HTML-теги, лишние пробелы или неструктурированный текст — очисти его и преобразуй в читаемый формат.
+  Если контент уже хорошо структурирован — используй его как основу, но улучши стиль и читаемость.
   
   Формат вывода: EditorJS JSON Blocks (строго совместимый с Editor.js).
   Ты должен вернуть массив блоков (blocks) внутри JSON объекта в формате Editor.js.
@@ -129,11 +133,11 @@ export async function generateArticle(topic: string, context: string, model?: st
   7. code: { "type": "code", "data": { "code": "код здесь" } }
 
   Структура статьи:
-  - Введение (Paragraph)
-  - Суть (Header level 2 + Paragraphs)
-  - Детали/Списки (List)
+  - Введение (Paragraph) - краткое введение в тему
+  - Основной контент (Header level 2 + Paragraphs) - разбивай на логические разделы
+  - Детали/Списки (List) - если есть перечисления
   - Цитаты если есть (Quote)
-  - Заключение (Paragraph)
+  - Заключение (Paragraph) - краткое резюме
 
   ВАЖНО: Верни ответ ТОЛЬКО в формате валидного JSON (minified, в одну строку).
   - Убедись, что это валидный JSON.
@@ -141,6 +145,7 @@ export async function generateArticle(topic: string, context: string, model?: st
   - Не используй переносы строк (Enter) для форматирования самого JSON объекта.
   - Не используй неэкранированные управляющие символы.
   - Каждый блок должен иметь правильную структуру с "type" и "data".
+  - Генерируй релевантные теги на основе содержания статьи (3-5 тегов).
 
   Формат ответа (строго):
   {

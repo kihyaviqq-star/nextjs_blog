@@ -1,20 +1,53 @@
 
 'use server';
 
-import { fetchMicrosoftNews, NewsItem } from '@/lib/news-fetcher';
+import { fetchNewsFromSources, NewsItem, RSS_SOURCES } from '@/lib/news-fetcher';
+import { scrapeUrl } from '@/lib/url-scraper';
 import { generateArticle, GeneratedArticle } from '@/lib/ai-client';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth'; // Assuming auth is available here
+import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
 
-export async function getNewsAction(): Promise<{ success: boolean; data?: NewsItem[]; error?: string }> {
+export async function getNewsAction(enabledSourceIds?: string[]): Promise<{ success: boolean; data?: NewsItem[]; error?: string }> {
   try {
-    const news = await fetchMicrosoftNews();
+    const news = await fetchNewsFromSources(enabledSourceIds || RSS_SOURCES.map(s => s.id));
     return { success: true, data: news };
-  } catch (error) {
-    return { success: false, error: 'Failed to fetch news' };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to fetch news' };
+  }
+}
+
+export async function parseUrlAction(url: string): Promise<{ success: boolean; data?: { title: string; content: string; url: string }; error?: string }> {
+  try {
+    // Validate URL
+    try {
+      new URL(url);
+    } catch {
+      return { success: false, error: 'Invalid URL format' };
+    }
+
+    const scraped = await scrapeUrl(url);
+    return { success: true, data: scraped };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to scrape URL' };
+  }
+}
+
+export async function generateArticleFromUrlAction(url: string): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
+  try {
+    // First scrape the URL
+    const scrapeResult = await parseUrlAction(url);
+    if (!scrapeResult.success || !scrapeResult.data) {
+      throw new Error(scrapeResult.error || 'Failed to scrape URL');
+    }
+
+    // Generate article from scraped content
+    const article = await generateArticle(scrapeResult.data.title, scrapeResult.data.content);
+    return { success: true, data: article };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Generation failed' };
   }
 }
 
@@ -33,12 +66,20 @@ export async function generateImageAction(topic: string, summary: string): Promi
     const prompt = await generateImagePrompt(topic, summary);
     const imageUrl = await generateImage(prompt);
     
-    // Download image and save locally
-    const response = await fetch(imageUrl);
-    if (!response.ok) throw new Error('Failed to download image');
+    let buffer: Buffer;
     
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Handle base64 data URLs
+    if (imageUrl.startsWith('data:image/')) {
+      const base64Data = imageUrl.split(',')[1];
+      buffer = Buffer.from(base64Data, 'base64');
+    } else {
+      // Download image from URL
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error('Failed to download image');
+      
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
     
     // Create unique filename
     const filename = `cover-${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
