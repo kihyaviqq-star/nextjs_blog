@@ -7,6 +7,11 @@
 
 .codex-editor__redactor {
   padding-bottom: 100px !important;
+  min-height: 400px;
+}
+
+.ce-redactor {
+  outline: none;
 }
 
 /* Toolbar */
@@ -166,8 +171,14 @@
 }
 
 /* Block content */
+.ce-block {
+  min-height: 32px;
+  transition: min-height 0.15s ease;
+}
+
 .ce-block__content {
   color: hsl(var(--foreground));
+  min-height: 32px;
 }
 
 .ce-block--selected .ce-block__content {
@@ -176,6 +187,26 @@
 
 .ce-block--focused {
   background: transparent !important;
+}
+
+.ce-block--empty {
+  min-height: 48px;
+}
+
+/* Prevent layout jumps when adding blocks */
+.ce-block[contenteditable="true"] {
+  min-height: 32px;
+  transition: min-height 0.15s ease;
+}
+
+.ce-paragraph {
+  min-height: 24px;
+  line-height: 1.6;
+}
+
+.ce-header {
+  min-height: 40px;
+  line-height: 1.5;
 }
 
 /* Placeholder */
@@ -332,8 +363,46 @@
 }
 
 /* Image */
+.cdx-block.image-tool {
+  min-height: 200px;
+  transition: min-height 0.2s ease;
+}
+
 .cdx-block.image-tool .image-tool__image {
   background: transparent !important;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-tool__image-preloader {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--secondary)) !important;
+}
+
+.image-tool__image img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+
+.image-tool__file-button {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px 24px !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s !important;
+}
+
+.image-tool__file-button:hover {
+  opacity: 0.9 !important;
 }
 
 .cdx-input.image-tool__caption {
@@ -341,6 +410,8 @@
   border: none !important;
   border-bottom: 1px solid hsl(var(--border)) !important;
   color: hsl(var(--foreground)) !important;
+  margin-top: 12px;
+  padding: 8px 0;
 }
 
 .image-tool__caption::placeholder {

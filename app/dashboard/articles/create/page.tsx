@@ -174,7 +174,7 @@ export default function CreatePostPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <HeaderClientWrapper />
-      <main className="flex-grow container mx-auto px-4 py-8 max-w-6xl">
+      <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6">
           <Link href="/dashboard/articles">
             <Button variant="ghost" size="sm" className="mb-4 -ml-3">

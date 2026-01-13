@@ -230,7 +230,7 @@ export default function EditorWrapper({
                 try {
                   const formData = new FormData();
                   formData.append("file", file);
-                  formData.append("type", "cover"); // Используем cover для изображений в контенте статьи
+                  formData.append("type", "editor-image");
 
                   const response = await fetch("/api/upload", {
                     method: "POST",
@@ -253,7 +253,9 @@ export default function EditorWrapper({
                   console.error("Image upload error:", error);
                   return {
                     success: 0,
-                    error: error.message || "Не удалось загрузить изображение",
+                    error: {
+                      message: error.message || "Не удалось загрузить изображение",
+                    },
                   };
                 }
               },
@@ -274,7 +276,9 @@ export default function EditorWrapper({
                   console.error("Image URL error:", error);
                   return {
                     success: 0,
-                    error: error.message || "Неверный URL изображения",
+                    error: {
+                      message: error.message || "Неверный URL изображения",
+                    },
                   };
                 }
               },
@@ -314,7 +318,10 @@ export default function EditorWrapper({
         if (onChange && editorRef.current) {
           try {
             const content = await editorRef.current.save();
-            onChange(content);
+            // Используем requestAnimationFrame для плавного обновления
+            requestAnimationFrame(() => {
+              onChange(content);
+            });
           } catch (error) {
             console.error("Error saving editor content:", error);
           }
