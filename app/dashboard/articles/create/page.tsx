@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { FileUpload } from "@/components/file-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save, Eye, X } from "lucide-react";
 import { OutputData } from "@editorjs/editorjs";
@@ -257,27 +258,13 @@ export default function CreatePostPage() {
                 URL изображения для обложки статьи (рекомендуемый размер: 1200x600px)
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <input
-                type="url"
-                value={coverImage}
-                onChange={(e) => setCoverImage(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            <CardContent>
+              <FileUpload
+                currentUrl={coverImage}
+                onUploadComplete={(url) => setCoverImage(url)}
+                type="cover"
+                label="Загрузить обложку"
               />
-              {coverImage && (
-                <div className="relative w-full h-64 rounded-lg overflow-hidden bg-secondary">
-                  <img
-                    src={coverImage}
-                    alt="Предпросмотр обложки"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '<div class="flex items-center justify-center h-full text-muted-foreground"><p>Не удалось загрузить изображение</p></div>';
-                    }}
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
 

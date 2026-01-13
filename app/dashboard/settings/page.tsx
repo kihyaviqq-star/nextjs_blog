@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,34 +140,32 @@ export default function SiteSettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="logoUrl" className="text-sm font-medium">
-                  URL логотипа (необязательно)
+                <label className="text-sm font-medium">
+                  Логотип сайта (необязательно)
                 </label>
-                <Input
-                  id="logoUrl"
-                  type="url"
-                  value={settings.logoUrl || ""}
-                  onChange={(e) => handleChange("logoUrl", e.target.value)}
-                  placeholder="https://example.com/logo.png"
+                <FileUpload
+                  currentUrl={settings.logoUrl}
+                  onUploadComplete={(url) => handleChange("logoUrl", url)}
+                  type="logo"
+                  label="Загрузить логотип"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Если оставить пустым, будет использоваться стандартный логотип
+                  Если не загружен, будет использоваться стандартный логотип
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="faviconUrl" className="text-sm font-medium">
-                  URL favicon (необязательно)
+                <label className="text-sm font-medium">
+                  Favicon (необязательно)
                 </label>
-                <Input
-                  id="faviconUrl"
-                  type="url"
-                  value={settings.faviconUrl || ""}
-                  onChange={(e) => handleChange("faviconUrl", e.target.value)}
-                  placeholder="https://example.com/favicon.ico"
+                <FileUpload
+                  currentUrl={settings.faviconUrl}
+                  onUploadComplete={(url) => handleChange("faviconUrl", url)}
+                  type="logo"
+                  label="Загрузить favicon"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Иконка, отображаемая во вкладке браузера (.ico, .png)
+                  Иконка, отображаемая во вкладке браузера
                 </p>
               </div>
             </CardContent>

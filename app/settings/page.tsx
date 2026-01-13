@@ -5,9 +5,10 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mail, FileText, Link as LinkIcon, Loader2, Upload } from "lucide-react";
+import { User, Mail, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -211,46 +212,16 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Аватар</CardTitle>
               <CardDescription>
-                URL изображения для вашего профиля
+                Загрузите фото для вашего профиля
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt="Avatar preview"
-                    className="w-20 h-20 rounded-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <User className="w-10 h-10 text-white" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={avatar}
-                    onChange={(e) => setAvatar(e.target.value)}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Вставьте URL изображения или используйте сервис вроде{" "}
-                    <a
-                      href="https://api.dicebear.com/7.x/avataaars/svg"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      DiceBear
-                    </a>
-                  </p>
-                </div>
-              </div>
+            <CardContent>
+              <FileUpload
+                currentUrl={avatar}
+                onUploadComplete={(url) => setAvatar(url)}
+                type="avatar"
+                label="Загрузить аватар"
+              />
             </CardContent>
           </Card>
 
