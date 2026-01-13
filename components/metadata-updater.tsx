@@ -10,20 +10,24 @@ export function MetadataUpdater() {
         if (response.ok) {
           const data = await response.json();
           
-          // Update document title
-          if (data.siteName) {
-            document.title = data.siteName;
-          }
+          // Don't update title - it's already set correctly by generateMetadata
+          // Only update description and favicon if they're not already set
           
-          // Update meta description
+          // Update meta description (only if not already set by generateMetadata)
           if (data.metaDescription) {
             let metaDesc = document.querySelector('meta[name="description"]');
-            if (!metaDesc) {
+            if (metaDesc) {
+              // Only update if current description is the default one
+              const currentDesc = metaDesc.getAttribute('content');
+              if (!currentDesc || currentDesc === "Информационный портал о последних новостях и разработках в области искусственного интеллекта") {
+                metaDesc.setAttribute('content', data.metaDescription);
+              }
+            } else {
               metaDesc = document.createElement('meta');
               metaDesc.setAttribute('name', 'description');
+              metaDesc.setAttribute('content', data.metaDescription);
               document.head.appendChild(metaDesc);
             }
-            metaDesc.setAttribute('content', data.metaDescription);
           }
           
           // Update favicon
