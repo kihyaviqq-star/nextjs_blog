@@ -105,7 +105,6 @@ export async function PUT(
             id: true,
             name: true,
             username: true,
-            email: true,
             avatarUrl: true,
           },
         },

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 60 * 1000, // 1 hour
+  uniqueTokenPerInterval: 500,
+});
 
 export async function POST(
   request: NextRequest,
@@ -7,6 +13,17 @@ export async function POST(
 ) {
   try {
     const { slug } = await params;
+    const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+    
+    // Rate limit: 1 view per IP per post per hour
+    try {
+      await limiter.check(1, `${ip}-${slug}`);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Rate limit exceeded" },
+        { status: 429 }
+      );
+    }
 
     // Increment view count
     const updatedPost = await prisma.post.update({
