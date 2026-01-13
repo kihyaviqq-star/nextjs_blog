@@ -7,13 +7,13 @@ import { UserMenu } from "@/components/user-menu";
 import { MobileMenu } from "@/components/mobile-menu";
 import { Button } from "@/components/ui/button";
 import { PenSquare, LogIn } from "lucide-react";
-import { ReactNode } from "react";
 
 interface HeaderClientProps {
-  logo: ReactNode;
+  siteName: string;
+  logoUrl: string | null;
 }
 
-export function HeaderClient({ logo }: HeaderClientProps) {
+export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
   const { data: session, status } = useSession();
   const userRole = (session?.user as any)?.role;
   const canWrite = userRole === "ADMIN" || userRole === "EDITOR";
@@ -23,7 +23,19 @@ export function HeaderClient({ logo }: HeaderClientProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo - always visible */}
-          {logo}
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 z-10"
+          >
+            {logoUrl && (
+              <img 
+                src={logoUrl} 
+                alt={siteName} 
+                className="h-8 w-auto"
+              />
+            )}
+            <span className="text-xl font-semibold">{siteName}</span>
+          </Link>
 
           {/* Desktop actions - hidden on mobile */}
           <div className="hidden md:flex items-center gap-2 sm:gap-4 flex-shrink-0">

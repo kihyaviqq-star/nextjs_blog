@@ -4,41 +4,15 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
-import { prisma } from "@/lib/prisma";
+import { MetadataUpdater } from "@/components/metadata-updater";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
-// Generate dynamic metadata from database
-export async function generateMetadata(): Promise<Metadata> {
-  let settings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
-  });
-
-  // Create default if not exists
-  if (!settings) {
-    settings = await prisma.siteSettings.create({
-      data: {
-        id: "default",
-        siteName: "Blog",
-        metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
-      },
-    });
-  }
-
-  const metadata: Metadata = {
-    title: settings.siteName || "Blog",
-    description: settings.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
-  };
-
-  // Add favicon if available
-  if (settings.faviconUrl) {
-    metadata.icons = {
-      icon: settings.faviconUrl,
-    };
-  }
-
-  return metadata;
-}
+// Default metadata - will be updated by client-side component
+export const metadata: Metadata = {
+  title: "Blog",
+  description: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+};
 
 export default function RootLayout({
   children,
@@ -55,6 +29,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <MetadataUpdater />
             {children}
             <Toaster richColors position="top-right" />
           </ThemeProvider>
