@@ -4,12 +4,13 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
+import { DynamicMetadata } from "@/components/dynamic-metadata";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
 export const metadata: Metadata = {
-  title: "AI Агрегатор и Новости",
-  description: "Современная платформа для агрегации новостей и контента об искусственном интеллекте",
+  title: "AI Al-Stat",
+  description: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
 };
 
 export default function RootLayout({
@@ -27,6 +28,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <DynamicMetadata />
             {children}
             <Toaster richColors position="top-right" />
           </ThemeProvider>

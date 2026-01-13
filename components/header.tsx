@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { MobileMenu } from "@/components/mobile-menu";
+import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { PenSquare, LogIn } from "lucide-react";
 
@@ -18,15 +19,7 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo - always visible */}
-          <Link 
-            href="/" 
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 z-10"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">AI</span>
-            </div>
-            <span className="text-xl font-semibold">AI-Stat</span>
-          </Link>
+          <SiteLogo />
 
           {/* Desktop actions - hidden on mobile */}
           <div className="hidden md:flex items-center gap-2 sm:gap-4 flex-shrink-0">

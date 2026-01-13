@@ -109,17 +109,25 @@ export function UserMenu() {
           </>
         )}
         {isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/users" className="cursor-pointer">
-              <Users className="mr-2 h-4 w-4" />
-              <span>Пользователи</span>
-            </Link>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/users" className="cursor-pointer">
+                <Users className="mr-2 h-4 w-4" />
+                <span>Пользователи</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings" className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Настройки сайта</span>
+              </Link>
+            </DropdownMenuItem>
+          </>
         )}
         <DropdownMenuItem asChild>
           <Link href="/settings" className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Настройки</span>
+            <User className="mr-2 h-4 w-4" />
+            <span>Профиль</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
