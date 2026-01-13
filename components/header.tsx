@@ -1,32 +1,36 @@
-import { HeaderClient } from "./header-client";
-import { prisma } from "@/lib/prisma";
-import { cache } from "react";
+"use client";
 
-// Cache the settings fetch to avoid multiple queries
-const getSiteSettings = cache(async () => {
-  let settings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
+import { useEffect, useState } from "react";
+import { HeaderClient } from "./header-client";
+
+export function Header() {
+  const [settings, setSettings] = useState({
+    siteName: "Blog",
+    logoUrl: null as string | null,
   });
 
-  // Create default if not exists
-  if (!settings) {
-    settings = await prisma.siteSettings.create({
-      data: {
-        id: "default",
-        siteName: "Blog",
-      },
-    });
-  }
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          const data = await response.json();
+          setSettings({
+            siteName: data.siteName || "Blog",
+            logoUrl: data.logoUrl,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch site settings:", error);
+      }
+    };
 
-  return settings;
-});
-
-export async function Header() {
-  const settings = await getSiteSettings();
+    fetchSettings();
+  }, []);
 
   return (
     <HeaderClient 
-      siteName={settings.siteName || "Blog"}
+      siteName={settings.siteName}
       logoUrl={settings.logoUrl}
     />
   );
