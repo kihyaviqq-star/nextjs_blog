@@ -362,7 +362,7 @@ export default function CreatePostPage() {
                 Используйте редактор для создания богатого контента
               </p>
             </div>
-            <div className="border border-border rounded-lg p-6 bg-background">
+            <div>
               <EditorWrapper
                 data={editorData}
                 onChange={setEditorData}

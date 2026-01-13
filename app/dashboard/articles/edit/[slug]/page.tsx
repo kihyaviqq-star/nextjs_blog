@@ -417,7 +417,7 @@ export default function EditPostPage({ params }: PageProps) {
                 Используйте редактор для создания богатого контента
               </p>
             </div>
-            <div className="border border-border rounded-lg p-6 bg-background">
+            <div>
               {editorReady ? (
                 <EditorWrapper
                   key={editorKey}
