@@ -130,6 +130,13 @@ export default function EditorWrapper({
       return;
     }
 
+    // Double check: ensure holder element is empty before initializing
+    // This prevents duplicate editors if component re-renders
+    if (holderElement.children.length > 0) {
+      console.warn(`Editor holder "${staticHolder}" already has content, skipping initialization`);
+      return;
+    }
+
     // Use initial data only, ensure strict structure
     const normalizedData = {
       blocks: initialDataRef.current?.blocks || [],
