@@ -17,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: true,
       metaDescription: true,
       faviconUrl: true,
+      logoUrl: true,
     },
   });
 
@@ -32,13 +33,44 @@ export async function generateMetadata(): Promise<Metadata> {
         siteName: true,
         metaDescription: true,
         faviconUrl: true,
+        logoUrl: true,
       },
     });
   }
 
+  const siteName = settings.siteName || "Blog";
+  const siteDescription = settings.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
+  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const ogImage = settings.logoUrl 
+    ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
+    : `${siteUrl}/og-default.jpg`;
+
   const metadata: Metadata = {
-    title: settings.siteName || "Blog",
-    description: settings.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+    title: siteName,
+    description: siteDescription,
+    metadataBase: new URL(siteUrl),
+    openGraph: {
+      type: "website",
+      locale: "ru_RU",
+      url: siteUrl,
+      siteName: siteName,
+      title: siteName,
+      description: siteDescription,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: siteName,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: siteName,
+      description: siteDescription,
+      images: [ogImage],
+    },
   };
 
   // Add favicon if available

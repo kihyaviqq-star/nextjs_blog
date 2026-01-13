@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
@@ -26,6 +27,48 @@ async function ArticlePage({ post }: { post: any }) {
   
   // Extract blocks from EditorJS format
   const blocks = contentData?.blocks || (Array.isArray(contentData) ? contentData : []);
+
+  // Get site settings for Schema.org
+  const siteSettings = await prisma.siteSettings.findUnique({
+    where: { id: "default" },
+    select: { siteName: true, logoUrl: true },
+  });
+  const siteName = siteSettings?.siteName || "Blog";
+  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const postUrl = `${siteUrl}/${post.slug}`;
+  const ogImage = post.coverImage 
+    ? (post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`)
+    : (siteSettings?.logoUrl ? `${siteUrl}${siteSettings.logoUrl}` : `${siteUrl}/og-default.jpg`);
+
+  // Schema.org JSON-LD for Article
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt,
+    image: ogImage,
+    datePublished: post.publishedAt.toISOString(),
+    dateModified: post.updatedAt?.toISOString() || post.publishedAt.toISOString(),
+    author: {
+      "@type": "Person",
+      name: post.author.name || siteName,
+      url: post.author.username ? `${siteUrl}/${post.author.username}` : undefined,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: siteName,
+      logo: {
+        "@type": "ImageObject",
+        url: siteSettings?.logoUrl 
+          ? (siteSettings.logoUrl.startsWith('http') ? siteSettings.logoUrl : `${siteUrl}${siteSettings.logoUrl}`)
+          : `${siteUrl}/og-default.jpg`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": postUrl,
+    },
+  };
 
   // Get related posts (same author or similar tags)
   const relatedPosts = await prisma.post.findMany({
@@ -92,6 +135,11 @@ async function ArticlePage({ post }: { post: any }) {
       </div>
 
       <main className="container mx-auto px-4 pb-16 max-w-4xl">
+        {/* Schema.org JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        />
         <article>
           {/* Cover Image */}
           {post.coverImage && (
@@ -504,26 +552,64 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
 
-  // Get site settings for site name
+  // Get site settings for site name and metadata
   let siteSettings = await prisma.siteSettings.findUnique({
     where: { id: "default" },
-    select: { siteName: true },
+    select: { 
+      siteName: true,
+      metaDescription: true,
+      logoUrl: true,
+    },
   });
   const siteName = siteSettings?.siteName || "Blog";
+  const siteDescription = siteSettings?.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
+  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const defaultImage = siteSettings?.logoUrl ? `${siteUrl}${siteSettings.logoUrl}` : `${siteUrl}/og-default.jpg`;
 
   // Try post first
   const post = await prisma.post.findUnique({
     where: { slug: decodedSlug },
-    select: {
-      title: true,
-      excerpt: true,
+    include: {
+      author: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
 
   if (post) {
+    const postUrl = `${siteUrl}/${decodedSlug}`;
+    const ogImage = post.coverImage 
+      ? (post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`)
+      : defaultImage;
+
     return {
       title: `${post.title} | ${siteName}`,
       description: post.excerpt,
+      openGraph: {
+        title: post.title,
+        description: post.excerpt,
+        type: "article",
+        publishedTime: post.publishedAt.toISOString(),
+        authors: [post.author.name || siteName],
+        images: [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: post.title,
+          },
+        ],
+        url: postUrl,
+        siteName: siteName,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: post.title,
+        description: post.excerpt,
+        images: [ogImage],
+      },
     };
   }
 
@@ -535,17 +621,45 @@ export async function generateMetadata({ params }: PageProps) {
     select: {
       name: true,
       bio: true,
+      avatarUrl: true,
     }
   });
 
   if (user) {
+    const userUrl = `${siteUrl}/${decodedSlug}`;
+    const ogImage = user.avatarUrl 
+      ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${siteUrl}${user.avatarUrl}`)
+      : defaultImage;
+
     return {
       title: `${user.name || decodedSlug} | ${siteName}`,
       description: user.bio || `Профиль пользователя ${user.name || decodedSlug}`,
+      openGraph: {
+        title: `${user.name || decodedSlug} | ${siteName}`,
+        description: user.bio || `Профиль пользователя ${user.name || decodedSlug}`,
+        type: "profile",
+        images: [
+          {
+            url: ogImage,
+            width: 400,
+            height: 400,
+            alt: user.name || decodedSlug,
+          },
+        ],
+        url: userUrl,
+        siteName: siteName,
+      },
+      twitter: {
+        card: "summary",
+        title: `${user.name || decodedSlug} | ${siteName}`,
+        description: user.bio || `Профиль пользователя ${user.name || decodedSlug}`,
+        images: [ogImage],
+      },
     };
   }
 
   return {
     title: `Страница не найдена | ${siteName}`,
+    description: "Страница не найдена",
   };
 }
