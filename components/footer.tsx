@@ -1,28 +1,23 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import { cache } from "react";
 
-import { useEffect, useState } from "react";
+// Cache the settings fetch to avoid duplicate queries
+const getFooterText = cache(async () => {
+  try {
+    const settings = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+      select: { footerText: true },
+    });
+    return settings?.footerText || "Сделано с ❤️";
+  } catch (error) {
+    console.error("Failed to fetch footer settings:", error);
+    return "Сделано с ❤️";
+  }
+});
 
-export function Footer() {
-  const [footerText, setFooterText] = useState("Сделано с ❤️");
+export async function Footer() {
+  const footerText = await getFooterText();
   const currentYear = new Date().getFullYear();
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch("/api/settings");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.footerText) {
-            setFooterText(data.footerText);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch footer settings:", error);
-      }
-    };
-
-    fetchSettings();
-  }, []);
 
   return (
     <footer className="border-t border-zinc-800 dark:border-zinc-800 mt-auto">
