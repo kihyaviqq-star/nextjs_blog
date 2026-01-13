@@ -38,16 +38,12 @@ export function SiteLogo() {
       href="/" 
       className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 z-10"
     >
-      {settings.logoUrl ? (
+      {settings.logoUrl && (
         <img 
           src={settings.logoUrl} 
           alt={settings.siteName} 
           className="h-8 w-auto"
         />
-      ) : (
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <span className="text-white font-bold text-lg">AI</span>
-        </div>
       )}
       <span className="text-xl font-semibold">{settings.siteName}</span>
     </Link>
