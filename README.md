@@ -80,10 +80,10 @@ cp .env.example .env
 
 # 4. Инициализировать базу данных
 npx prisma generate
-npx prisma db push
+npx prisma migrate dev
 
 # 5. Заполнить базу тестовыми данными (опционально)
-npx tsx prisma/seed.ts
+npx prisma db seed
 
 # 6. Запустить dev сервер
 npm run dev
