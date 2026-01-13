@@ -310,7 +310,7 @@ export default function GeneratorPage() {
                 <CardContent className="py-16 text-center">
                   <Sparkles className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground">
-                    Выберите новость и нажмите "Сгенерировать статью"
+                    Выберите новость и нажмите &quot;Сгенерировать статью&quot;
                   </p>
                 </CardContent>
               </Card>
