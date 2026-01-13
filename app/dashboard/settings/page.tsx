@@ -161,7 +161,7 @@ export default function SiteSettingsPage() {
                 <FileUpload
                   currentUrl={settings.faviconUrl}
                   onUploadComplete={(url) => handleChange("faviconUrl", url)}
-                  type="logo"
+                  type="favicon"
                   label="Загрузить favicon"
                 />
                 <p className="text-xs text-muted-foreground">

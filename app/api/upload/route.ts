@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const type = formData.get("type") as string; // 'avatar', 'logo', 'cover'
+    const type = formData.get("type") as string; // 'avatar', 'logo', 'cover', 'favicon'
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!type || !["avatar", "logo", "cover"].includes(type)) {
+    if (!type || !["avatar", "logo", "cover", "favicon"].includes(type)) {
       return NextResponse.json({ error: "Invalid upload type" }, { status: 400 });
     }
 
@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine upload directory based on type
-    const uploadDir = join(process.cwd(), "public", "uploads", `${type}s`);
+    // For favicon, use "favicons" folder, for others use plural form
+    const folderName = type === "favicon" ? "favicons" : `${type}s`;
+    const uploadDir = join(process.cwd(), "public", "uploads", folderName);
     
     // Ensure directory exists
     try {
@@ -78,7 +80,8 @@ export async function POST(request: NextRequest) {
     await writeFile(filepath, buffer);
 
     // Return the public URL
-    const publicUrl = `/uploads/${type}s/${uniqueFilename}`;
+    const folderName = type === "favicon" ? "favicons" : `${type}s`;
+    const publicUrl = `/uploads/${folderName}/${uniqueFilename}`;
 
     return NextResponse.json({
       success: true,

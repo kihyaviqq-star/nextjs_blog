@@ -8,7 +8,7 @@ import { toast } from "sonner";
 interface FileUploadProps {
   currentUrl?: string | null;
   onUploadComplete: (url: string) => void;
-  type: "avatar" | "logo" | "cover";
+  type: "avatar" | "logo" | "cover" | "favicon";
   label: string;
   accept?: string;
   maxSize?: number; // in MB
