@@ -53,6 +53,8 @@ export default function EditorWrapper({
   const { theme } = useTheme();
   const editorRef = useRef<EditorJS | null>(null);
   const isInitialized = useRef(false);
+  const isInternalChange = useRef(false);
+  const onChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const initializeEditor = useCallback(() => {
     if (isInitialized.current) return;
@@ -65,7 +67,8 @@ export default function EditorWrapper({
     }
 
     // Нормализуем data - если undefined или null, используем пустую структуру
-    const normalizedData = data && data.blocks && data.blocks.length > 0 
+    // Используем только при первой инициализации
+    const normalizedData = (data && data.blocks && data.blocks.length > 0) 
       ? data 
       : { blocks: [] };
 
@@ -315,15 +318,34 @@ export default function EditorWrapper({
         underline: Underline as any,
       },
       onChange: async () => {
-        if (onChange && editorRef.current) {
+        if (onChange && editorRef.current && !isInternalChange.current) {
           try {
-            const content = await editorRef.current.save();
-            // Используем requestAnimationFrame для плавного обновления
-            requestAnimationFrame(() => {
-              onChange(content);
-            });
+            // Устанавливаем флаг, чтобы предотвратить перерисовку
+            isInternalChange.current = true;
+            
+            // Используем debounce для уменьшения количества обновлений
+            if (onChangeTimeoutRef.current) {
+              clearTimeout(onChangeTimeoutRef.current);
+            }
+            
+            onChangeTimeoutRef.current = setTimeout(async () => {
+              try {
+                const content = await editorRef.current?.save();
+                if (content) {
+                  onChange(content);
+                }
+              } catch (error) {
+                console.error("Error saving editor content:", error);
+              } finally {
+                // Сбрасываем флаг после небольшой задержки
+                setTimeout(() => {
+                  isInternalChange.current = false;
+                }, 100);
+              }
+            }, 300);
           } catch (error) {
             console.error("Error saving editor content:", error);
+            isInternalChange.current = false;
           }
         }
       },
@@ -378,6 +400,9 @@ export default function EditorWrapper({
 
     return () => {
       clearTimeout(timer);
+      if (onChangeTimeoutRef.current) {
+        clearTimeout(onChangeTimeoutRef.current);
+      }
       if (editorRef.current && editorRef.current.destroy) {
         try {
           editorRef.current.destroy();
@@ -391,8 +416,14 @@ export default function EditorWrapper({
   }, [initializeEditor, holder]);
 
   // Update editor when data prop changes (for editing existing posts)
+  // НЕ обновляем, если изменение было от пользователя (через onChange)
   useEffect(() => {
     if (!editorRef.current || !data || !isInitialized.current) {
+      return;
+    }
+
+    // Пропускаем обновление, если изменение было внутренним (от пользователя)
+    if (isInternalChange.current) {
       return;
     }
 
@@ -407,12 +438,20 @@ export default function EditorWrapper({
         const currentDataStr = JSON.stringify(currentData);
         const newDataStr = JSON.stringify(data);
         
-        if (currentDataStr !== newDataStr) {
-          return editorRef.current?.render(data);
+        // Обновляем только если данные действительно отличаются и это не внутреннее изменение
+        if (currentDataStr !== newDataStr && !isInternalChange.current) {
+          isInternalChange.current = true;
+          return editorRef.current?.render(data).then(() => {
+            // Сбрасываем флаг после рендера
+            setTimeout(() => {
+              isInternalChange.current = false;
+            }, 200);
+          });
         }
       })
       .catch((error: Error) => {
         console.error("Error updating editor data:", error);
+        isInternalChange.current = false;
       });
   }, [data]);
 
