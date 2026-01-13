@@ -21,7 +21,7 @@ export async function GET(
             id: true,
             name: true,
             username: true,
-            email: true,
+            // email: true, // Removed for privacy
             avatarUrl: true,
           },
         },

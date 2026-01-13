@@ -70,6 +70,37 @@ export default function GeneratorPage() {
   const [urlInput, setUrlInput] = useState("");
   const editorDataRef = useRef<OutputData | null>(null);
   const editorHolderId = useRef(`editor-${Date.now()}`);
+  
+  // Infinite scroll
+  const [visibleNewsCount, setVisibleNewsCount] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore && visibleNewsCount < news.length) {
+          setIsLoadingMore(true);
+          // Artificial delay to show loader
+          setTimeout(() => {
+            setVisibleNewsCount((prev) => Math.min(prev + 20, news.length));
+            setIsLoadingMore(false);
+          }, 800);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [news.length, loading, visibleNewsCount, isLoadingMore]); // Added dependencies
 
   useEffect(() => {
     loadNews();
@@ -84,6 +115,8 @@ export default function GeneratorPage() {
 
   const loadNews = async () => {
     setLoading(true);
+    setVisibleNewsCount(20); // Reset visible count
+    console.log('Loading news with sources:', enabledSources);
     const result = await getNewsAction(enabledSources);
     if (result.success && result.data) {
       // Добавляем id к каждой новости
@@ -420,7 +453,7 @@ export default function GeneratorPage() {
               </Card>
             ) : (
               <div className="space-y-4 max-h-[800px] overflow-y-auto">
-                {news.map((item) => (
+                {news.slice(0, visibleNewsCount).map((item) => (
                   <Card key={item.id} className="hover:border-primary/50 transition-colors">
                     <CardHeader>
                       <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
@@ -471,6 +504,13 @@ export default function GeneratorPage() {
                     </CardContent>
                   </Card>
                 ))}
+                
+                {visibleNewsCount < news.length && (
+                  <div ref={loadMoreRef} className="py-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    <span className="text-sm font-medium">Загрузка следующих новостей...</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -118,7 +118,7 @@ export async function PUT(request: NextRequest) {
         name: name || undefined,
         username: username ? username.toLowerCase() : undefined, // Always store lowercase
         bio: bio || undefined,
-        email: email || null, // Allow null to hide email
+        // email: email || null, // DISABLED: Email update requires verification
         avatarUrl: avatarUrl || undefined,
         telegram: telegram || null,
         vk: vk || null,

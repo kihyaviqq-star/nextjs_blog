@@ -18,7 +18,7 @@ export interface RSSSource {
 }
 
 export const RSS_SOURCES: RSSSource[] = [
-  { id: 'comss', name: 'www.comss.ru', url: 'https://www.comss.ru/page/rss.php' },
+  // { id: 'comss', name: 'www.comss.ru', url: 'https://www.comss.ru/rss.php' }, // Broken feed
   { id: 'winaero', name: 'winaero.com', url: 'https://winaero.com/feed/' },
   { id: 'microsoft', name: 'Microsoft Blog', url: 'https://blogs.windows.com/feed/' },
   { id: 'azure', name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/' },

@@ -12,15 +12,40 @@ import path from 'path';
 
 export async function getNewsAction(enabledSourceIds?: string[]): Promise<{ success: boolean; data?: NewsItem[]; error?: string }> {
   try {
-    const news = await fetchNewsFromSources(enabledSourceIds || RSS_SOURCES.map(s => s.id));
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    console.log('getNewsAction called with:', enabledSourceIds, 'Type:', typeof enabledSourceIds, 'IsArray:', Array.isArray(enabledSourceIds));
+    
+    // Explicitly handle undefined/null to default to all sources
+    // If empty array is passed, it means "no sources", so we respect it.
+    let sourcesToFetch: string[];
+    
+    if (enabledSourceIds === undefined || enabledSourceIds === null) {
+      sourcesToFetch = RSS_SOURCES.map(s => s.id);
+      console.log('Defaulting to all sources');
+    } else {
+      sourcesToFetch = enabledSourceIds;
+    }
+    
+    console.log('Fetching sources:', sourcesToFetch);
+    const news = await fetchNewsFromSources(sourcesToFetch);
     return { success: true, data: news };
   } catch (error: any) {
+    console.error('getNewsAction error:', error);
     return { success: false, error: error.message || 'Failed to fetch news' };
   }
 }
 
 export async function parseUrlAction(url: string): Promise<{ success: boolean; data?: { title: string; content: string; url: string }; error?: string }> {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
     // Validate URL
     try {
       new URL(url);
@@ -37,6 +62,11 @@ export async function parseUrlAction(url: string): Promise<{ success: boolean; d
 
 export async function generateArticleFromUrlAction(url: string): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
     // First scrape the URL
     const scrapeResult = await parseUrlAction(url);
     if (!scrapeResult.success || !scrapeResult.data) {
@@ -116,6 +146,10 @@ export async function publishArticleAction(article: GeneratedArticle): Promise<{
 
     if (!user) {
       return { success: false, error: 'User not found' };
+    }
+
+    if (user.role !== 'ADMIN' && user.role !== 'EDITOR') {
+      return { success: false, error: 'Forbidden: Insufficient permissions' };
     }
 
     // Extract first paragraph for excerpt (strip HTML tags)

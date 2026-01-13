@@ -2,6 +2,7 @@ import React from "react";
 import { EditorBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Check } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 
 interface BlockRendererProps {
   blocks: EditorBlock[];
@@ -63,10 +64,13 @@ function Block({ block }: { block: EditorBlock }) {
 function RawBlock({ data }: { data: any }) {
   if (!data || !data.html) return null;
   
+  // Sanitize HTML to prevent XSS
+  const cleanHtml = DOMPurify.sanitize(data.html);
+
   return (
     <div 
       className="my-6"
-      dangerouslySetInnerHTML={{ __html: data.html }}
+      dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
   );
 }
@@ -303,12 +307,18 @@ function EmbedBlock({ data }: { data: any }) {
   
   const { service, source, embed, width, height, caption } = data;
   
+  // Sanitize embed code but allow iframes
+  const cleanEmbed = DOMPurify.sanitize(embed, {
+    ADD_TAGS: ["iframe"],
+    ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling"],
+  });
+
   return (
     <figure className="my-6">
       <div className="relative rounded-lg overflow-hidden border border-border bg-secondary">
         <div 
           className="aspect-video"
-          dangerouslySetInnerHTML={{ __html: embed }}
+          dangerouslySetInnerHTML={{ __html: cleanEmbed }}
         />
       </div>
       {caption && (

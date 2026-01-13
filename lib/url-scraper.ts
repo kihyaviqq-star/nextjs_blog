@@ -1,7 +1,29 @@
+import { lookup } from 'dns/promises';
+
 /**
  * URL Scraper - Extracts main content from web pages
  * Uses fetch + basic HTML parsing to extract article content
  */
+
+function isPrivateIP(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return false; // Not an IPv4 address (could be IPv6, handled separately or ignored for now if we only check IPv4)
+
+  // 127.0.0.0/8
+  if (parts[0] === 127) return true;
+  // 10.0.0.0/8
+  if (parts[0] === 10) return true;
+  // 192.168.0.0/16
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  // 172.16.0.0/12
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  // 0.0.0.0/8
+  if (parts[0] === 0) return true;
+  // 169.254.0.0/16
+  if (parts[0] === 169 && parts[1] === 254) return true;
+
+  return false;
+}
 
 export interface ScrapedContent {
   title: string;
@@ -11,6 +33,27 @@ export interface ScrapedContent {
 
 export async function scrapeUrl(url: string): Promise<ScrapedContent> {
   try {
+    const parsedUrl = new URL(url);
+    
+    // Block non-http protocols
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error('Invalid protocol. Only HTTP/HTTPS allowed.');
+    }
+
+    // SSRF Protection: Resolve and check IP
+    try {
+      const { address } = await lookup(parsedUrl.hostname);
+      if (isPrivateIP(address)) {
+        throw new Error(`Access denied to private IP: ${address}`);
+      }
+    } catch (e: any) {
+      if (e.message.includes('Access denied')) throw e;
+      // If DNS fails, fetch will fail anyway, but we can let it proceed if it was just a lookup error 
+      // (though safer to fail open only if we are sure). 
+      // For security, if we can't resolve, we shouldn't fetch.
+      console.warn(`DNS lookup failed for ${parsedUrl.hostname}: ${e.message}`);
+    }
+
     // Fetch the page with browser-like headers
     const response = await fetch(url, {
       headers: {

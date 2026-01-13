@@ -3,6 +3,13 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { generateUniqueUsername } from "@/lib/username";
 import { isUsernameReserved } from "@/lib/constants";
+import rateLimit from "@/lib/rate-limit";
+
+// Initialize rate limiter for registration (e.g., 5 attempts per hour per IP)
+const limiter = rateLimit({
+  interval: 60 * 60 * 1000, // 1 hour
+  uniqueTokenPerInterval: 500,
+});
 
 /**
  * POST /api/register
@@ -10,6 +17,17 @@ import { isUsernameReserved } from "@/lib/constants";
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate Limiting by IP
+    const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
+    try {
+      await limiter.check(5, ip);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { email, password, name } = body;
 
