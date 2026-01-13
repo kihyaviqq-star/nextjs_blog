@@ -42,15 +42,6 @@ export function UserMenu() {
       ? `/${session.user.name.toLowerCase().replace(/\s+/g, "-")}` 
       : "/settings"; // Fallback to settings if no username
 
-  // Логирование для отладки
-  console.log("[UserMenu] Rendering with session:", {
-    name: session.user.name,
-    username: username,
-    profileLink: profileLink,
-    avatarUrl: avatarUrl,
-    role: userRole
-  });
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

@@ -1,8 +1,9 @@
 import { HeaderClient } from "./header-client";
 import { prisma } from "@/lib/prisma";
+import { cache } from "react";
 
-export async function Header() {
-  // Fetch settings on server
+// Cache the settings fetch to avoid multiple queries
+const getSiteSettings = cache(async () => {
   let settings = await prisma.siteSettings.findUnique({
     where: { id: "default" },
   });
@@ -16,6 +17,12 @@ export async function Header() {
       },
     });
   }
+
+  return settings;
+});
+
+export async function Header() {
+  const settings = await getSiteSettings();
 
   return (
     <HeaderClient 
