@@ -102,8 +102,13 @@ export default function EditorWrapper({
     // Debounce the onChange call
     onChangeTimeoutRef.current = setTimeout(async () => {
       try {
-        if (!editorInstance.current || !isInitialized.current) return;
-        const content = await editorInstance.current.save();
+        const editor = editorInstance.current;
+        if (!editor || !isInitialized.current) return;
+        
+        // Check if editor has save method
+        if (typeof editor.save !== 'function') return;
+        
+        const content = await editor.save();
         if (content && onChange) {
           onChange(content);
         }
@@ -384,21 +389,28 @@ export default function EditorWrapper({
     // Initialize plugins after editor is ready
     editor.isReady
       .then(() => {
+        const currentEditor = editorInstance.current;
+        if (!currentEditor) {
+          console.error("Editor instance is null after isReady");
+          return;
+        }
+        
         isInitialized.current = true;
         
-        if (editorInstance.current) {
-          try {
-            // Initialize plugins
-            pluginsRef.current.undo = new Undo({ editor: editorInstance.current });
-            pluginsRef.current.dragDrop = new DragDrop(editorInstance.current);
-          } catch (error) {
-            console.error("Error initializing editor plugins:", error);
+        try {
+          // Initialize plugins only if editor exists
+          if (currentEditor && typeof currentEditor.save === 'function') {
+            pluginsRef.current.undo = new Undo({ editor: currentEditor });
+            pluginsRef.current.dragDrop = new DragDrop(currentEditor);
           }
+        } catch (error) {
+          console.error("Error initializing editor plugins:", error);
         }
       })
       .catch((error) => {
         console.error("Editor initialization error:", error);
         isInitialized.current = false;
+        editorInstance.current = null;
       });
 
     // Cleanup function - only runs on unmount
@@ -463,18 +475,26 @@ export default function EditorWrapper({
   // This should NOT re-run on every data change - editor is uncontrolled after init
   useEffect(() => {
     // Only load data if editor is ready AND we haven't loaded initial data yet
-    if (!editorInstance.current || !isInitialized.current || !data || dataLoadedRef.current) {
+    const currentEditor = editorInstance.current;
+    if (!currentEditor || !isInitialized.current || !data || dataLoadedRef.current) {
       return;
     }
 
     // Load initial data only once
-    editorInstance.current.isReady
+    currentEditor.isReady
       .then(async () => {
         try {
+          const editor = editorInstance.current;
+          if (!editor || typeof editor.render !== 'function') {
+            console.error("Editor not available for rendering");
+            dataLoadedRef.current = true;
+            return;
+          }
+          
           const normalizedData = normalizeEditorData(data);
           // Only render if we have valid blocks
           if (normalizedData.blocks.length > 0) {
-            await editorInstance.current?.render(normalizedData);
+            await editor.render(normalizedData);
           }
           dataLoadedRef.current = true;
         } catch (error) {
