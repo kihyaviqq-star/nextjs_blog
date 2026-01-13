@@ -11,7 +11,7 @@ import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save, Eye, X } from "lucide-react";
-import { OutputData } from "@editorjs/editorjs";
+import type { OutputData } from "@editorjs/editorjs";
 import { toast } from "sonner";
 
 const EditorWrapper = dynamic(() => import("@/components/editor/editor-wrapper"), {

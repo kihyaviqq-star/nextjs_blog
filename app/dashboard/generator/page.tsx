@@ -20,8 +20,20 @@ import { NewsItem as NewsItemType, RSS_SOURCES } from "@/lib/news-fetcher";
 import { GeneratedArticle } from "@/lib/ai-client";
 import { Sparkles, Loader2, CheckCircle2, ExternalLink, Settings, Globe } from "lucide-react";
 import { toast } from "sonner";
-import EditorWrapper from "@/components/editor/editor-wrapper";
-import { OutputData } from "@editorjs/editorjs";
+import dynamic from "next/dynamic";
+import type { OutputData } from "@editorjs/editorjs";
+
+const EditorWrapper = dynamic(() => import("@/components/editor/editor-wrapper"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[400px] flex items-center justify-center border border-border rounded-lg bg-secondary/20">
+      <div className="text-center space-y-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="text-sm text-muted-foreground">Загрузка редактора...</p>
+      </div>
+    </div>
+  ),
+});
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
@@ -423,7 +435,9 @@ export default function GeneratorPage() {
                           >
                             Источник: {(() => {
                               try {
-                                return new URL(item.link).hostname.replace(/^www\./, '');
+                                if (!item.link) return '';
+                                const url = new URL(item.link);
+                                return url.hostname.replace(/^www\./, '');
                               } catch (e) {
                                 return '';
                               }
