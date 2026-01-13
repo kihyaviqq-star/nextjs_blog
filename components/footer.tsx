@@ -15,6 +15,7 @@ const getFooterText = cache(async () => {
   }
 });
 
+// Server component for server pages
 export async function Footer() {
   const footerText = await getFooterText();
   const currentYear = new Date().getFullYear();
@@ -34,3 +35,6 @@ export async function Footer() {
     </footer>
   );
 }
+
+// Client component wrapper for client pages
+export { FooterClient } from "./footer-client";

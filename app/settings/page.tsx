@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,7 +181,7 @@ export default function SettingsPage() {
   if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <HeaderClientWrapper />
         <main className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -413,7 +413,7 @@ export default function SettingsPage() {
         </div>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }

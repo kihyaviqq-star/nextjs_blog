@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save, Eye, X } from "lucide-react";
@@ -219,7 +219,7 @@ export default function EditPostPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <HeaderClientWrapper />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6">
           <Link href="/dashboard/articles">
@@ -465,7 +465,7 @@ export default function EditPostPage({ params }: PageProps) {
         </div>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }

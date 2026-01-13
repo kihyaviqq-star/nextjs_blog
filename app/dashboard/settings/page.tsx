@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -253,7 +253,7 @@ export default function SiteSettingsPage() {
         </form>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }

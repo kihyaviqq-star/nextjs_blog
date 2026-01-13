@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -147,7 +147,7 @@ export default function ArticlesPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <HeaderClientWrapper />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-6">
@@ -432,7 +432,7 @@ export default function ArticlesPage() {
         )}
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }

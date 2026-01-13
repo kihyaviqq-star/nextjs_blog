@@ -25,6 +25,7 @@ const getSiteSettings = cache(async () => {
   }
 });
 
+// Server component for server pages
 export async function Header() {
   const settings = await getSiteSettings();
 
@@ -35,3 +36,6 @@ export async function Header() {
     />
   );
 }
+
+// Client component wrapper for client pages
+export { HeaderClientWrapper } from "./header-client-wrapper";

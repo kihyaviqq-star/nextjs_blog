@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Footer } from "@/components/footer";
+import { FooterClient } from "@/components/footer";
 import { ArrowLeft, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
