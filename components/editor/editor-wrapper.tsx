@@ -132,10 +132,14 @@ export default function EditorWrapper({
 
     // Double check: ensure holder element is empty before initializing
     // This prevents duplicate editors if component re-renders
-    if (holderElement.children.length > 0) {
-      console.warn(`Editor holder "${staticHolder}" already has content, skipping initialization`);
+    // Check for existing Editor.js instances (codex-editor class)
+    if (holderElement.querySelector('.codex-editor')) {
+      console.warn(`Editor "${staticHolder}" already initialized, skipping`);
       return;
     }
+
+    // Clear any existing content in holder
+    holderElement.innerHTML = '';
 
     // Use initial data only, ensure strict structure
     const normalizedData = {
