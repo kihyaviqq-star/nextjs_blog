@@ -7,7 +7,7 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import BlockRenderer from "@/components/blog/block-renderer";
-import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Send, Twitter, Github } from "lucide-react";
+import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ViewIncrementer } from "@/components/view-incrementer";
 import { isUsernameReserved } from "@/lib/constants";
