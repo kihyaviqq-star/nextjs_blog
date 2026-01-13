@@ -102,7 +102,7 @@ export default function SiteSettingsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+      <HeaderClientWrapper />
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12 max-w-4xl">
         <div className="mb-8">
