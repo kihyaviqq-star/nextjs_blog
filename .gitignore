@@ -44,3 +44,6 @@ next-env.d.ts
 # prisma database files
 *.db
 *.db-journal
+
+# Project documentation (local only)
+/_project_docs/
