@@ -13,9 +13,24 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Check initial theme
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    checkTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    
+    return () => observer.disconnect();
   }, []);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
@@ -36,10 +51,15 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
     setIsHovered(false);
   };
 
-  // Prevent white flash by using dark background initially
-  const baseStyle = mounted
-    ? undefined
-    : { backgroundColor: "rgb(24 24 27 / 0.5)", borderColor: "rgb(39 39 42)" };
+  // Get hover gradient based on theme
+  const getHoverGradient = () => {
+    const baseColor = isDark ? 'rgb(24 24 27 / 0.5)' : 'rgb(255 255 255 / 0.8)';
+    const gradientColor = isDark 
+      ? 'rgba(59, 130, 246, 0.15)' // Blue for dark mode
+      : 'rgba(59, 130, 246, 0.1)'; // Lighter blue for light mode
+    
+    return `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, ${gradientColor}, transparent 40%), ${baseColor}`;
+  };
 
   return (
     <div
@@ -55,10 +75,9 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
         className
       )}
       style={{
-        ...baseStyle,
         ...(isHovered && mounted
           ? {
-              background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(59, 130, 246, 0.15), transparent 40%), rgb(24 24 27 / 0.5)`,
+              background: getHoverGradient(),
             }
           : {}),
       }}
