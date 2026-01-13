@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import { useTheme } from "next-themes";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 // @ts-ignore
@@ -73,60 +73,65 @@ function normalizeEditorData(data?: OutputData): OutputData {
 export default function EditorWrapper({
   data,
   onChange,
-  holder = "editorjs",
+  holder = "editorjs-container",
 }: EditorWrapperProps) {
   const { theme } = useTheme();
-  const ejInstance = useRef<EditorJS | null>(null);
+  const editorInstance = useRef<EditorJS | null>(null);
   const isInitialized = useRef(false);
   const onChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialDataRef = useRef<OutputData | null>(null);
   const pluginsRef = useRef<{ undo?: any; dragDrop?: any }>({});
+  const dataLoadedRef = useRef(false); // Track if initial data has been loaded
+  const staticHolder = useMemo(() => holder || "editorjs-container", [holder]);
 
   // Store initial data once and never change it
   if (initialDataRef.current === null) {
     initialDataRef.current = normalizeEditorData(data);
+    dataLoadedRef.current = !!data;
   }
 
-  // Memoize onChange callback to prevent re-creation
-  const handleChange = useMemo(() => {
-    return async () => {
-      if (!onChange || !ejInstance.current) return;
+  // Use useCallback for onChange handler to prevent re-creation
+  const handleChange = useCallback(async () => {
+    if (!onChange || !editorInstance.current || !isInitialized.current) return;
 
-      // Clear previous timeout
-      if (onChangeTimeoutRef.current) {
-        clearTimeout(onChangeTimeoutRef.current);
-      }
+    // Clear previous timeout
+    if (onChangeTimeoutRef.current) {
+      clearTimeout(onChangeTimeoutRef.current);
+    }
 
-      // Debounce the onChange call
-      onChangeTimeoutRef.current = setTimeout(async () => {
-        try {
-          const content = await ejInstance.current?.save();
-          if (content && onChange) {
-            onChange(content);
-          }
-        } catch (error) {
-          console.error("Error saving editor content:", error);
+    // Debounce the onChange call
+    onChangeTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (!editorInstance.current || !isInitialized.current) return;
+        const content = await editorInstance.current.save();
+        if (content && onChange) {
+          onChange(content);
         }
-      }, 500); // Increased debounce to 500ms for stability
-    };
-  }, [onChange]);
+      } catch (error) {
+        console.error("Error saving editor content:", error);
+      }
+    }, 300); // Debounce to 300ms
   }, [onChange]);
 
   // Initialize editor only once
   useEffect(() => {
+    // Guard clause: prevent re-initialization
     if (typeof window === "undefined") return;
-    if (ejInstance.current || isInitialized.current) return;
+    if (editorInstance.current || isInitialized.current) return;
 
-    const holderElement = document.getElementById(holder);
+    const holderElement = document.getElementById(staticHolder);
     if (!holderElement) {
-      console.error(`Editor holder element with id "${holder}" not found`);
+      console.error(`Editor holder element with id "${staticHolder}" not found`);
       return;
     }
 
-    const normalizedData = normalizeEditorData(initialDataRef.current);
+    // Use initial data only, ensure strict structure
+    const normalizedData = {
+      blocks: initialDataRef.current?.blocks || [],
+    };
 
     const editor = new EditorJS({
-      holder: holder,
+      holder: staticHolder,
       placeholder: "Начните писать свой контент...",
       data: normalizedData,
       autofocus: false,
@@ -374,18 +379,18 @@ export default function EditorWrapper({
       onChange: handleChange,
     });
 
-    ejInstance.current = editor;
+    editorInstance.current = editor;
 
     // Initialize plugins after editor is ready
     editor.isReady
       .then(() => {
         isInitialized.current = true;
         
-        if (ejInstance.current) {
+        if (editorInstance.current) {
           try {
             // Initialize plugins
-            pluginsRef.current.undo = new Undo({ editor: ejInstance.current });
-            pluginsRef.current.dragDrop = new DragDrop(ejInstance.current);
+            pluginsRef.current.undo = new Undo({ editor: editorInstance.current });
+            pluginsRef.current.dragDrop = new DragDrop(editorInstance.current);
           } catch (error) {
             console.error("Error initializing editor plugins:", error);
           }
@@ -396,7 +401,7 @@ export default function EditorWrapper({
         isInitialized.current = false;
       });
 
-    // Cleanup function
+    // Cleanup function - only runs on unmount
     return () => {
       // Clear onChange timeout
       if (onChangeTimeoutRef.current) {
@@ -404,8 +409,8 @@ export default function EditorWrapper({
         onChangeTimeoutRef.current = null;
       }
 
-      // Destroy editor instance
-      if (ejInstance.current) {
+      // Destroy editor instance only on unmount
+      if (editorInstance.current) {
         try {
           // Clean up plugins first
           if (pluginsRef.current.undo && typeof pluginsRef.current.undo.destroy === 'function') {
@@ -427,68 +432,68 @@ export default function EditorWrapper({
           pluginsRef.current = {};
           
           // Destroy editor only if method exists
-          const editor = ejInstance.current;
+          const editor = editorInstance.current;
           if (editor && typeof editor.destroy === 'function') {
             editor.destroy();
           } else {
             // Fallback: clear the DOM element if destroy method doesn't exist
-            const holderElement = document.getElementById(holder);
+            const holderElement = document.getElementById(staticHolder);
             if (holderElement) {
               holderElement.innerHTML = '';
             }
           }
           
-          ejInstance.current = null;
+          editorInstance.current = null;
           isInitialized.current = false;
         } catch (error) {
           console.error("Error destroying editor:", error);
           // Fallback cleanup
-          const holderElement = document.getElementById(holder);
+          const holderElement = document.getElementById(staticHolder);
           if (holderElement) {
             holderElement.innerHTML = '';
           }
-          ejInstance.current = null;
+          editorInstance.current = null;
           isInitialized.current = false;
         }
       }
     };
-  }, [holder, handleChange]); // Only depend on holder and handleChange
+  }, [staticHolder, handleChange]); // Only depend on static holder and stable handleChange
 
-  // Handle external data updates (e.g., when editing existing post)
-  // Only render if data is provided externally and different from current
+  // Handle external data updates ONLY on first load (for editing existing posts)
+  // This should NOT re-run on every data change - editor is uncontrolled after init
   useEffect(() => {
-    if (!ejInstance.current || !isInitialized.current || !data) {
+    // Only load data if editor is ready AND we haven't loaded initial data yet
+    if (!editorInstance.current || !isInitialized.current || !data || dataLoadedRef.current) {
       return;
     }
 
-    // Only update if data is provided and different from initial
-    ejInstance.current.isReady
+    // Load initial data only once
+    editorInstance.current.isReady
       .then(async () => {
         try {
-          const currentData = await ejInstance.current?.save();
-          const currentDataStr = JSON.stringify(normalizeEditorData(currentData));
-          const newDataStr = JSON.stringify(normalizeEditorData(data));
-          
-          // Only render if data is truly different
-          if (currentDataStr !== newDataStr) {
-            const normalizedData = normalizeEditorData(data);
-            await ejInstance.current?.render(normalizedData);
+          const normalizedData = normalizeEditorData(data);
+          // Only render if we have valid blocks
+          if (normalizedData.blocks.length > 0) {
+            await editorInstance.current?.render(normalizedData);
           }
+          dataLoadedRef.current = true;
         } catch (error) {
-          console.error("Error updating editor data:", error);
+          console.error("Error loading initial editor data:", error);
+          dataLoadedRef.current = true; // Mark as loaded even on error to prevent retries
         }
       })
       .catch((error) => {
-        console.error("Error in data update:", error);
+        console.error("Error in initial data load:", error);
+        dataLoadedRef.current = true; // Mark as loaded to prevent retries
       });
-  }, [data]); // Only run when data prop changes externally
+  }, [data]); // This will only run once because dataLoadedRef prevents re-runs
 
   return (
     <div 
       className="prose prose-invert dark:prose-invert max-w-none editor-container"
       data-theme={theme}
     >
-      <div id={holder} className="editor-holder" />
+      <div id={staticHolder} className="editor-holder" />
     </div>
   );
 }
