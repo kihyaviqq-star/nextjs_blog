@@ -69,11 +69,11 @@ export const authConfig: NextAuthConfig = {
             });
 
             if (freshUser) {
-              token.name = freshUser.name;
-              token.username = freshUser.username;
-              token.email = freshUser.email;
-              token.role = freshUser.role;
-              token.avatarUrl = freshUser.avatarUrl;
+              token.name = freshUser.name ?? undefined;
+              token.username = freshUser.username ?? undefined;
+              token.email = freshUser.email ?? undefined;
+              token.role = freshUser.role ?? undefined;
+              token.avatarUrl = freshUser.avatarUrl ?? undefined;
               console.log("[Auth JWT] Updated from DB:", freshUser.name);
             }
           } catch (error) {
@@ -134,10 +134,10 @@ export const authConfig: NextAuthConfig = {
             return {
               id: user.id,
               email: user.email,
-              name: user.name,
-              username: user.username,
+              name: user.name ?? undefined,
+              username: user.username ?? undefined,
               role: user.role,
-              avatarUrl: user.avatarUrl,
+              avatarUrl: user.avatarUrl ?? undefined,
             };
       },
     }),

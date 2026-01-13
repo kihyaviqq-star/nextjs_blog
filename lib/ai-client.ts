@@ -163,7 +163,7 @@ export async function generateArticle(topic: string, context: string, model?: st
       try {
         return JSON.parse(fixedContent) as GeneratedArticle;
       } catch (retryError) {
-        throw new Error(`Failed to parse AI response: ${parseError.message}`);
+        throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
       }
     }
   } catch (error) {

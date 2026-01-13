@@ -174,6 +174,7 @@ const initialMockPosts: BlogPost[] = [
         },
         {
           type: "delimiter",
+          data: {},
         },
         {
           type: "header",
@@ -670,6 +671,7 @@ const initialMockPosts: BlogPost[] = [
         },
         {
           type: "delimiter",
+          data: {},
         },
         {
           type: "paragraph",
@@ -769,6 +771,7 @@ export function createPost(data: {
     // Или создаем автора на лету из данных пользователя
     else if (data.author.id && data.author.name) {
       author = {
+        id: data.author.id,
         slug: data.author.id,
         name: data.author.name,
         title: data.author.role === "ADMIN" ? "Администратор" : "Редактор",

@@ -130,14 +130,14 @@ export default function EditorWrapper({
       },
       tools: {
         paragraph: {
-          class: Paragraph,
+          class: Paragraph as any,
           inlineToolbar: true,
           config: {
             placeholder: "Введите текст",
           },
         },
         header: {
-          class: Header,
+          class: Header as any,
           inlineToolbar: true,
           config: {
             placeholder: "Введите заголовок",
@@ -147,7 +147,7 @@ export default function EditorWrapper({
           shortcut: "CMD+SHIFT+H",
         },
         list: {
-          class: List,
+          class: List as any,
           inlineToolbar: true,
           config: {
             defaultStyle: "unordered",
@@ -155,11 +155,11 @@ export default function EditorWrapper({
           shortcut: "CMD+SHIFT+L",
         },
         checklist: {
-          class: Checklist,
+          class: Checklist as any,
           inlineToolbar: true,
         },
         quote: {
-          class: Quote,
+          class: Quote as any,
           inlineToolbar: true,
           config: {
             quotePlaceholder: "Введите цитату",
@@ -168,7 +168,7 @@ export default function EditorWrapper({
           shortcut: "CMD+SHIFT+Q",
         },
         warning: {
-          class: Warning,
+          class: Warning as any,
           inlineToolbar: true,
           config: {
             titlePlaceholder: "Заголовок",
@@ -176,29 +176,29 @@ export default function EditorWrapper({
           },
         },
         marker: {
-          class: Marker,
+          class: Marker as any,
           shortcut: "CMD+SHIFT+M",
         },
         code: {
-          class: Code,
+          class: Code as any,
           config: {
             placeholder: "Введите код",
           },
           shortcut: "CMD+SHIFT+C",
         },
-        delimiter: Delimiter,
+        delimiter: Delimiter as any,
         inlineCode: {
-          class: InlineCode,
+          class: InlineCode as any,
           shortcut: "CMD+SHIFT+K",
         },
         linkTool: {
-          class: LinkTool,
+          class: LinkTool as any,
           config: {
             endpoint: "/api/fetchUrl", // Mock endpoint
           },
         },
         image: {
-          class: Image,
+          class: Image as any,
           config: {
             uploader: {
               uploadByFile(file: File) {
@@ -227,7 +227,7 @@ export default function EditorWrapper({
           },
         },
         embed: {
-          class: Embed,
+          class: Embed as any,
           config: {
             services: {
               youtube: true,
@@ -241,14 +241,14 @@ export default function EditorWrapper({
           },
         },
         table: {
-          class: Table,
+          class: Table as any,
           inlineToolbar: true,
           config: {
             rows: 2,
             cols: 3,
           },
         },
-        underline: Underline,
+        underline: Underline as any,
       },
       onChange: async () => {
         if (onChange && editorRef.current) {
