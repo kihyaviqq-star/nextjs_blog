@@ -280,7 +280,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Это ваш публичный URL профиля:{" "}
                   <code className="bg-secondary px-1 rounded">
-                    https://ai-stat.ru/{username || "username"}
+                    /{username || "username"}
                   </code>
                   <br />
                   <span className="text-xs opacity-75">

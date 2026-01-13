@@ -86,7 +86,7 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="editor@ai-stat.ru"
+                placeholder="example@email.com"
                 required
                 disabled={isLoading}
               />
