@@ -52,9 +52,22 @@ function Block({ block }: { block: EditorBlock }) {
       return <EmbedBlock data={block.data} />;
     case "linkTool":
       return <LinkToolBlock data={block.data} />;
+    case "raw":
+      return <RawBlock data={block.data} />;
     default:
       return null;
   }
+}
+
+function RawBlock({ data }: { data: any }) {
+  if (!data || !data.html) return null;
+  
+  return (
+    <div 
+      className="my-6"
+      dangerouslySetInnerHTML={{ __html: data.html }}
+    />
+  );
 }
 
 function HeaderBlock({ data }: { data: any }) {

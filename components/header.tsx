@@ -35,12 +35,20 @@ export function Header() {
             ) : session?.user ? (
               <>
                 {canWrite && (
-                  <Button asChild size="sm" className="gap-2">
-                    <Link href="/dashboard/articles/create">
-                      <PenSquare className="w-4 h-4" />
-                      <span className="hidden lg:inline">Написать статью</span>
-                    </Link>
-                  </Button>
+                  <>
+                    <Button asChild size="sm" className="gap-2" variant="outline">
+                      <Link href="/admin/generator">
+                        <span className="hidden lg:inline">Генерация ИИ</span>
+                        <span className="lg:hidden">ИИ</span>
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" className="gap-2">
+                      <Link href="/dashboard/articles/create">
+                        <PenSquare className="w-4 h-4" />
+                        <span className="hidden lg:inline">Написать статью</span>
+                      </Link>
+                    </Button>
+                  </>
                 )}
                 <UserMenu />
               </>

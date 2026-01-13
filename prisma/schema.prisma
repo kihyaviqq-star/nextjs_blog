@@ -27,6 +27,8 @@ model User {
   vk            String?
   twitter       String?
   github        String?
+  linkedin      String?
+  website       String?
   
   // Timestamps
   createdAt     DateTime  @default(now())

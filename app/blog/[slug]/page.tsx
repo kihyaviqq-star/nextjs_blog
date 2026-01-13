@@ -148,7 +148,7 @@ export default async function BlogPostPage({ params }: PageProps) {
               {post.title}
             </h1>
             <p className="text-xl text-muted-foreground mb-8">
-              {post.excerpt}
+              {post.excerpt.replace(/<[^>]*>?/gm, '')}
             </p>
 
             {/* Meta */}
