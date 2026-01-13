@@ -7,7 +7,7 @@ export function Footer() {
             © 2026 ai-stat.ru — Все права защищены
           </div>
           <div className="text-center md:text-right">
-            Сделано с <span className="text-red-500">❤</span> для всех, кто интересуется ИИ
+            Сделано с <span className="text-red-500">❤</span> любовью
           </div>
         </div>
       </div>

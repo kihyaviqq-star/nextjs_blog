@@ -160,7 +160,7 @@ export default function EditPostPage({ params }: PageProps) {
   };
 
   const handlePreview = () => {
-    router.push(`/blog/${slug}`);
+    router.push(`/${slug}`);
   };
 
   const addTag = () => {

@@ -160,7 +160,7 @@ export default async function DashboardPage() {
                         </TableCell>
                         <TableCell className="min-w-[300px]">
                           <Link
-                            href={`/blog/${post.slug}`}
+                            href={`/${post.slug}`}
                             className="font-medium hover:text-primary transition-colors"
                           >
                             {post.title}

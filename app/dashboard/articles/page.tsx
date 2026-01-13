@@ -242,7 +242,7 @@ export default function ArticlesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <Link
-                        href={`/blog/${post.slug}`}
+                        href={`/${post.slug}`}
                         className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 mb-2 block"
                       >
                         {post.title}
@@ -360,7 +360,7 @@ export default function ArticlesPage() {
                             {/* Title */}
                             <div className="flex-1 min-w-0">
                               <Link
-                                href={`/blog/${post.slug}`}
+                                href={`/${post.slug}`}
                                 className="font-medium text-sm hover:text-primary transition-colors line-clamp-2"
                               >
                                 {post.title}

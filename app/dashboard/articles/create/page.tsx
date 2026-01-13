@@ -130,7 +130,7 @@ export default function CreatePostPage() {
         
         // Небольшая задержка для отображения toast перед redirect
         setTimeout(() => {
-          router.push(`/blog/${data.slug}`);
+          router.push(`/${data.slug}`);
         }, 500);
       } else {
         const errorData = await response.json().catch(() => ({}));
