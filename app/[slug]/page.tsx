@@ -494,12 +494,8 @@ export default async function DynamicPage({ params }: PageProps) {
   // Decode slug
   const decodedSlug = decodeURIComponent(slug);
 
-  // Check if slug is reserved
-  if (isUsernameReserved(decodedSlug)) {
-    notFound();
-  }
-
   // Try to find a post first (priority to articles)
+  // Articles can use any slug, even if it's in reserved list
   const post = await prisma.post.findUnique({
     where: { slug: decodedSlug },
     include: {
@@ -519,6 +515,11 @@ export default async function DynamicPage({ params }: PageProps) {
   }
 
   // If no post found, try to find a user
+  // Only check reserved usernames for user profiles, not for articles
+  if (isUsernameReserved(decodedSlug)) {
+    notFound();
+  }
+
   const user = await prisma.user.findFirst({
     where: {
       username: decodedSlug.toLowerCase(),
