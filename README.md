@@ -65,8 +65,8 @@
 
 ```bash
 # 1. Клонировать репозиторий
-git clone <your-repo-url>
-cd blog
+git clone https://github.com/kihyaviqq-star/nextjs_blog
+cd nextjs_blog
 
 # 2. Установить зависимости
 npm install
