@@ -202,7 +202,7 @@ export default function RegisterPage() {
       </div>
       </div>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }
