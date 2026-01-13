@@ -102,3 +102,16 @@ model Post {
   @@index([views]) // Index for sorting by popularity
   @@index([publishedAt]) // Index for navigation
 }
+
+// Site Settings (Singleton)
+model SiteSettings {
+  id              String   @id @default("default")
+  siteName        String   @default("Blog")
+  logoUrl         String?
+  faviconUrl      String?
+  metaDescription String?  @default("Информационный портал о последних новостях и разработках в области искусственного интеллекта")
+  footerText      String?  @default("Сделано с ❤ для всех, кто интересуется ИИ")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

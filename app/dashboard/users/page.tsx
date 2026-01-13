@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -56,7 +56,7 @@ export default async function UsersPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <HeaderClientWrapper />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-6">
           <Link href="/dashboard/articles">
@@ -178,7 +178,7 @@ export default async function UsersPage() {
         </Card>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }

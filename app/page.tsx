@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { SearchFilterBar } from "@/components/search-filter-bar";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,7 +98,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {postsWithParsedTags.map((post) => (
-            <Link key={post.id} href={`/blog/${post.slug}`}>
+            <Link key={post.id} href={`/${post.slug}`}>
               <SpotlightCard className="h-full cursor-pointer">
                 <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden">
                   {post.coverImage && (
@@ -257,18 +258,7 @@ export default async function Home({ searchParams }: HomeProps) {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border mt-16">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <div>© 2026 ai-stat.ru — Все права защищены</div>
-            <div className="text-center md:text-right">
-              Сделано с <span className="text-red-500">❤</span> для всех, кто
-              интересуется ИИ
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

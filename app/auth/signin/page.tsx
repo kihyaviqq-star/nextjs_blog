@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Footer } from "@/components/footer";
+import { FooterClient } from "@/components/footer";
 import { ArrowLeft, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
@@ -86,7 +86,7 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="editor@ai-stat.ru"
+                placeholder="example@email.com"
                 required
                 disabled={isLoading}
               />
@@ -163,7 +163,7 @@ export default function SignInPage() {
       </div>
       </div>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }

@@ -9,19 +9,16 @@ export default function NotFound() {
         <div className="flex justify-center">
           <FileQuestion className="w-24 h-24 text-muted-foreground" />
         </div>
-        <h1 className="text-4xl font-bold">Пост не найден</h1>
+        <h1 className="text-4xl font-bold">Страница не найдена</h1>
         <p className="text-lg text-muted-foreground max-w-md">
-          Пост, который вы ищете, не существует или был удален.
+          Страница, которую вы ищете, не существует или была удалена.
         </p>
         <div className="flex gap-4 justify-center">
-          <Link href="/blog">
+          <Link href="/">
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Назад к блогу
+              На главную
             </Button>
-          </Link>
-          <Link href="/">
-            <Button variant="outline">На главную</Button>
           </Link>
         </div>
       </div>

@@ -42,15 +42,6 @@ export function UserMenu() {
       ? `/${session.user.name.toLowerCase().replace(/\s+/g, "-")}` 
       : "/settings"; // Fallback to settings if no username
 
-  // Логирование для отладки
-  console.log("[UserMenu] Rendering with session:", {
-    name: session.user.name,
-    username: username,
-    profileLink: profileLink,
-    avatarUrl: avatarUrl,
-    role: userRole
-  });
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -77,19 +68,22 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
+        <DropdownMenuLabel asChild>
+          <Link 
+            href={profileLink} 
+            className="flex flex-col space-y-1 cursor-pointer hover:bg-accent rounded-sm transition-colors px-2 py-1.5"
+          >
             <p className="text-sm font-medium leading-none">{session.user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {roleLabel}
             </p>
-          </div>
+          </Link>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={profileLink} className="cursor-pointer">
+          <Link href="/settings" className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
-            <span>Мой профиль</span>
+            <span>Настройки</span>
           </Link>
         </DropdownMenuItem>
         {canManageContent && (
@@ -109,19 +103,21 @@ export function UserMenu() {
           </>
         )}
         {isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/users" className="cursor-pointer">
-              <Users className="mr-2 h-4 w-4" />
-              <span>Пользователи</span>
-            </Link>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/users" className="cursor-pointer">
+                <Users className="mr-2 h-4 w-4" />
+                <span>Пользователи</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings" className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Настройки сайта</span>
+              </Link>
+            </DropdownMenuItem>
+          </>
         )}
-        <DropdownMenuItem asChild>
-          <Link href="/settings" className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Настройки</span>
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-red-600 focus:text-red-600"

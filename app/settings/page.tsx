@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
+import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mail, FileText, Link as LinkIcon, Loader2, Upload } from "lucide-react";
+import { User, Mail, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -180,7 +181,7 @@ export default function SettingsPage() {
   if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <HeaderClientWrapper />
         <main className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -196,7 +197,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <HeaderClientWrapper />
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Настройки профиля</h1>
@@ -211,46 +212,16 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Аватар</CardTitle>
               <CardDescription>
-                URL изображения для вашего профиля
+                Загрузите фото для вашего профиля
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt="Avatar preview"
-                    className="w-20 h-20 rounded-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <User className="w-10 h-10 text-white" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={avatar}
-                    onChange={(e) => setAvatar(e.target.value)}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Вставьте URL изображения или используйте сервис вроде{" "}
-                    <a
-                      href="https://api.dicebear.com/7.x/avataaars/svg"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      DiceBear
-                    </a>
-                  </p>
-                </div>
-              </div>
+            <CardContent>
+              <FileUpload
+                currentUrl={avatar}
+                onUploadComplete={(url) => setAvatar(url)}
+                type="avatar"
+                label="Загрузить аватар"
+              />
             </CardContent>
           </Card>
 
@@ -309,7 +280,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Это ваш публичный URL профиля:{" "}
                   <code className="bg-secondary px-1 rounded">
-                    https://ai-stat.ru/{username || "username"}
+                    /{username || "username"}
                   </code>
                   <br />
                   <span className="text-xs opacity-75">
@@ -442,7 +413,7 @@ export default function SettingsPage() {
         </div>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }
