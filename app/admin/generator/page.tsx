@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { HeaderClientWrapper } from "@/components/header";
-import { FooterClient } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -115,7 +114,7 @@ export default function GeneratorPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <>
       <HeaderClientWrapper />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
@@ -324,8 +323,6 @@ export default function GeneratorPage() {
           </div>
         </div>
       </main>
-
-      <FooterClient />
-    </div>
+    </>
   );
 }
