@@ -458,25 +458,45 @@ export default function EditorWrapper({
           const editor = editorInstance.current;
           if (editor && typeof editor.destroy === 'function') {
             editor.destroy();
-          } else {
-            // Fallback: clear the DOM element if destroy method doesn't exist
-            const holderElement = document.getElementById(staticHolder);
-            if (holderElement) {
-              holderElement.innerHTML = '';
+          }
+          
+          // Always clear the DOM element to ensure clean state
+          const holderElement = document.getElementById(staticHolder);
+          if (holderElement) {
+            // Remove all Editor.js related elements
+            const codexEditor = holderElement.querySelector('.codex-editor');
+            if (codexEditor) {
+              codexEditor.remove();
             }
+            // Clear any remaining content
+            holderElement.innerHTML = '';
           }
           
           editorInstance.current = null;
           isInitialized.current = false;
         } catch (error) {
           console.error("Error destroying editor:", error);
-          // Fallback cleanup
+          // Fallback cleanup - always clear DOM
           const holderElement = document.getElementById(staticHolder);
           if (holderElement) {
+            const codexEditor = holderElement.querySelector('.codex-editor');
+            if (codexEditor) {
+              codexEditor.remove();
+            }
             holderElement.innerHTML = '';
           }
           editorInstance.current = null;
           isInitialized.current = false;
+        }
+      } else {
+        // Even if editorInstance is null, clean up any orphaned DOM elements
+        const holderElement = document.getElementById(staticHolder);
+        if (holderElement) {
+          const codexEditor = holderElement.querySelector('.codex-editor');
+          if (codexEditor) {
+            codexEditor.remove();
+          }
+          holderElement.innerHTML = '';
         }
       }
     };
