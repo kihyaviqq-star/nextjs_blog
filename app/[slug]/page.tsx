@@ -504,6 +504,13 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
 
+  // Get site settings for site name
+  let siteSettings = await prisma.siteSettings.findUnique({
+    where: { id: "default" },
+    select: { siteName: true },
+  });
+  const siteName = siteSettings?.siteName || "Blog";
+
   // Try post first
   const post = await prisma.post.findUnique({
     where: { slug: decodedSlug },
@@ -515,7 +522,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (post) {
     return {
-      title: `${post.title} | AI-Stat`,
+      title: `${post.title} | ${siteName}`,
       description: post.excerpt,
     };
   }
@@ -533,12 +540,12 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (user) {
     return {
-      title: `${user.name || decodedSlug} | AI-Stat`,
+      title: `${user.name || decodedSlug} | ${siteName}`,
       description: user.bio || `Профиль пользователя ${user.name || decodedSlug}`,
     };
   }
 
   return {
-    title: "Страница не найдена | AI-Stat",
+    title: `Страница не найдена | ${siteName}`,
   };
 }

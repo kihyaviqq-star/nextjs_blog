@@ -5,14 +5,51 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { MetadataUpdater } from "@/components/metadata-updater";
+import { prisma } from "@/lib/prisma";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
-// Default metadata - will be updated by client-side component
-export const metadata: Metadata = {
-  title: "Blog",
-  description: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
-};
+// Generate metadata with site settings
+export async function generateMetadata(): Promise<Metadata> {
+  let settings = await prisma.siteSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      siteName: true,
+      metaDescription: true,
+      faviconUrl: true,
+    },
+  });
+
+  // Create default if not exists
+  if (!settings) {
+    settings = await prisma.siteSettings.create({
+      data: {
+        id: "default",
+        siteName: "Blog",
+        metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+      },
+      select: {
+        siteName: true,
+        metaDescription: true,
+        faviconUrl: true,
+      },
+    });
+  }
+
+  const metadata: Metadata = {
+    title: settings.siteName || "Blog",
+    description: settings.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+  };
+
+  // Add favicon if available
+  if (settings.faviconUrl) {
+    metadata.icons = {
+      icon: settings.faviconUrl,
+    };
+  }
+
+  return metadata;
+}
 
 export default function RootLayout({
   children,
