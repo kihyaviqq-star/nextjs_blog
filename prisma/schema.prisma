@@ -104,7 +104,7 @@ model Post {
 // Site Settings (Singleton)
 model SiteSettings {
   id              String   @id @default("default")
-  siteName        String   @default("AI Al-Stat")
+  siteName        String   @default("Blog")
   logoUrl         String?
   faviconUrl      String?
   metaDescription String?  @default("Информационный портал о последних новостях и разработках в области искусственного интеллекта")

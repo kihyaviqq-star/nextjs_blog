@@ -26,7 +26,7 @@ export default function SiteSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [settings, setSettings] = useState<SiteSettings>({
     id: "default",
-    siteName: "AI Al-Stat",
+    siteName: "Blog",
     logoUrl: null,
     faviconUrl: null,
     metaDescription: null,
@@ -131,7 +131,7 @@ export default function SiteSettingsPage() {
                   type="text"
                   value={settings.siteName}
                   onChange={(e) => handleChange("siteName", e.target.value)}
-                  placeholder="AI Al-Stat"
+                  placeholder="Название вашего сайта"
                   required
                 />
                 <p className="text-xs text-muted-foreground">
