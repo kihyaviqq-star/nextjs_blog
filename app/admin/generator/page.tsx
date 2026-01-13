@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { HeaderClientWrapper } from "@/components/header";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   getNewsAction, 
@@ -117,7 +119,17 @@ export default function GeneratorPage() {
     <>
       <HeaderClientWrapper />
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+      {/* Back Button */}
+      <div className="container mx-auto px-4 pt-6 pb-6 max-w-7xl">
+        <Link href="/">
+          <Button variant="outline" size="sm" className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Все новости
+          </Button>
+        </Link>
+      </div>
+      
+      <main className="flex-1 container mx-auto px-4 pb-8 max-w-7xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Генератор статей ИИ</h1>
           <p className="text-muted-foreground">
