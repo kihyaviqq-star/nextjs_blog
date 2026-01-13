@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
     await writeFile(filepath, buffer);
 
-    // Return the public URL
+    // Return the public URL (reuse folderName variable)
     const publicUrl = `/uploads/${folderName}/${uniqueFilename}`;
 
     return NextResponse.json({
