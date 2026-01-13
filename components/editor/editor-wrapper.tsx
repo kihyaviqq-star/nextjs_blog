@@ -110,6 +110,7 @@ export default function EditorWrapper({
       }, 500); // Increased debounce to 500ms for stability
     };
   }, [onChange]);
+  }, [onChange]);
 
   // Initialize editor only once
   useEffect(() => {
@@ -400,25 +401,54 @@ export default function EditorWrapper({
       // Clear onChange timeout
       if (onChangeTimeoutRef.current) {
         clearTimeout(onChangeTimeoutRef.current);
+        onChangeTimeoutRef.current = null;
       }
 
       // Destroy editor instance
       if (ejInstance.current) {
         try {
-          // Clean up plugins
-          if (pluginsRef.current.undo) {
-            pluginsRef.current.undo.destroy?.();
+          // Clean up plugins first
+          if (pluginsRef.current.undo && typeof pluginsRef.current.undo.destroy === 'function') {
+            try {
+              pluginsRef.current.undo.destroy();
+            } catch (e) {
+              // Ignore plugin cleanup errors
+            }
           }
-          if (pluginsRef.current.dragDrop) {
-            pluginsRef.current.dragDrop.destroy?.();
+          if (pluginsRef.current.dragDrop && typeof pluginsRef.current.dragDrop.destroy === 'function') {
+            try {
+              pluginsRef.current.dragDrop.destroy();
+            } catch (e) {
+              // Ignore plugin cleanup errors
+            }
           }
           
-          // Destroy editor
-          ejInstance.current.destroy();
+          // Clear plugins reference
+          pluginsRef.current = {};
+          
+          // Destroy editor only if method exists
+          const editor = ejInstance.current;
+          if (editor && typeof editor.destroy === 'function') {
+            editor.destroy();
+          } else {
+            // Fallback: clear the DOM element if destroy method doesn't exist
+            const holderElement = document.getElementById(holder);
+            if (holderElement) {
+              holderElement.innerHTML = '';
+            }
+          }
+          
           ejInstance.current = null;
           isInitialized.current = false;
         } catch (error) {
           console.error("Error destroying editor:", error);
+          // Fallback cleanup
+          const holderElement = document.getElementById(holder);
+          if (holderElement) {
+            holderElement.innerHTML = '';
+          }
+          ejInstance.current = null;
+          isInitialized.current = false;
         }
       }
     };
