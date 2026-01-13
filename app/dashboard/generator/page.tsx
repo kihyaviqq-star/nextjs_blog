@@ -15,12 +15,12 @@ import {
 } from "./actions";
 import { NewsItem as NewsItemType } from "@/lib/news-fetcher";
 import { GeneratedArticle } from "@/lib/ai-client";
+import { Sparkles, Loader2, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 interface NewsItem extends NewsItemType {
   id: string;
 }
-import { Sparkles, Loader2, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
 
 export default function GeneratorPage() {
   const router = useRouter();
