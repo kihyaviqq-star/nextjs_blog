@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { cache } from "react";
 import { HeaderClient } from "./header-client";
+export { HeaderClientWrapper } from "./header-client-wrapper";
+
 
 // Cache the settings fetch to avoid duplicate queries
 const getSiteSettings = cache(async () => {
