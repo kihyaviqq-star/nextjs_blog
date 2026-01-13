@@ -145,20 +145,6 @@ export default function SignInPage() {
               </Link>
             </p>
           </div>
-
-          <div className="mt-6 p-4 rounded-lg bg-secondary/50 border border-border/50">
-            <p className="text-sm text-muted-foreground mb-2 font-medium">
-              Тестовые учетные данные:
-            </p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p>
-                <strong>Email:</strong> editor@ai-stat.ru
-              </p>
-              <p>
-                <strong>Пароль:</strong> editor123
-              </p>
-            </div>
-          </div>
         </Card>
       </div>
       </div>
