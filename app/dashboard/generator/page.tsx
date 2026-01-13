@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +14,8 @@ import { GeneratedArticle } from '@/lib/ai-client';
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 
 const Editor = dynamic(() => import('@/components/editor'), { 
   ssr: false,
@@ -120,15 +121,17 @@ export default function GeneratorPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Back Button */}
-      <div className="container mx-auto px-4 pt-6 pb-2">
-        <Button variant="ghost" onClick={() => router.back()} className="gap-2 pl-0 hover:pl-2 transition-all">
-          <ArrowLeft className="w-4 h-4" />
-          Назад
-        </Button>
-      </div>
+      <HeaderClientWrapper />
+      
+      <main className="flex-grow container mx-auto px-4 py-4">
+        {/* Back Button */}
+        <div className="mb-4">
+          <Button variant="ghost" onClick={() => router.back()} className="gap-2 pl-0 hover:pl-2 transition-all">
+            <ArrowLeft className="w-4 h-4" />
+            Назад
+          </Button>
+        </div>
 
-      <div className="container mx-auto px-4 py-4 flex-1">
         <div className="flex flex-col md:flex-row gap-6 h-full">
         
         {/* Левая колонка: Новости */}
@@ -308,7 +311,9 @@ export default function GeneratorPage() {
           </Card>
         </div>
         </div>
-      </div>
+      </main>
+
+      <FooterClient />
     </div>
   );
 }

@@ -373,7 +373,7 @@ export default function CreatePostPage() {
         </div>
 
         {/* Bottom Actions */}
-        <div className="mt-8 flex justify-end gap-2 pb-8 min-h-[100px]">
+        <div className="mt-8 flex justify-end gap-4 pb-8 min-h-[100px]">
           <Link href="/dashboard/articles">
             <Button variant="outline" size="lg">
               Отмена
