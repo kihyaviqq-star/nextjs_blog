@@ -82,7 +82,7 @@ export default function EditorWrapper({
   const initialDataRef = useRef<OutputData | null>(null);
   const pluginsRef = useRef<{ undo?: any; dragDrop?: any }>({});
   const dataLoadedRef = useRef(false); // Track if initial data has been loaded
-  const staticHolder = useMemo(() => holder || "editorjs-container", [holder]);
+  const holderRef = useRef<HTMLDivElement>(null);
 
   // Store initial data once and never change it
   if (initialDataRef.current === null) {
@@ -124,22 +124,17 @@ export default function EditorWrapper({
     if (typeof window === "undefined") return;
     if (editorInstance.current || isInitialized.current) return;
 
-    const holderElement = document.getElementById(staticHolder);
+    const holderElement = holderRef.current;
     if (!holderElement) {
-      console.error(`Editor holder element with id "${staticHolder}" not found`);
+      console.error("Editor holder element not found");
       return;
     }
 
-    // Double check: ensure holder element is empty before initializing
-    // This prevents duplicate editors if component re-renders
-    // Check for existing Editor.js instances (codex-editor class)
-    if (holderElement.querySelector('.codex-editor')) {
-      console.warn(`Editor "${staticHolder}" already initialized, skipping`);
-      return;
-    }
-
-    // Clear any existing content in holder
-    holderElement.innerHTML = '';
+    // Create a unique child element for this editor instance
+    // This isolates the editor's DOM from previous instances that might not have cleaned up yet (race condition)
+    const editorHost = document.createElement('div');
+    editorHost.className = 'editor-host-instance';
+    holderElement.appendChild(editorHost);
 
     // Use initial data only, ensure strict structure
     const normalizedData = {
@@ -147,7 +142,7 @@ export default function EditorWrapper({
     };
 
     const editor = new EditorJS({
-      holder: staticHolder,
+      holder: editorHost, // Render into our isolated host element
       placeholder: "Начните писать свой контент...",
       data: normalizedData,
       autofocus: false,
@@ -201,6 +196,7 @@ export default function EditorWrapper({
             warning: {
               Title: "Заголовок",
               Message: "Сообщение",
+              // ...
             },
             link: {
               "Add a link": "Добавить ссылку",
@@ -261,6 +257,9 @@ export default function EditorWrapper({
         checklist: {
           class: Checklist as any,
           inlineToolbar: true,
+          config: {
+            placeholder: "Элемент списка",
+          },
         },
         quote: {
           class: Quote as any,
@@ -379,6 +378,7 @@ export default function EditorWrapper({
               instagram: true,
               facebook: true,
               vimeo: true,
+              rutube: true,
             },
           },
         },
@@ -396,17 +396,20 @@ export default function EditorWrapper({
     });
 
     editorInstance.current = editor;
+    isInitialized.current = true;
 
     // Initialize plugins after editor is ready
     editor.isReady
       .then(() => {
         const currentEditor = editorInstance.current;
         if (!currentEditor) {
-          console.error("Editor instance is null after isReady");
+          // This happens if editor was destroyed before ready (Strict Mode race condition)
+          // Since we use isolated DOM elements, we just need to ensure we don't leave memory leaks
+          if (typeof editor.destroy === 'function') {
+            try { editor.destroy(); } catch (e) {}
+          }
           return;
         }
-        
-        isInitialized.current = true;
         
         try {
           // Initialize plugins only if editor exists
@@ -460,47 +463,30 @@ export default function EditorWrapper({
             editor.destroy();
           }
           
-          // Always clear the DOM element to ensure clean state
-          const holderElement = document.getElementById(staticHolder);
-          if (holderElement) {
-            // Remove all Editor.js related elements
-            const codexEditor = holderElement.querySelector('.codex-editor');
-            if (codexEditor) {
-              codexEditor.remove();
-            }
-            // Clear any remaining content
-            holderElement.innerHTML = '';
+          // Remove the isolated host element
+          if (editorHost && editorHost.parentNode) {
+            editorHost.parentNode.removeChild(editorHost);
           }
           
           editorInstance.current = null;
           isInitialized.current = false;
         } catch (error) {
           console.error("Error destroying editor:", error);
-          // Fallback cleanup - always clear DOM
-          const holderElement = document.getElementById(staticHolder);
-          if (holderElement) {
-            const codexEditor = holderElement.querySelector('.codex-editor');
-            if (codexEditor) {
-              codexEditor.remove();
-            }
-            holderElement.innerHTML = '';
+          // Fallback cleanup - always remove host
+          if (editorHost && editorHost.parentNode) {
+            editorHost.parentNode.removeChild(editorHost);
           }
           editorInstance.current = null;
           isInitialized.current = false;
         }
       } else {
-        // Even if editorInstance is null, clean up any orphaned DOM elements
-        const holderElement = document.getElementById(staticHolder);
-        if (holderElement) {
-          const codexEditor = holderElement.querySelector('.codex-editor');
-          if (codexEditor) {
-            codexEditor.remove();
-          }
-          holderElement.innerHTML = '';
+        // Even if editorInstance is null, remove the host element
+        if (editorHost && editorHost.parentNode) {
+          editorHost.parentNode.removeChild(editorHost);
         }
       }
     };
-  }, [staticHolder, handleChange]); // Only depend on static holder and stable handleChange
+  }, [handleChange]); // Only depend on stable handleChange
 
   // Handle external data updates ONLY on first load (for editing existing posts)
   // This should NOT re-run on every data change - editor is uncontrolled after init
@@ -544,7 +530,7 @@ export default function EditorWrapper({
       className="prose prose-invert dark:prose-invert max-w-none editor-container"
       data-theme={theme}
     >
-      <div id={staticHolder} className="editor-holder" />
+      <div ref={holderRef} className="editor-holder" />
     </div>
   );
 }
