@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { HeaderClientWrapper } from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, X, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   getNewsAction, 
@@ -15,8 +18,21 @@ import {
 } from "./actions";
 import { NewsItem as NewsItemType } from "@/lib/news-fetcher";
 import { GeneratedArticle } from "@/lib/ai-client";
-import { Sparkles, Loader2, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, ExternalLink, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { OutputData } from "@editorjs/editorjs";
+
+const EditorWrapper = dynamic(() => import("@/components/editor/editor-wrapper"), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-[400px] flex items-center justify-center border border-border rounded-lg bg-secondary/20">
+      <div className="text-center space-y-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="text-sm text-muted-foreground">Загрузка редактора...</p>
+      </div>
+    </div>
+  ),
+});
 
 interface NewsItem extends NewsItemType {
   id: string;
@@ -27,19 +43,44 @@ export default function GeneratorPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [generatingCover, setGeneratingCover] = useState(false);
   const [generatedArticle, setGeneratedArticle] = useState<GeneratedArticle | null>(null);
+  const [editorData, setEditorData] = useState<OutputData | undefined>();
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+
+  // Convert GeneratedArticle blocks to Editor.js format
+  const articleToEditorData = useMemo(() => {
+    if (!generatedArticle) return undefined;
+    return {
+      blocks: generatedArticle.blocks,
+      time: Date.now(),
+      version: "2.29.1"
+    } as OutputData;
+  }, [generatedArticle]);
 
   useEffect(() => {
     loadNews();
   }, []);
 
+  useEffect(() => {
+    if (articleToEditorData) {
+      setEditorData(articleToEditorData);
+    }
+  }, [articleToEditorData]);
+
+  useEffect(() => {
+    if (generatedArticle) {
+      setTags(generatedArticle.tags || []);
+    }
+  }, [generatedArticle]);
+
   const loadNews = async () => {
     setLoading(true);
     const result = await getNewsAction();
     if (result.success && result.data) {
-      // Добавляем id к каждой новости
       setNews(result.data.map((item, index) => ({
         ...item,
         id: `news-${index}-${Date.now()}`
@@ -56,9 +97,10 @@ export default function GeneratorPage() {
     setGenerating(newsItem.id);
     setSelectedNews(newsItem);
     setGeneratedArticle(null);
+    setEditorData(undefined);
+    setTags([]);
 
     try {
-      // Генерируем статью
       const context = newsItem.snippet || newsItem.title || '';
       const articleResult = await generateArticleAction(newsItem.title, context);
       
@@ -68,18 +110,6 @@ export default function GeneratorPage() {
 
       const article = articleResult.data;
       setGeneratedArticle(article);
-
-      // Генерируем обложку
-      const summary = article.blocks
-        .find(b => b.type === "paragraph")?.data?.text
-        ?.substring(0, 200) || article.title;
-
-      const imageResult = await generateImageAction(article.title, summary);
-      
-      if (imageResult.success && imageResult.imageUrl) {
-        article.coverImage = imageResult.imageUrl;
-        setGeneratedArticle({ ...article });
-      }
 
       toast.success("Статья успешно сгенерирована!");
     } catch (error: any) {
@@ -91,12 +121,58 @@ export default function GeneratorPage() {
     }
   };
 
+  const handleGenerateCover = async () => {
+    if (!generatedArticle) return;
+
+    setGeneratingCover(true);
+    try {
+      const summary = generatedArticle.blocks
+        .find(b => b.type === "paragraph")?.data?.text
+        ?.substring(0, 200) || generatedArticle.title;
+
+      const imageResult = await generateImageAction(generatedArticle.title, summary);
+      
+      if (imageResult.success && imageResult.imageUrl) {
+        setGeneratedArticle({
+          ...generatedArticle,
+          coverImage: imageResult.imageUrl
+        });
+        toast.success("Обложка успешно сгенерирована!");
+      } else {
+        throw new Error(imageResult.error || "Ошибка генерации обложки");
+      }
+    } catch (error: any) {
+      toast.error("Ошибка генерации обложки", {
+        description: error.message || "Попробуйте позже"
+      });
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
   const handlePublish = async () => {
     if (!generatedArticle) return;
 
     setPublishing(true);
     try {
-      const result = await publishArticleAction(generatedArticle);
+      const articleToPublish: GeneratedArticle = {
+        ...generatedArticle,
+        tags: tags,
+        blocks: editorData?.blocks || generatedArticle.blocks
+      };
+
+      const result = await publishArticleAction(articleToPublish);
       
       if (result.success) {
         toast.success("Статья успешно опубликована!");
@@ -255,6 +331,8 @@ export default function GeneratorPage() {
                         onClick={() => {
                           setGeneratedArticle(null);
                           setSelectedNews(null);
+                          setEditorData(undefined);
+                          setTags([]);
                         }}
                       >
                         Очистить
@@ -263,54 +341,111 @@ export default function GeneratorPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {generatedArticle.coverImage && (
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                      <img
-                        src={generatedArticle.coverImage}
-                        alt={generatedArticle.title}
-                        className="w-full h-full object-cover"
-                      />
+                  {/* Cover Image */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold">Обложка:</h3>
+                      {!generatedArticle.coverImage && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGenerateCover}
+                          disabled={generatingCover}
+                          className="gap-2"
+                        >
+                          {generatingCover ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Генерация...
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon className="w-4 h-4" />
+                              Сгенерировать обложку
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  )}
+                    {generatedArticle.coverImage ? (
+                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
+                        <img
+                          src={generatedArticle.coverImage}
+                          alt={generatedArticle.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-video rounded-lg border border-dashed border-border flex items-center justify-center bg-secondary/20">
+                        <p className="text-sm text-muted-foreground">Обложка не установлена</p>
+                      </div>
+                    )}
+                  </div>
 
+                  {/* Tags */}
                   <div>
                     <h3 className="font-semibold mb-2">Теги:</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {generatedArticle.tags.map((tag, i) => (
-                        <span
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {tags.map((tag, i) => (
+                        <Badge
                           key={i}
-                          className="px-2 py-1 bg-secondary rounded text-xs"
+                          variant="secondary"
+                          className="gap-1 pr-1"
                         >
                           {tag}
-                        </span>
+                          <button
+                            onClick={() => handleRemoveTag(tag)}
+                            className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                            type="button"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
                       ))}
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-semibold mb-2">Содержимое:</h3>
-                    <div className="text-sm text-muted-foreground space-y-2 max-h-[300px] overflow-y-auto p-4 bg-secondary/30 rounded-lg">
-                      {generatedArticle.blocks.map((block, i) => {
-                        if (block.type === "paragraph") {
-                          return (
-                            <p key={i} className="mb-2">
-                              {block.data?.text?.replace(/<[^>]*>/g, "") || ""}
-                            </p>
-                          );
-                        } else if (block.type === "header") {
-                          const level = block.data?.level || 2;
-                          const Tag = `h${level}` as keyof JSX.IntrinsicElements;
-                          return (
-                            <Tag key={i} className="font-semibold mt-4 mb-2">
-                              {block.data?.text || ""}
-                            </Tag>
-                          );
-                        }
-                        return null;
-                      })}
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddTag();
+                          }
+                        }}
+                        placeholder="Добавить тег"
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddTag}
+                        className="gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
 
+                  {/* Editor.js Content */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Содержимое:</h3>
+                    <div className="border border-border rounded-lg overflow-hidden">
+                      {editorData ? (
+                        <EditorWrapper
+                          data={editorData}
+                          onChange={setEditorData}
+                          holder="editorjs-generator"
+                        />
+                      ) : (
+                        <div className="min-h-[400px] flex items-center justify-center bg-secondary/20">
+                          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Publish Button */}
                   <Button
                     onClick={handlePublish}
                     disabled={publishing}

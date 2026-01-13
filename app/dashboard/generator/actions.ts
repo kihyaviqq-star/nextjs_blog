@@ -77,6 +77,12 @@ export async function publishArticleAction(article: GeneratedArticle): Promise<{
       return { success: false, error: 'User not found' };
     }
 
+    // Extract first paragraph for excerpt (strip HTML tags)
+    const firstParagraph = article.blocks.find(b => b.type === 'paragraph');
+    const excerptText = firstParagraph?.data?.text 
+      ? firstParagraph.data.text.replace(/<[^>]*>/g, '').substring(0, 150) + '...'
+      : '';
+
     // Сохраняем в БД
     await prisma.post.create({
       data: {
@@ -88,9 +94,9 @@ export async function publishArticleAction(article: GeneratedArticle): Promise<{
           blocks: article.blocks,
           version: '2.29.1'
         }),
-        excerpt: article.blocks.find(b => b.type === 'paragraph')?.data?.text?.substring(0, 150) + '...' || '',
+        excerpt: excerptText,
         tags: JSON.stringify(article.tags),
-        coverImage: article.coverImage,
+        coverImage: article.coverImage || null,
         readTime: '5 мин', // Placeholder
         authorId: user.id,
         publishedAt: new Date(),
@@ -98,6 +104,7 @@ export async function publishArticleAction(article: GeneratedArticle): Promise<{
     });
     
     revalidatePath('/dashboard');
+    revalidatePath('/');
     return { success: true };
   } catch (error: any) {
     console.error('Publish error:', error);

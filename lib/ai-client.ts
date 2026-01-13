@@ -58,13 +58,52 @@ export async function generateImagePrompt(topic: string, summary: string): Promi
 }
 
 export async function generateImage(prompt: string): Promise<string> {
-  // Использование Pollinations.ai (бесплатно, работает без ключа)
-  // Мы используем сгенерированный OpenRouter промпт для получения уникальной картинки в нужном стиле
-  const encodedPrompt = encodeURIComponent(prompt);
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
+  if (!OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY is not set');
+
+  const imageModel = process.env.OPENROUTER_IMAGE_MODEL || 'bytedance-seed/seedream-4.5';
   
-  // Проверяем доступность (опционально)
-  return imageUrl;
+  try {
+    // Try OpenRouter image generation API first
+    const response = await fetch('https://openrouter.ai/api/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': SITE_URL,
+        'X-Title': SITE_NAME,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: imageModel,
+        prompt: prompt,
+        n: 1,
+        size: '1200x630',
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      // OpenRouter image API typically returns data array with url or b64_json
+      if (data.data && data.data[0]) {
+        if (data.data[0].url) {
+          return data.data[0].url;
+        } else if (data.data[0].b64_json) {
+          // Convert base64 to data URL
+          return `data:image/png;base64,${data.data[0].b64_json}`;
+        }
+      }
+    }
+
+    // Fallback to Pollinations.ai if OpenRouter doesn't work
+    const encodedPrompt = encodeURIComponent(prompt);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
+    return imageUrl;
+  } catch (error) {
+    console.error('Image generation error, using fallback:', error);
+    // Fallback to Pollinations.ai
+    const encodedPrompt = encodeURIComponent(prompt);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
+    return imageUrl;
+  }
 }
 
 export async function generateArticle(topic: string, context: string, model?: string): Promise<GeneratedArticle> {
@@ -77,21 +116,21 @@ export async function generateArticle(topic: string, context: string, model?: st
   const systemPrompt = `Ты — профессиональный IT-журналист, эксперт по продуктам Microsoft. 
   Твоя задача — взять техническую новость и написать увлекательную статью на русском языке. 
   
-  Формат вывода: EditorJS JSON Blocks.
-  Ты должен вернуть массив блоков (blocks) внутри JSON объекта.
+  Формат вывода: EditorJS JSON Blocks (строго совместимый с Editor.js).
+  Ты должен вернуть массив блоков (blocks) внутри JSON объекта в формате Editor.js.
   
   Поддерживаемые типы блоков:
-  1. header (level: 2 или 3)
-  2. paragraph (с поддержкой <b>, <i>, <a href="...">)
-  3. list (style: "unordered" или "ordered")
-  4. quote (text, caption)
-  5. warning (title, message) - используй для важных предупреждений или заметок
-  6. delimiter (без данных)
-  7. code (code) - для команд или кода
+  1. header: { "type": "header", "data": { "text": "Заголовок", "level": 2 } }
+  2. paragraph: { "type": "paragraph", "data": { "text": "Текст с <b>жирным</b> и <i>курсивом</i>" } }
+  3. list: { "type": "list", "data": { "style": "unordered", "items": ["Пункт 1", "Пункт 2"] } }
+  4. quote: { "type": "quote", "data": { "text": "Цитата", "caption": "Автор" } }
+  5. warning: { "type": "warning", "data": { "title": "Заголовок", "message": "Сообщение" } }
+  6. delimiter: { "type": "delimiter", "data": {} }
+  7. code: { "type": "code", "data": { "code": "код здесь" } }
 
   Структура статьи:
   - Введение (Paragraph)
-  - Суть (Header + Paragraphs)
+  - Суть (Header level 2 + Paragraphs)
   - Детали/Списки (List)
   - Цитаты если есть (Quote)
   - Заключение (Paragraph)
@@ -101,15 +140,16 @@ export async function generateArticle(topic: string, context: string, model?: st
   - Экранируй все двойные кавычки внутри контента (\\").
   - Не используй переносы строк (Enter) для форматирования самого JSON объекта.
   - Не используй неэкранированные управляющие символы.
+  - Каждый блок должен иметь правильную структуру с "type" и "data".
 
-  Формат:
+  Формат ответа (строго):
   {
     "title": "Заголовок статьи",
     "blocks": [
       { "type": "paragraph", "data": { "text": "Текст..." } },
       { "type": "header", "data": { "text": "Заголовок раздела", "level": 2 } }
     ],
-    "tags": ["тег1", "тег2"],
+    "tags": ["тег1", "тег2", "тег3"],
     "slug": "url-friendly-slug-transliterated-to-english"
   }`;
 
