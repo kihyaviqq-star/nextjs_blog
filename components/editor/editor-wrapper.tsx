@@ -61,6 +61,10 @@ export default function EditorWrapper({
       holder: holder,
       placeholder: "Начните писать свой контент...",
       data: data,
+      autofocus: false,
+      readOnly: false,
+      defaultBlock: "paragraph",
+      tunes: ["anchor"],
       i18n: {
         messages: {
           ui: {
@@ -80,6 +84,7 @@ export default function EditorWrapper({
                 Add: "Добавить",
                 Filter: "Фильтр",
                 "Nothing found": "Ничего не найдено",
+                "Or paste the link": "Или вставьте ссылку",
               },
             },
           },
@@ -109,6 +114,15 @@ export default function EditorWrapper({
             },
             link: {
               "Add a link": "Добавить ссылку",
+            },
+            image: {
+              Caption: "Описание",
+              "Select an Image": "Выберите изображение",
+              "With border": "С рамкой",
+              "Stretch image": "Растянуть",
+              "With background": "С фоном",
+              "Embed": "Встроить",
+              "Delete": "Удалить",
             },
             stub: {
               "The block can not be displayed correctly.": "Блок не может быть отображен корректно.",
@@ -201,29 +215,64 @@ export default function EditorWrapper({
           class: Image as any,
           config: {
             uploader: {
-              uploadByFile(file: File) {
-                return new Promise((resolve) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    resolve({
-                      success: 1,
-                      file: {
-                        url: reader.result as string,
-                      },
-                    });
+              async uploadByFile(file: File) {
+                try {
+                  const formData = new FormData();
+                  formData.append("file", file);
+                  formData.append("type", "cover"); // Используем cover для изображений в контенте статьи
+
+                  const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || "Ошибка загрузки изображения");
+                  }
+
+                  const data = await response.json();
+                  return {
+                    success: 1,
+                    file: {
+                      url: data.url,
+                    },
                   };
-                  reader.readAsDataURL(file);
-                });
+                } catch (error: any) {
+                  console.error("Image upload error:", error);
+                  return {
+                    success: 0,
+                    error: error.message || "Не удалось загрузить изображение",
+                  };
+                }
               },
-              uploadByUrl(url: string) {
-                return Promise.resolve({
-                  success: 1,
-                  file: {
-                    url: url,
-                  },
-                });
+              async uploadByUrl(url: string) {
+                try {
+                  // Проверяем, что URL валидный
+                  if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
+                    throw new Error("Неверный URL изображения");
+                  }
+                  
+                  return {
+                    success: 1,
+                    file: {
+                      url: url,
+                    },
+                  };
+                } catch (error: any) {
+                  console.error("Image URL error:", error);
+                  return {
+                    success: 0,
+                    error: error.message || "Неверный URL изображения",
+                  };
+                }
               },
             },
+            captionPlaceholder: "Описание изображения (необязательно)",
+            buttonContent: "Выберите изображение",
+            withBorder: false,
+            withBackground: false,
+            stretched: false,
           },
         },
         embed: {
@@ -252,17 +301,26 @@ export default function EditorWrapper({
       },
       onChange: async () => {
         if (onChange && editorRef.current) {
-          const content = await editorRef.current.save();
-          onChange(content);
+          try {
+            const content = await editorRef.current.save();
+            onChange(content);
+          } catch (error) {
+            console.error("Error saving editor content:", error);
+          }
         }
       },
       onReady: () => {
         if (editorRef.current) {
-          new Undo({ editor: editorRef.current });
-          new DragDrop(editorRef.current);
+          try {
+            new Undo({ editor: editorRef.current });
+            new DragDrop(editorRef.current);
+          } catch (error) {
+            console.error("Error initializing editor plugins:", error);
+          }
         }
       },
-      minHeight: 300,
+      minHeight: 400,
+      inlineToolbar: ['bold', 'italic', 'link', 'marker', 'underline', 'inlineCode'],
     });
 
     editorRef.current = editor;
@@ -276,11 +334,34 @@ export default function EditorWrapper({
 
     return () => {
       if (editorRef.current && editorRef.current.destroy) {
-        editorRef.current.destroy();
+        try {
+          editorRef.current.destroy();
+          editorRef.current = null;
+        } catch (error) {
+          console.error("Error destroying editor:", error);
+        }
         isInitialized.current = false;
       }
     };
   }, [initializeEditor]);
+
+  // Update editor when data prop changes (for editing existing posts)
+  useEffect(() => {
+    if (!editorRef.current || !data || isInitialized.current === false) {
+      return;
+    }
+
+    // Check if editor is ready and data actually changed
+    editorRef.current.isReady
+      .then(() => {
+        editorRef.current?.render(data).catch((error: Error) => {
+          console.error("Error rendering editor data:", error);
+        });
+      })
+      .catch((error: Error) => {
+        console.error("Editor not ready:", error);
+      });
+  }, [data]);
 
   return (
     <div 
