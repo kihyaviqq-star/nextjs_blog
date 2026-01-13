@@ -45,7 +45,6 @@ export function SiteLogo() {
           className="h-8 w-auto"
         />
       )}
-      <span className="text-xl font-semibold">{settings.siteName}</span>
     </Link>
   );
 }
