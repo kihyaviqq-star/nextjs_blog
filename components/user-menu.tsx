@@ -77,13 +77,16 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
+        <DropdownMenuLabel asChild>
+          <Link 
+            href={profileLink} 
+            className="flex flex-col space-y-1 cursor-pointer hover:bg-accent rounded-sm transition-colors px-2 py-1.5"
+          >
             <p className="text-sm font-medium leading-none">{session.user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {roleLabel}
             </p>
-          </div>
+          </Link>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
