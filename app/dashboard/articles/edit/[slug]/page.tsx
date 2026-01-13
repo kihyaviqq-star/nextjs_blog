@@ -410,14 +410,14 @@ export default function EditPostPage({ params }: PageProps) {
           </Card>
 
           {/* Editor */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Содержимое статьи</CardTitle>
-              <CardDescription>
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Содержимое статьи</h2>
+              <p className="text-muted-foreground">
                 Используйте редактор для создания богатого контента
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div>
               {editorReady ? (
                 <EditorWrapper
                   key={editorKey}
@@ -426,15 +426,15 @@ export default function EditPostPage({ params }: PageProps) {
                   holder={`editorjs-edit-${editorKey}`}
                 />
               ) : (
-                <div className="min-h-[400px] flex items-center justify-center border border-border rounded-lg bg-secondary/20">
+                <div className="min-h-[400px] flex items-center justify-center">
                   <div className="text-center space-y-4">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p className="text-sm text-muted-foreground">Загрузка содержимого...</p>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Bottom Actions */}

@@ -53,14 +53,32 @@ export default function EditorWrapper({
   const { theme } = useTheme();
   const editorRef = useRef<EditorJS | null>(null);
   const isInitialized = useRef(false);
+  const isInternalChange = useRef(false);
+  const onChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const initializeEditor = useCallback(() => {
     if (isInitialized.current) return;
+    
+    // Проверяем, что элемент существует
+    const holderElement = document.getElementById(holder);
+    if (!holderElement) {
+      console.error(`Editor holder element with id "${holder}" not found`);
+      return;
+    }
+
+    // Нормализуем data - если undefined или null, используем пустую структуру
+    // Используем только при первой инициализации
+    const normalizedData = (data && data.blocks && data.blocks.length > 0) 
+      ? data 
+      : { blocks: [] };
 
     const editor = new EditorJS({
       holder: holder,
       placeholder: "Начните писать свой контент...",
-      data: data,
+      data: normalizedData,
+      autofocus: false,
+      readOnly: false,
+      defaultBlock: "paragraph",
       i18n: {
         messages: {
           ui: {
@@ -80,6 +98,7 @@ export default function EditorWrapper({
                 Add: "Добавить",
                 Filter: "Фильтр",
                 "Nothing found": "Ничего не найдено",
+                "Or paste the link": "Или вставьте ссылку",
               },
             },
           },
@@ -109,6 +128,15 @@ export default function EditorWrapper({
             },
             link: {
               "Add a link": "Добавить ссылку",
+            },
+            image: {
+              Caption: "Описание",
+              "Select an Image": "Выберите изображение",
+              "With border": "С рамкой",
+              "Stretch image": "Растянуть",
+              "With background": "С фоном",
+              "Embed": "Встроить",
+              "Delete": "Удалить",
             },
             stub: {
               "The block can not be displayed correctly.": "Блок не может быть отображен корректно.",
@@ -201,29 +229,68 @@ export default function EditorWrapper({
           class: Image as any,
           config: {
             uploader: {
-              uploadByFile(file: File) {
-                return new Promise((resolve) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    resolve({
-                      success: 1,
-                      file: {
-                        url: reader.result as string,
-                      },
-                    });
+              async uploadByFile(file: File) {
+                try {
+                  const formData = new FormData();
+                  formData.append("file", file);
+                  formData.append("type", "editor-image");
+
+                  const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || "Ошибка загрузки изображения");
+                  }
+
+                  const data = await response.json();
+                  return {
+                    success: 1,
+                    file: {
+                      url: data.url,
+                    },
                   };
-                  reader.readAsDataURL(file);
-                });
+                } catch (error: any) {
+                  console.error("Image upload error:", error);
+                  return {
+                    success: 0,
+                    error: {
+                      message: error.message || "Не удалось загрузить изображение",
+                    },
+                  };
+                }
               },
-              uploadByUrl(url: string) {
-                return Promise.resolve({
-                  success: 1,
-                  file: {
-                    url: url,
-                  },
-                });
+              async uploadByUrl(url: string) {
+                try {
+                  // Проверяем, что URL валидный
+                  if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
+                    throw new Error("Неверный URL изображения");
+                  }
+                  
+                  return {
+                    success: 1,
+                    file: {
+                      url: url,
+                    },
+                  };
+                } catch (error: any) {
+                  console.error("Image URL error:", error);
+                  return {
+                    success: 0,
+                    error: {
+                      message: error.message || "Неверный URL изображения",
+                    },
+                  };
+                }
               },
             },
+            captionPlaceholder: "Описание изображения (необязательно)",
+            buttonContent: "Выберите изображение",
+            withBorder: false,
+            withBackground: false,
+            stretched: false,
           },
         },
         embed: {
@@ -251,36 +318,142 @@ export default function EditorWrapper({
         underline: Underline as any,
       },
       onChange: async () => {
-        if (onChange && editorRef.current) {
-          const content = await editorRef.current.save();
-          onChange(content);
+        if (onChange && editorRef.current && !isInternalChange.current) {
+          try {
+            // Устанавливаем флаг, чтобы предотвратить перерисовку
+            isInternalChange.current = true;
+            
+            // Используем debounce для уменьшения количества обновлений
+            if (onChangeTimeoutRef.current) {
+              clearTimeout(onChangeTimeoutRef.current);
+            }
+            
+            onChangeTimeoutRef.current = setTimeout(async () => {
+              try {
+                const content = await editorRef.current?.save();
+                if (content) {
+                  onChange(content);
+                }
+              } catch (error) {
+                console.error("Error saving editor content:", error);
+              } finally {
+                // Сбрасываем флаг после небольшой задержки
+                setTimeout(() => {
+                  isInternalChange.current = false;
+                }, 100);
+              }
+            }, 300);
+          } catch (error) {
+            console.error("Error saving editor content:", error);
+            isInternalChange.current = false;
+          }
         }
       },
       onReady: () => {
-        if (editorRef.current) {
-          new Undo({ editor: editorRef.current });
-          new DragDrop(editorRef.current);
-        }
+        // Плагины инициализируются в initializeEditor после isReady
       },
-      minHeight: 300,
+      minHeight: 400,
+      inlineToolbar: ['bold', 'italic', 'link', 'marker', 'underline', 'inlineCode'],
     });
 
     editorRef.current = editor;
-    isInitialized.current = true;
+    
+    // Инициализируем плагины после того, как редактор готов
+    editor.isReady
+      .then(() => {
+        isInitialized.current = true;
+        if (editorRef.current) {
+          try {
+            new Undo({ editor: editorRef.current });
+            new DragDrop(editorRef.current);
+          } catch (error) {
+            console.error("Error initializing editor plugins:", error);
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Editor initialization error:", error);
+        isInitialized.current = false;
+      });
   }, [data, holder, onChange]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !isInitialized.current) {
-      initializeEditor();
-    }
+    if (typeof window === "undefined") return;
+    
+    // Ждем, пока DOM элемент будет готов
+    const timer = setTimeout(() => {
+      if (!isInitialized.current) {
+        const holderElement = document.getElementById(holder);
+        if (holderElement) {
+          initializeEditor();
+        } else {
+          console.warn(`Editor holder "${holder}" not found, retrying...`);
+          // Повторная попытка через небольшую задержку
+          setTimeout(() => {
+            if (!isInitialized.current) {
+              initializeEditor();
+            }
+          }, 100);
+        }
+      }
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
+      if (onChangeTimeoutRef.current) {
+        clearTimeout(onChangeTimeoutRef.current);
+      }
       if (editorRef.current && editorRef.current.destroy) {
-        editorRef.current.destroy();
+        try {
+          editorRef.current.destroy();
+          editorRef.current = null;
+        } catch (error) {
+          console.error("Error destroying editor:", error);
+        }
         isInitialized.current = false;
       }
     };
-  }, [initializeEditor]);
+  }, [initializeEditor, holder]);
+
+  // Update editor when data prop changes (for editing existing posts)
+  // НЕ обновляем, если изменение было от пользователя (через onChange)
+  useEffect(() => {
+    if (!editorRef.current || !data || !isInitialized.current) {
+      return;
+    }
+
+    // Пропускаем обновление, если изменение было внутренним (от пользователя)
+    if (isInternalChange.current) {
+      return;
+    }
+
+    // Проверяем, что данные действительно изменились
+    editorRef.current.isReady
+      .then(() => {
+        // Получаем текущие данные редактора
+        return editorRef.current?.save();
+      })
+      .then((currentData) => {
+        // Сравниваем только если данные действительно изменились
+        const currentDataStr = JSON.stringify(currentData);
+        const newDataStr = JSON.stringify(data);
+        
+        // Обновляем только если данные действительно отличаются и это не внутреннее изменение
+        if (currentDataStr !== newDataStr && !isInternalChange.current) {
+          isInternalChange.current = true;
+          return editorRef.current?.render(data).then(() => {
+            // Сбрасываем флаг после рендера
+            setTimeout(() => {
+              isInternalChange.current = false;
+            }, 200);
+          });
+        }
+      })
+      .catch((error: Error) => {
+        console.error("Error updating editor data:", error);
+        isInternalChange.current = false;
+      });
+  }, [data]);
 
   return (
     <div 

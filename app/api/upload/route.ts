@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const type = formData.get("type") as string; // 'avatar', 'logo', 'cover', 'favicon'
+    const type = formData.get("type") as string; // 'avatar', 'logo', 'cover', 'favicon', 'editor-image'
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!type || !["avatar", "logo", "cover", "favicon"].includes(type)) {
+    if (!type || !["avatar", "logo", "cover", "favicon", "editor-image"].includes(type)) {
       return NextResponse.json({ error: "Invalid upload type" }, { status: 400 });
     }
 
@@ -59,8 +59,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine upload directory based on type
-    // For favicon, use "favicons" folder, for others use plural form
-    const folderName = type === "favicon" ? "favicons" : `${type}s`;
+    // For favicon, use "favicons" folder, for editor-image use "covers", for others use plural form
+    const folderName = type === "favicon" 
+      ? "favicons" 
+      : type === "editor-image" 
+        ? "covers" 
+        : `${type}s`;
     const uploadDir = join(process.cwd(), "public", "uploads", folderName);
     
     // Ensure directory exists
