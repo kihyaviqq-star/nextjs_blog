@@ -421,7 +421,13 @@ export default function GeneratorPage() {
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs hover:text-primary"
                           >
-                            Источник <ExternalLink className="w-3 h-3" />
+                            Источник: {(() => {
+                              try {
+                                return new URL(item.link).hostname.replace(/^www\./, '');
+                              } catch (e) {
+                                return '';
+                              }
+                            })()} <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </CardDescription>

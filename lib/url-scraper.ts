@@ -11,18 +11,30 @@ export interface ScrapedContent {
 
 export async function scrapeUrl(url: string): Promise<ScrapedContent> {
   try {
-    // Fetch the page
+    // Fetch the page with browser-like headers
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'max-age=0',
+        'Upgrade-Insecure-Requests': '1',
       }
     });
 
     if (!response.ok) {
+      if (response.status === 403 || response.status === 401) {
+        throw new Error(`Access denied (Anti-bot protection): ${response.status}`);
+      }
       throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
     }
 
     const html = await response.text();
+
+    // Check for common anti-bot signatures
+    if (html.includes('__js_p_') || html.includes('ddos-guard') || html.includes('Just a moment...')) {
+      throw new Error('Site is protected by anti-bot system (Cloudflare/DDoS-Guard)');
+    }
 
     // Extract title from HTML
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i) || 
@@ -74,7 +86,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
       .trim();
 
     if (!content || content.length < 50) {
-      throw new Error('Could not extract meaningful content from the page');
+      throw new Error('Could not extract meaningful content. The site might be protected or using dynamic rendering.');
     }
 
     return {
