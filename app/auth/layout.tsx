@@ -1,5 +1,3 @@
-import { FooterClient } from "@/components/footer";
-
 export default function AuthLayout({
   children,
 }: {
@@ -8,7 +6,6 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen flex flex-col">
       {children}
-      <FooterClient />
     </div>
   );
 }
