@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { generateUniqueUsername } from "@/lib/username";
 import { isUsernameReserved } from "@/lib/constants";
 import rateLimit from "@/lib/rate-limit";
+import { handleApiError } from "@/lib/error-handler";
 
 // Initialize rate limiter for registration (e.g., 5 attempts per hour per IP)
 const limiter = rateLimit({
@@ -127,10 +128,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("❌ Registration error:", error);
+    const { message, status } = handleApiError(error, "API POST register");
     return NextResponse.json(
-      { error: "Ошибка при регистрации. Попробуйте позже." },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

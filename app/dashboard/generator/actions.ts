@@ -9,6 +9,19 @@ import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
+import { z } from 'zod';
+import rateLimit from '@/lib/rate-limit';
+
+// Rate limiters для разных операций
+const aiGenerationLimiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 500,
+});
+
+const imageGenerationLimiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 500,
+});
 
 export async function getNewsAction(enabledSourceIds?: string[]): Promise<{ success: boolean; data?: NewsItem[]; error?: string }> {
   try {
@@ -43,8 +56,22 @@ export async function getNewsAction(enabledSourceIds?: string[]): Promise<{ succ
 export async function parseUrlAction(url: string): Promise<{ success: boolean; data?: { title: string; content: string; url: string }; error?: string }> {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Проверка роли через запрос к БД (только ADMIN/EDITOR могут парсить URL)
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    if (user.role !== 'ADMIN' && user.role !== 'EDITOR') {
+      return { success: false, error: 'Forbidden: Insufficient permissions' };
     }
 
     // Validate URL
@@ -64,8 +91,18 @@ export async function parseUrlAction(url: string): Promise<{ success: boolean; d
 export async function generateArticleFromUrlAction(url: string): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user || !session.user.email) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Rate limiting (10 запросов в минуту)
+    try {
+      await aiGenerationLimiter.check(10, `ai-gen-url-${session.user.email}`);
+    } catch {
+      return { 
+        success: false, 
+        error: 'Too many requests. Please wait before generating another article. Limit: 10 requests per minute.' 
+      };
     }
 
     // First scrape the URL
@@ -82,17 +119,97 @@ export async function generateArticleFromUrlAction(url: string): Promise<{ succe
   }
 }
 
+// Zod схема для валидации входных данных
+const generateArticleSchema = z.object({
+  topic: z.string().min(1, 'Topic is required').max(500, 'Topic must be at most 500 characters'),
+  context: z.string().min(1, 'Context is required').max(50000, 'Context must be at most 50000 characters'),
+});
+
 export async function generateArticleAction(topic: string, context: string): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
   try {
+    // 1. Проверка сессии
+    const session = await auth();
+    if (!session?.user || !session.user.email) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // 2. Rate limiting (10 запросов в минуту)
+    try {
+      await aiGenerationLimiter.check(10, `ai-gen-${session.user.email}`);
+    } catch {
+      return { 
+        success: false, 
+        error: 'Too many requests. Please wait before generating another article. Limit: 10 requests per minute.' 
+      };
+    }
+
+    // 3. Проверка роли через запрос к БД
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    if (user.role !== 'ADMIN' && user.role !== 'EDITOR') {
+      return { success: false, error: 'Forbidden: Insufficient permissions' };
+    }
+
+    // 3. Валидация входных параметров через Zod
+    try {
+      generateArticleSchema.parse({ topic, context });
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        const firstError = validationError.errors[0];
+        return { 
+          success: false, 
+          error: firstError?.message || 'Invalid input parameters' 
+        };
+      }
+      return { success: false, error: 'Invalid input parameters' };
+    }
+
+    // Генерация статьи
     const article = await generateArticle(topic, context);
     return { success: true, data: article };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Generation failed' };
+    // 4. Обработка ошибок для production
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Логируем детальную ошибку только в development
+    if (!isProduction) {
+      console.error('generateArticleAction error:', error);
+    }
+
+    // Возвращаем безопасное сообщение в production
+    return { 
+      success: false, 
+      error: isProduction 
+        ? 'Failed to generate article. Please try again later.' 
+        : (error.message || 'Generation failed')
+    };
   }
 }
 
 export async function generateImageAction(topic: string, summary: string): Promise<{ success: boolean; imageUrl?: string; prompt?: string; error?: string }> {
   try {
+    // Rate limiting (10 запросов в минуту для генерации изображений)
+    const session = await auth();
+    if (!session?.user || !session.user.email) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    try {
+      await imageGenerationLimiter.check(10, `img-gen-${session.user.email}`);
+    } catch {
+      return { 
+        success: false, 
+        error: 'Too many requests. Please wait before generating another image. Limit: 10 requests per minute.' 
+      };
+    }
+
     const { generateImagePrompt, generateImage } = await import('@/lib/ai-client');
     const prompt = await generateImagePrompt(topic, summary);
     const imageUrl = await generateImage(prompt);

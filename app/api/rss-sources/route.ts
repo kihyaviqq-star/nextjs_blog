@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { findRSSFeed } from '@/lib/rss-finder';
+import { createRSSSourceSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE } from '@/lib/validations';
+import rateLimit from '@/lib/rate-limit';
+import { handleApiError } from '@/lib/error-handler';
+
+// Rate limiter для добавления RSS источников (20 запросов в минуту)
+const rssSourceLimiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 500,
+});
 
 // GET - получить все источники
 export async function GET() {
@@ -38,10 +47,10 @@ export async function GET() {
 
     return NextResponse.json({ sources });
   } catch (error: any) {
-    console.error('Error fetching RSS sources:', error);
+    const { message, status } = handleApiError(error, "API GET RSS sources");
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch sources' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
@@ -49,9 +58,23 @@ export async function GET() {
 // POST - добавить новый источник
 export async function POST(request: NextRequest) {
   try {
+    // 1. Проверка авторизации (нужна для rate limiting по email)
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 2. Rate limiting (20 запросов в минуту по email пользователя)
+    try {
+      await rssSourceLimiter.check(20, `rss-source-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { 
+          error: 'Too many requests',
+          message: 'Rate limit exceeded. Maximum 20 requests per minute for adding RSS sources.'
+        },
+        { status: 429 }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -67,17 +90,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { name, url } = body;
-
-    if (!url) {
+    // 1. Проверка размера тела запроса
+    const contentLength = request.headers.get('content-length');
+    const sizeValidation = validateBodySize(contentLength);
+    if (!sizeValidation.valid) {
       return NextResponse.json(
-        { error: 'URL is required' },
+        { error: sizeValidation.error },
         { status: 400 }
       );
     }
 
-    // Validate URL format
+    // 2. Парсинг и валидация тела запроса
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    // 3. Проверка реального размера тела запроса
+    const bodySize = JSON.stringify(body).length;
+    if (bodySize > MAX_JSON_BODY_SIZE) {
+      return NextResponse.json(
+        { error: `Request body too large. Maximum size is ${MAX_JSON_BODY_SIZE / 1024 / 1024}MB` },
+        { status: 413 }
+      );
+    }
+
+    // 4. Валидация через Zod
+    const validationResult = createRSSSourceSchema.safeParse(body);
+    if (!validationResult.success) {
+      const formattedError = formatZodError(validationResult.error);
+      return NextResponse.json(
+        formattedError,
+        { status: 400 }
+      );
+    }
+
+    const { name, url } = validationResult.data;
+
+    // Validate URL format (Zod уже проверил, но для RSS finder нужен полный URL)
     let siteUrl: string;
     try {
       const urlObj = new URL(url);
@@ -147,10 +202,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ source }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating RSS source:', error);
+    const { message, status } = handleApiError(error, "API POST RSS source");
     return NextResponse.json(
-      { error: error.message || 'Failed to create source' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

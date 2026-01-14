@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import rateLimit from "@/lib/rate-limit";
+import { handleApiError } from "@/lib/error-handler";
 
 const limiter = rateLimit({
   interval: 60 * 60 * 1000, // 1 hour
@@ -45,7 +46,8 @@ export async function POST(
       views: updatedPost.views,
     });
   } catch (error) {
-    console.error("[API] Error incrementing views:", error);
+    // Log error but return success to not block UI
+    handleApiError(error, "API POST views");
     // Return success even on error to not block the UI
     return NextResponse.json(
       { success: false, error: "Failed to increment views" },

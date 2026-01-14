@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { handleApiError } from "@/lib/error-handler";
+import { MAX_JSON_BODY_SIZE } from "@/lib/validations";
 
 // GET - Fetch site settings
 export async function GET() {
@@ -27,10 +29,10 @@ export async function GET() {
 
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("[Settings GET] Error:", error);
+    const { message, status } = handleApiError(error, "API GET settings");
     return NextResponse.json(
-      { error: "Failed to fetch settings" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
@@ -39,17 +41,54 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await auth();
-    const userRole = (session?.user as any)?.role;
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Проверка роли через запрос к БД (безопаснее, чем из сессии)
+    const dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
 
     // Only ADMIN can update settings
-    if (userRole !== "ADMIN") {
+    if (dbUser.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
         { status: 403 }
       );
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    // Проверка реального размера тела запроса
+    const bodySize = JSON.stringify(body).length;
+    if (bodySize > MAX_JSON_BODY_SIZE) {
+      return NextResponse.json(
+        { error: `Request body too large. Maximum size is ${MAX_JSON_BODY_SIZE / 1024 / 1024}MB` },
+        { status: 413 }
+      );
+    }
+
     const { siteName, logoUrl, faviconUrl, metaDescription, footerText } = body;
 
     // Update or create settings
@@ -74,10 +113,10 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(settings);
   } catch (error) {
-    console.error("[Settings PUT] Error:", error);
+    const { message, status } = handleApiError(error, "API PUT settings");
     return NextResponse.json(
-      { error: "Failed to update settings" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

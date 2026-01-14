@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { updateRSSSourceSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE } from '@/lib/validations';
+import { handleApiError } from '@/lib/error-handler';
 
 // PUT - обновить источник (включить/выключить)
 export async function PUT(
@@ -27,23 +29,54 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const body = await request.json();
-    const { enabled, name, url } = body;
+    
+    // 1. Проверка размера тела запроса
+    const contentLength = request.headers.get('content-length');
+    const sizeValidation = validateBodySize(contentLength);
+    if (!sizeValidation.valid) {
+      return NextResponse.json(
+        { error: sizeValidation.error },
+        { status: 400 }
+      );
+    }
+
+    // 2. Парсинг и валидация тела запроса
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    // 3. Проверка реального размера тела запроса
+    const bodySize = JSON.stringify(body).length;
+    if (bodySize > MAX_JSON_BODY_SIZE) {
+      return NextResponse.json(
+        { error: `Request body too large. Maximum size is ${MAX_JSON_BODY_SIZE / 1024 / 1024}MB` },
+        { status: 413 }
+      );
+    }
+
+    // 4. Валидация через Zod
+    const validationResult = updateRSSSourceSchema.safeParse(body);
+    if (!validationResult.success) {
+      const formattedError = formatZodError(validationResult.error);
+      return NextResponse.json(
+        formattedError,
+        { status: 400 }
+      );
+    }
+
+    const { enabled, name, url } = validationResult.data;
 
     const updateData: any = {};
     if (enabled !== undefined) updateData.enabled = enabled;
     if (name !== undefined) updateData.name = name.trim();
     if (url !== undefined) {
-      // Validate URL if provided
-      try {
-        new URL(url);
-        updateData.url = url.trim();
-      } catch {
-        return NextResponse.json(
-          { error: 'Invalid URL format' },
-          { status: 400 }
-        );
-      }
+      updateData.url = url.trim();
     }
 
     const source = await prisma.rSSSource.update({
@@ -53,16 +86,18 @@ export async function PUT(
 
     return NextResponse.json({ source });
   } catch (error: any) {
-    console.error('Error updating RSS source:', error);
+    // Handle Prisma specific errors
     if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Source not found' },
         { status: 404 }
       );
     }
+    
+    const { message, status } = handleApiError(error, "API PUT RSS source");
     return NextResponse.json(
-      { error: error.message || 'Failed to update source' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
@@ -111,10 +146,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error deleting RSS source:', error);
+    const { message, status } = handleApiError(error, "API DELETE RSS source");
     return NextResponse.json(
-      { error: error.message || 'Failed to delete source' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

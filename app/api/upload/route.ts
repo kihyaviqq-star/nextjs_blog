@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { auth } from "@/lib/auth";
 import rateLimit from "@/lib/rate-limit";
+import { handleApiError } from "@/lib/error-handler";
 
 // Initialize rate limiter
 const limiter = rateLimit({
@@ -156,10 +157,10 @@ export async function POST(request: NextRequest) {
       filename: uniqueFilename,
     });
   } catch (error) {
-    console.error("[Upload] Error:", error);
+    const { message, status } = handleApiError(error, "API Upload");
     return NextResponse.json(
-      { error: "Failed to upload file" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

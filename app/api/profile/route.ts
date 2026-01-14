@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { validateUsername, generateUsernameSlug } from "@/lib/constants";
+import { handleApiError } from "@/lib/error-handler";
 
 // GET - получить профиль текущего пользователя
 export async function GET(request: NextRequest) {
@@ -55,10 +56,10 @@ export async function GET(request: NextRequest) {
       role: user.role,
     });
   } catch (error) {
-    console.error("[API] Error fetching profile:", error);
+    const { message, status } = handleApiError(error, "API GET profile");
     return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
@@ -148,10 +149,10 @@ export async function PUT(request: NextRequest) {
       role: updatedUser.role,
     });
   } catch (error) {
-    console.error("[API] Error updating profile:", error);
+    const { message, status } = handleApiError(error, "API PUT profile");
     return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
