@@ -1,7 +1,7 @@
 
 'use server';
 
-import { fetchNewsFromSources, NewsItem, RSS_SOURCES } from '@/lib/news-fetcher';
+import { fetchNewsFromSources, NewsItem, getAllSources } from '@/lib/news-fetcher';
 import { scrapeUrl } from '@/lib/url-scraper';
 import { generateArticle, GeneratedArticle } from '@/lib/ai-client';
 import { prisma } from '@/lib/prisma';
@@ -24,8 +24,9 @@ export async function getNewsAction(enabledSourceIds?: string[]): Promise<{ succ
     let sourcesToFetch: string[];
     
     if (enabledSourceIds === undefined || enabledSourceIds === null) {
-      sourcesToFetch = RSS_SOURCES.map(s => s.id);
-      console.log('Defaulting to all sources');
+      const allSources = await getAllSources();
+      sourcesToFetch = allSources.filter(s => s.enabled !== false).map(s => s.id);
+      console.log('Defaulting to all enabled sources');
     } else {
       sourcesToFetch = enabledSourceIds;
     }

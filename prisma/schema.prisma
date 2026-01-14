@@ -115,3 +115,17 @@ model SiteSettings {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+// RSS Sources for article generator
+model RSSSource {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  enabled   Boolean  @default(true)
+  isDefault Boolean  @default(false) // Predefined sources that cannot be deleted
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([url])
+  @@index([enabled])
+}

@@ -1,5 +1,6 @@
 
 import Parser from 'rss-parser';
+import { prisma } from './prisma';
 
 const parser = new Parser();
 
@@ -15,15 +16,71 @@ export interface RSSSource {
   id: string;
   name: string;
   url: string;
+  enabled?: boolean;
+  isDefault?: boolean;
 }
 
-export const RSS_SOURCES: RSSSource[] = [
-  // { id: 'comss', name: 'www.comss.ru', url: 'https://www.comss.ru/rss.php' }, // Broken feed
-  { id: 'winaero', name: 'winaero.com', url: 'https://winaero.com/feed/' },
-  { id: 'microsoft', name: 'Microsoft Blog', url: 'https://blogs.windows.com/feed/' },
-  { id: 'azure', name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/' },
-  { id: 'wylsa', name: 'Wylsa.com', url: 'https://wylsa.com/feed/' }
+export const DEFAULT_RSS_SOURCES: RSSSource[] = [
+  { id: 'winaero', name: 'winaero.com', url: 'https://winaero.com/feed/', isDefault: true },
+  { id: 'microsoft', name: 'Microsoft Blog', url: 'https://blogs.windows.com/feed/', isDefault: true },
+  { id: 'azure', name: 'Azure Blog', url: 'https://azure.microsoft.com/en-us/blog/feed/', isDefault: true },
+  { id: 'wylsa', name: 'Wylsa.com', url: 'https://wylsa.com/feed/', isDefault: true }
 ];
+
+// Получить все источники (из БД + дефолтные)
+export async function getAllSources(): Promise<RSSSource[]> {
+  try {
+    // Check if RSSSource model exists in Prisma Client
+    if (!prisma.rSSSource) {
+      console.error('RSSSource model not found in Prisma Client. Please run: npx prisma generate');
+      // Return default sources as fallback
+      return DEFAULT_RSS_SOURCES.map(s => ({ ...s, enabled: true }));
+    }
+
+    // Получаем источники из БД
+    const dbSources = await prisma.rSSSource.findMany({
+      orderBy: [
+        { createdAt: 'desc' }
+      ]
+    });
+
+    // Преобразуем в нужный формат
+    const sources: RSSSource[] = dbSources.map(source => ({
+      id: source.id,
+      name: source.name,
+      url: source.url,
+      enabled: source.enabled,
+      isDefault: source.isDefault
+    }));
+
+    // Если в БД нет источников, создаем дефолтные
+    if (sources.length === 0) {
+      for (const defaultSource of DEFAULT_RSS_SOURCES) {
+        try {
+          await prisma.rSSSource.create({
+            data: {
+              id: defaultSource.id,
+              name: defaultSource.name,
+              url: defaultSource.url,
+              enabled: true,
+              isDefault: false
+            }
+          });
+          sources.push({ ...defaultSource, enabled: true });
+        } catch (error) {
+          // Ignore if already exists
+          console.error('Error creating default source:', error);
+        }
+      }
+    }
+
+    return sources;
+  } catch (error) {
+    console.error('Error loading sources from DB:', error);
+    // Fallback to default sources
+    return DEFAULT_RSS_SOURCES.map(s => ({ ...s, enabled: true }));
+  }
+}
 
 export async function fetchNewsFromSources(enabledSourceIds: string[] = []): Promise<NewsItem[]> {
   const allNews: NewsItem[] = [];
@@ -33,8 +90,13 @@ export async function fetchNewsFromSources(enabledSourceIds: string[] = []): Pro
     return [];
   }
 
+  // Get all sources (from DB)
+  const allSources = await getAllSources();
+  
   // Filter sources by enabled IDs
-  const enabledSources = RSS_SOURCES.filter(source => enabledSourceIds.includes(source.id));
+  const enabledSources = allSources.filter(source => 
+    enabledSourceIds.includes(source.id) && source.enabled !== false
+  );
 
   for (const source of enabledSources) {
     try {

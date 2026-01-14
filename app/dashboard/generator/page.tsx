@@ -16,9 +16,9 @@ import {
   generateImageAction,
   publishArticleAction 
 } from "./actions";
-import { NewsItem as NewsItemType, RSS_SOURCES } from "@/lib/news-fetcher";
+import { NewsItem as NewsItemType, RSSSource } from "@/lib/news-fetcher";
 import { GeneratedArticle } from "@/lib/ai-client";
-import { Sparkles, Loader2, CheckCircle2, ExternalLink, Settings, Globe } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, ExternalLink, Settings, Globe, Trash2, Plus as PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import type { OutputData } from "@editorjs/editorjs";
@@ -42,6 +42,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface NewsItem extends NewsItemType {
   id: string;
@@ -59,15 +69,18 @@ export default function GeneratorPage() {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [newTag, setNewTag] = useState("");
-  const [enabledSources, setEnabledSources] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY_SOURCES);
-      return saved ? JSON.parse(saved) : RSS_SOURCES.map(s => s.id);
-    }
-    return RSS_SOURCES.map(s => s.id);
-  });
+  const [sources, setSources] = useState<RSSSource[]>([]);
+  const [loadingSources, setLoadingSources] = useState(true);
+  const [enabledSources, setEnabledSources] = useState<string[]>([]);
   const [parsingUrl, setParsingUrl] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [newSourceName, setNewSourceName] = useState("");
+  const [newSourceUrl, setNewSourceUrl] = useState("");
+  const [addingSource, setAddingSource] = useState(false);
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sourceToDelete, setSourceToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingSource, setDeletingSource] = useState(false);
   const editorDataRef = useRef<OutputData | null>(null);
   const editorHolderId = useRef(`editor-${Date.now()}`);
   
@@ -103,15 +116,77 @@ export default function GeneratorPage() {
   }, [news.length, loading, visibleNewsCount, isLoadingMore]); // Added dependencies
 
   useEffect(() => {
-    loadNews();
-  }, [enabledSources]);
+    loadSources();
+  }, []);
+
+  useEffect(() => {
+    if (sources.length > 0) {
+      // Load saved enabled sources from localStorage or default to all enabled
+      const saved = typeof window !== 'undefined' 
+        ? localStorage.getItem(STORAGE_KEY_SOURCES)
+        : null;
+      
+      if (saved) {
+        const savedIds = JSON.parse(saved);
+        // Filter to only include sources that exist
+        const validIds = savedIds.filter((id: string) => 
+          sources.some(s => s.id === id)
+        );
+        setEnabledSources(validIds.length > 0 ? validIds : sources.filter(s => s.enabled !== false).map(s => s.id));
+      } else {
+        // Default to all enabled sources
+        setEnabledSources(sources.filter(s => s.enabled !== false).map(s => s.id));
+      }
+    }
+  }, [sources]);
+
+  useEffect(() => {
+    if (enabledSources.length > 0 && !loadingSources) {
+      loadNews();
+    } else if (enabledSources.length === 0 && !loadingSources) {
+      setNews([]);
+      setLoading(false);
+    }
+  }, [enabledSources, loadingSources]);
 
   useEffect(() => {
     // Save enabled sources to localStorage
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && enabledSources.length > 0) {
       localStorage.setItem(STORAGE_KEY_SOURCES, JSON.stringify(enabledSources));
     }
   }, [enabledSources]);
+
+  const loadSources = async () => {
+    setLoadingSources(true);
+    try {
+      const response = await fetch('/api/rss-sources');
+      if (response.ok) {
+        const data = await response.json();
+        const loadedSources = data.sources || [];
+        setSources(loadedSources);
+        
+        // Если источников нет, это нормально - не показываем ошибку
+        // Ошибка показывается только при реальных проблемах (не 200 статус)
+      } else {
+        // Только при реальной ошибке (не 200) показываем сообщение
+        const errorData = await response.json().catch(() => ({}));
+        toast.error("Не удалось загрузить источники", {
+          description: errorData.error || "Проверьте подключение к интернету"
+        });
+        // Устанавливаем пустой массив, чтобы не было ошибок дальше
+        setSources([]);
+      }
+    } catch (error) {
+      console.error('Error loading sources:', error);
+      // Только при сетевой ошибке или исключении показываем сообщение
+      toast.error("Ошибка загрузки источников", {
+        description: "Проверьте подключение к интернету"
+      });
+      setSources([]);
+    } finally {
+      setLoadingSources(false);
+    }
+  };
 
   const loadNews = async () => {
     setLoading(true);
@@ -132,7 +207,13 @@ export default function GeneratorPage() {
     setLoading(false);
   };
 
-  const toggleSource = (sourceId: string) => {
+  const toggleSource = async (sourceId: string) => {
+    const source = sources.find(s => s.id === sourceId);
+    if (!source) return;
+
+    const newEnabled = !enabledSources.includes(sourceId);
+    
+    // Optimistically update UI
     setEnabledSources(prev => {
       if (prev.includes(sourceId)) {
         return prev.filter(id => id !== sourceId);
@@ -140,6 +221,119 @@ export default function GeneratorPage() {
         return [...prev, sourceId];
       }
     });
+
+    // Update on server
+    try {
+      const response = await fetch(`/api/rss-sources/${sourceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: newEnabled })
+      });
+
+      if (!response.ok) {
+        // Revert on error
+        setEnabledSources(prev => {
+          if (newEnabled) {
+            return prev.filter(id => id !== sourceId);
+          } else {
+            return [...prev, sourceId];
+          }
+        });
+        toast.error("Не удалось обновить источник");
+      } else {
+        // Reload sources to get updated state
+        await loadSources();
+      }
+    } catch (error) {
+      // Revert on error
+      setEnabledSources(prev => {
+        if (newEnabled) {
+          return prev.filter(id => id !== sourceId);
+        } else {
+          return [...prev, sourceId];
+        }
+      });
+      toast.error("Ошибка обновления источника");
+    }
+  };
+
+  const handleAddSource = async () => {
+    if (!newSourceUrl.trim()) {
+      toast.error("Введите URL сайта");
+      return;
+    }
+
+    setAddingSource(true);
+    try {
+      toast.info("Поиск RSS ленты...", {
+        description: "Это может занять несколько секунд"
+      });
+
+      const response = await fetch('/api/rss-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSourceName.trim() || undefined, // Optional name
+          url: newSourceUrl.trim()
+        })
+      });
+
+      if (response.ok) {
+        toast.success("Источник добавлен", {
+          description: "RSS лента найдена и добавлена"
+        });
+        setNewSourceName("");
+        setNewSourceUrl("");
+        setShowAddSource(false);
+        await loadSources();
+        // Auto-enable new source
+        const data = await response.json();
+        if (data.source) {
+          setEnabledSources(prev => [...prev, data.source.id]);
+        }
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Не удалось добавить источник");
+      }
+    } catch (error) {
+      toast.error("Ошибка добавления источника");
+    } finally {
+      setAddingSource(false);
+    }
+  };
+
+  const handleDeleteSourceClick = (sourceId: string) => {
+    const source = sources.find(s => s.id === sourceId);
+    if (!source) return;
+
+    setSourceToDelete({ id: sourceId, name: source.name });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSource = async () => {
+    if (!sourceToDelete) return;
+
+    setDeletingSource(true);
+    try {
+      const response = await fetch(`/api/rss-sources/${sourceToDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        toast.success("Источник удален");
+        setEnabledSources(prev => prev.filter(id => id !== sourceToDelete.id));
+        await loadSources();
+        setDeleteDialogOpen(false);
+        setSourceToDelete(null);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Не удалось удалить источник");
+      }
+    } catch (error) {
+      toast.error("Ошибка удаления источника");
+    } finally {
+      setDeletingSource(false);
+    }
   };
 
   const handleParseUrl = async () => {
@@ -359,32 +553,137 @@ export default function GeneratorPage() {
               <div className="flex gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2" disabled={loadingSources}>
                       <Settings className="w-4 h-4" />
                       Источники
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-80">
                     <DropdownMenuLabel>Управление источниками</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {RSS_SOURCES.map((source) => (
-                      <div
-                        key={source.id}
-                        className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-sm"
-                      >
-                        <label
-                          htmlFor={`source-${source.id}`}
-                          className="text-sm font-medium cursor-pointer flex-1"
-                        >
-                          {source.name}
-                        </label>
-                        <Switch
-                          id={`source-${source.id}`}
-                          checked={enabledSources.includes(source.id)}
-                          onCheckedChange={() => toggleSource(source.id)}
+                    
+                    {/* List of sources */}
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {loadingSources ? (
+                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+                          Загрузка...
+                        </div>
+                      ) : sources.length === 0 ? (
+                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                          Нет источников
+                        </div>
+                      ) : (
+                        sources.map((source) => (
+                          <div
+                            key={source.id}
+                            className="flex items-center justify-between px-2 py-1.5 hover:bg-accent rounded-sm group"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <label
+                                htmlFor={`source-${source.id}`}
+                                className="text-sm font-medium cursor-pointer truncate"
+                                title={source.name}
+                              >
+                                {source.name}
+                              </label>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSourceClick(source.id);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-500/20 dark:hover:text-red-400 dark:hover:bg-red-500/40 dark:hover:border-red-500/50 border border-transparent transition-all p-1 rounded"
+                                title="Удалить источник"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <Switch
+                              id={`source-${source.id}`}
+                              checked={enabledSources.includes(source.id)}
+                              onCheckedChange={() => toggleSource(source.id)}
+                            />
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <DropdownMenuSeparator />
+
+                    {/* Add new source form */}
+                    {showAddSource ? (
+                      <div className="px-2 py-2 space-y-2">
+                        <div>
+                          <Input
+                            placeholder="URL"
+                            value={newSourceUrl}
+                            onChange={(e) => setNewSourceUrl(e.target.value)}
+                            className="h-8 text-sm"
+                            disabled={addingSource}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !addingSource && newSourceUrl.trim()) {
+                                handleAddSource();
+                              }
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            RSS лента будет найдена автоматически
+                          </p>
+                        </div>
+                        <Input
+                          placeholder="Название"
+                          value={newSourceName}
+                          onChange={(e) => setNewSourceName(e.target.value)}
+                          className="h-8 text-sm"
+                          disabled={addingSource}
                         />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleAddSource}
+                            disabled={addingSource || !newSourceUrl.trim()}
+                            className="flex-1 h-8 text-xs"
+                          >
+                            {addingSource ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                                Поиск...
+                              </>
+                            ) : (
+                              <>
+                                <PlusIcon className="w-3 h-3 mr-1" />
+                                Добавить
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setShowAddSource(false);
+                              setNewSourceName("");
+                              setNewSourceUrl("");
+                            }}
+                            disabled={addingSource}
+                            className="h-8 text-xs"
+                          >
+                            Отмена
+                          </Button>
+                        </div>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="px-2 py-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowAddSource(true)}
+                          className="w-full justify-start h-8 text-xs"
+                        >
+                          <PlusIcon className="w-3 h-3 mr-2" />
+                          Добавить источник
+                        </Button>
+                      </div>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button
@@ -701,6 +1000,45 @@ export default function GeneratorPage() {
           </div>
         </div>
       </main>
+
+      {/* Delete Source Confirmation Dialog */}
+      <AlertDialog 
+        open={deleteDialogOpen} 
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setSourceToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить источник?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить источник <strong>"{sourceToDelete?.name}"</strong>?
+              <br />
+              Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingSource}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSource}
+              disabled={deletingSource}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingSource ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Удаление...
+                </>
+              ) : (
+                "Удалить"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
