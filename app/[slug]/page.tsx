@@ -178,7 +178,7 @@ async function ArticlePage({ post }: { post: any }) {
             {/* Meta */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pb-6 border-b border-border">
               <Link
-                href={`/${post.author.username || 'user'}`}
+                href={`/${post.author.username || post.author.id}`}
                 className="flex items-center gap-2 hover:text-foreground transition-colors group"
               >
                 {post.author.avatarUrl ? (
@@ -474,6 +474,55 @@ function UserProfilePage({ user }: { user: any }) {
           </Card>
         </section>
 
+        {/* User Articles */}
+        {user.posts && user.posts.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">Статьи автора ({user.posts.length})</h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              {user.posts.map((post: any) => (
+                <Link key={post.id} href={`/${post.slug}`}>
+                  <SpotlightCard className="h-full cursor-pointer">
+                    <Card className="h-full border-0 bg-transparent shadow-none group">
+                      {post.coverImage && (
+                        <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg">
+                          <img
+                            src={post.coverImage}
+                            alt={post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+                      <CardHeader>
+                        <CardTitle className="text-lg group-hover:text-primary transition-colors line-clamp-2">
+                          {post.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                             <Calendar className="w-4 h-4" />
+                             {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
+                               month: "short",
+                               day: "numeric",
+                               year: "numeric"
+                             })}
+                          </div>
+                          {post.readTime && (
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-4 h-4" />
+                              <span>{post.readTime}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </SpotlightCard>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Back to Home */}
         <div className="mt-8 text-center">
           <Link href="/">
@@ -522,7 +571,10 @@ export default async function DynamicPage({ params }: PageProps) {
 
   const user = await prisma.user.findFirst({
     where: {
-      username: decodedSlug.toLowerCase(),
+      OR: [
+        { username: decodedSlug.toLowerCase() },
+        { id: decodedSlug }
+      ]
     },
     select: {
       id: true,
@@ -537,6 +589,19 @@ export default async function DynamicPage({ params }: PageProps) {
       twitter: true,
       github: true,
       createdAt: true,
+      posts: {
+        orderBy: {
+          publishedAt: "desc",
+        },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          coverImage: true,
+          publishedAt: true,
+          readTime: true,
+        },
+      },
     }
   });
 
@@ -617,7 +682,10 @@ export async function generateMetadata({ params }: PageProps) {
   // Try user
   const user = await prisma.user.findFirst({
     where: {
-      username: decodedSlug.toLowerCase(),
+      OR: [
+        { username: decodedSlug.toLowerCase() },
+        { id: decodedSlug }
+      ]
     },
     select: {
       name: true,

@@ -85,9 +85,10 @@ export default function GeneratorPage() {
   const editorHolderId = useRef(`editor-${Date.now()}`);
   
   // Infinite scroll
-  const [visibleNewsCount, setVisibleNewsCount] = useState(20);
+  const [visibleNewsCount, setVisibleNewsCount] = useState(10);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -96,12 +97,16 @@ export default function GeneratorPage() {
           setIsLoadingMore(true);
           // Artificial delay to show loader
           setTimeout(() => {
-            setVisibleNewsCount((prev) => Math.min(prev + 20, news.length));
+            setVisibleNewsCount((prev) => Math.min(prev + 10, news.length));
             setIsLoadingMore(false);
-          }, 800);
+          }, 1000);
         }
       },
-      { threshold: 0.1 }
+      { 
+        root: scrollRef.current,
+        threshold: 0.1,
+        rootMargin: "100px" // Start loading before reaching the bottom
+      }
     );
 
     if (loadMoreRef.current) {
@@ -784,7 +789,11 @@ export default function GeneratorPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4 max-h-[800px] overflow-y-auto">
+              <div ref={scrollRef} className="space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="flex justify-between items-center text-sm text-muted-foreground px-1">
+                  <span>Показано {Math.min(visibleNewsCount, news.length)} из {news.length}</span>
+                </div>
+                
                 {news.slice(0, visibleNewsCount).map((item) => (
                   <Card key={item.id} className="hover:border-primary/50 transition-colors">
                     <CardHeader>
@@ -838,9 +847,9 @@ export default function GeneratorPage() {
                 ))}
                 
                 {visibleNewsCount < news.length && (
-                  <div ref={loadMoreRef} className="py-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    <span className="text-sm font-medium">Загрузка следующих новостей...</span>
+                  <div ref={loadMoreRef} className="py-4 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="text-xs">Загрузка...</span>
                   </div>
                 )}
               </div>
@@ -1031,7 +1040,7 @@ export default function GeneratorPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Удалить источник?</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите удалить источник <strong>"{sourceToDelete?.name}"</strong>?
+              Вы уверены, что хотите удалить источник <strong>&quot;{sourceToDelete?.name}&quot;</strong>?
               <br />
               Это действие нельзя отменить.
             </AlertDialogDescription>

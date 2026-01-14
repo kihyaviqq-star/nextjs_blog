@@ -369,6 +369,31 @@ export async function findRSSFeed(siteUrl: string): Promise<RSSFeedInfo | null> 
       // Continue
     }
 
+    // Strategy 4: Fallback to direct site scraping if no RSS found
+    // This allows adding sites that don't have RSS feeds but can be scraped
+    try {
+      // Validate original URL again just in case
+      await validateUrlForSSRF(baseUrl);
+
+      // Use GET instead of HEAD to be more reliable (some servers block HEAD)
+      const response = await fetch(baseUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        signal: createTimeoutSignal(10000)
+      });
+
+      if (response.ok) {
+        // Return the site URL itself as the feed URL.
+        // The fetcher will need to handle this by detecting it's not XML/RSS.
+        console.log(`No RSS feed found for ${baseUrl}, falling back to direct scraping`);
+        return { url: baseUrl };
+      }
+    } catch (error) {
+      console.error('Error checking base URL for scraping fallback:', error);
+    }
+
     return null;
   } catch (error: any) {
     console.error('Error finding RSS feed:', error);

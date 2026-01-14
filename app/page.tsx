@@ -98,39 +98,45 @@ export default async function Home({ searchParams }: HomeProps) {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {postsWithParsedTags.map((post) => (
-            <Link key={post.id} href={`/${post.slug}`}>
-              <SpotlightCard className="h-full cursor-pointer">
-                <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden">
-                  {post.coverImage && (
-                    <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg">
-                      <img
-                        src={post.coverImage}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  )}
-                  <CardHeader>
-                    <div className="flex flex-wrap gap-2 mb-3 min-h-[48px] items-start">
-                      {post.tags.map((tag: string) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium"
-                        >
-                          <Tag className="w-3 h-3" />
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <CardTitle className="group-hover:text-primary transition-colors line-clamp-2">
-                      {post.title}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {post.excerpt}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2 mb-4">
+            <SpotlightCard key={post.id} className="h-full relative">
+              <Link href={`/${post.slug}`} className="absolute inset-0 z-0" aria-label={post.title}>
+                <span className="sr-only">Читать статью</span>
+              </Link>
+              <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden relative z-10 pointer-events-none">
+                {post.coverImage && (
+                  <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg">
+                    <img
+                      src={post.coverImage}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                )}
+                <CardHeader>
+                  <div className="flex flex-wrap gap-2 mb-3 min-h-[48px] items-start">
+                    {post.tags.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium"
+                      >
+                        <Tag className="w-3 h-3" />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <CardTitle className="group-hover:text-primary transition-colors line-clamp-2">
+                    {post.title}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {post.excerpt}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 mb-4 pointer-events-auto relative z-20 w-fit">
+                    <Link 
+                      href={`/${post.author.username || post.author.id}`}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
                       {post.author.avatarUrl ? (
                         <img
                           src={post.author.avatarUrl}
@@ -144,33 +150,33 @@ export default async function Home({ searchParams }: HomeProps) {
                           </span>
                         </div>
                       )}
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground hover:text-primary transition-colors">
                         {post.author.name}
                       </span>
+                    </Link>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {post.readTime}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {post.readTime}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4 text-sm font-medium text-primary">
-                      Читать далее
-                    </div>
-                  </CardContent>
-                </Card>
-              </SpotlightCard>
-            </Link>
+                  </div>
+                  <div className="mt-4 text-sm font-medium text-primary">
+                    Читать далее
+                  </div>
+                </CardContent>
+              </Card>
+            </SpotlightCard>
           ))}
         </div>
 

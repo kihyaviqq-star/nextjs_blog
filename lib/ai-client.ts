@@ -131,10 +131,12 @@ export async function generateArticle(topic: string, context: string, model?: st
   5. warning: { "type": "warning", "data": { "title": "Заголовок", "message": "Сообщение" } }
   6. delimiter: { "type": "delimiter", "data": {} }
   7. code: { "type": "code", "data": { "code": "код здесь" } }
+  8. image: { "type": "image", "data": { "file": { "url": "https://example.com/image.jpg" }, "caption": "Описание", "withBorder": false, "withBackground": false, "stretched": false } }
 
   Структура статьи:
   - Введение (Paragraph) - краткое введение в тему
   - Основной контент (Header level 2 + Paragraphs) - разбивай на логические разделы
+  - Изображения (Image) - ЕСЛИ в исходном тексте есть маркеры [IMAGE: url], ТЫ ОБЯЗАН включить их в статью (минимум 1, максимум 5). Преобразуй маркеры [IMAGE: url] в блоки типа 'image'. Используй оригинальный URL из маркера. Не выдумывай URL.
   - Детали/Списки (List) - если есть перечисления
   - Цитаты если есть (Quote)
   - Заключение (Paragraph) - краткое резюме
@@ -152,6 +154,7 @@ export async function generateArticle(topic: string, context: string, model?: st
     "title": "Заголовок статьи",
     "blocks": [
       { "type": "paragraph", "data": { "text": "Текст..." } },
+      { "type": "image", "data": { "file": { "url": "..." }, "caption": "..." } },
       { "type": "header", "data": { "text": "Заголовок раздела", "level": 2 } }
     ],
     "tags": ["тег1", "тег2", "тег3"] // МАКСИМУМ 3 тега, не больше!

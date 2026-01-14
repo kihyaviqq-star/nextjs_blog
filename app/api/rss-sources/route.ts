@@ -35,8 +35,23 @@ export async function GET() {
 
     // Check if RSSSource model exists in Prisma Client
     if (!prisma.rSSSource) {
-      console.error('RSSSource model not found in Prisma Client. Please run: npx prisma generate');
-      return NextResponse.json({ sources: [] });
+      console.error('RSSSource model not found in Prisma Client. Keys:', Object.keys(prisma));
+      // Fallback check for different casing
+      // @ts-ignore
+      if (prisma.RSSSource) {
+        console.log('Found RSSSource as prisma.RSSSource');
+        // @ts-ignore
+        prisma.rSSSource = prisma.RSSSource;
+      } else if (prisma.rssSource) {
+        console.log('Found rssSource as prisma.rssSource');
+        // @ts-ignore
+        prisma.rSSSource = prisma.rssSource;
+      } else {
+        return NextResponse.json(
+            { error: 'Database model not initialized. Please restart the server.' },
+            { status: 500 }
+        );
+      }
     }
 
     const sources = await prisma.rSSSource.findMany({
@@ -176,6 +191,24 @@ export async function POST(request: NextRequest) {
         sourceName = urlObj.hostname.replace('www.', '');
       } catch {
         sourceName = 'RSS Feed';
+      }
+    }
+
+    // Ensure prisma.rSSSource exists (fix for potential casing issues or stale client)
+    if (!prisma.rSSSource) {
+      console.error('RSSSource model not found in Prisma Client (POST). Keys:', Object.keys(prisma));
+      // @ts-ignore
+      if (prisma.RSSSource) {
+        // @ts-ignore
+        prisma.rSSSource = prisma.RSSSource;
+      } else if (prisma.rssSource) {
+        // @ts-ignore
+        prisma.rSSSource = prisma.rssSource;
+      } else {
+        return NextResponse.json(
+            { error: 'Database model not initialized. Please restart the server.' },
+            { status: 500 }
+        );
       }
     }
 
