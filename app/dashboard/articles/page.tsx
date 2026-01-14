@@ -20,7 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { BlogPost } from "@/lib/types";
-import { Edit, Trash2, Search, Eye, ArrowUpDown } from "lucide-react";
+import { Edit, Trash2, Search, Eye, ArrowUpDown, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 type SortOption = "newest" | "popular";
@@ -248,18 +248,46 @@ export default function ArticlesPage() {
                         {post.title}
                       </Link>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-                        <span>
-                          {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric"
-                          })}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>
+                            {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
                         <span className="flex items-center gap-1">
                           <Eye className="w-3 h-3" />
                           {post.views?.toLocaleString() || "0"}
                         </span>
                       </div>
+                      {post.excerpt && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                          {post.excerpt}
+                        </p>
+                      )}
+                      {post.author && (
+                        <div className="flex items-center gap-2 mb-2">
+                          {post.author.avatarUrl ? (
+                            <img
+                              src={post.author.avatarUrl}
+                              alt={post.author.name || "User"}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                              <span className="text-white font-semibold text-xs">
+                                {(post.author.name || "U").charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {post.author.name || "Без имени"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
@@ -319,16 +347,19 @@ export default function ArticlesPage() {
                       <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Статья
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-32">
+                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[200px]">
+                        Автор
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[150px]">
                         Дата
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">
-                        <div className="flex items-center gap-1">
+                      <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[120px]">
+                        <div className="flex items-center justify-end gap-1">
                           <Eye className="w-3.5 h-3.5" />
                           Просмотры
                         </div>
                       </th>
-                      <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-40">
+                      <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider w-20">
                         Действия
                       </th>
                     </tr>
@@ -357,7 +388,7 @@ export default function ArticlesPage() {
                                 </div>
                               )}
                             </div>
-                            {/* Title */}
+                            {/* Title and Excerpt */}
                             <div className="flex-1 min-w-0">
                               <Link
                                 href={`/${post.slug}`}
@@ -365,20 +396,65 @@ export default function ArticlesPage() {
                               >
                                 {post.title}
                               </Link>
+                              {post.excerpt && (
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                                  {post.excerpt}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">
-                          {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric"
-                          })}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground">
-                          {post.views?.toLocaleString() || "0"}
-                        </td>
                         <td className="py-3 px-4">
+                          {post.author ? (
+                            <div className="flex items-center gap-2">
+                              {post.author.avatarUrl ? (
+                                <img
+                                  src={post.author.avatarUrl}
+                                  alt={post.author.name || "User"}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                  <span className="text-white font-semibold text-xs">
+                                    {(post.author.name || "U").charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">
+                                  {post.author.name || "Без имени"}
+                                </span>
+                                {post.author.username && (
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    @{post.author.username}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end">
+                            <span className="text-sm text-muted-foreground">
+                              {post.views?.toLocaleString("ru-RU") || "0"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right w-20">
                           <div className="flex items-center justify-end gap-2">
                             <Link href={`/dashboard/articles/edit/${post.slug}`}>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
