@@ -189,6 +189,22 @@ export default function GeneratorPage() {
   };
 
   const loadNews = async () => {
+    // Проверка на наличие источников
+    if (sources.length === 0) {
+      toast.info("Добавьте источники", {
+        description: "Для начала добавьте источники RSS, чтобы загрузить новости"
+      });
+      return;
+    }
+
+    // Проверка на наличие включенных источников
+    if (enabledSources.length === 0) {
+      toast.info("Включите источники", {
+        description: "Включите хотя бы один источник, чтобы загрузить новости"
+      });
+      return;
+    }
+
     setLoading(true);
     setVisibleNewsCount(20); // Reset visible count
     console.log('Loading news with sources:', enabledSources);
