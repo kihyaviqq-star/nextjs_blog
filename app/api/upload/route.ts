@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!type || !["avatar", "logo", "cover", "favicon", "editor-image"].includes(type)) {
+    if (!type || !["avatar", "logo", "cover", "favicon", "editor-image", "comment-image"].includes(type)) {
       return NextResponse.json({ error: "Invalid upload type" }, { status: 400 });
     }
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     // For favicon, use "favicons" folder, for editor-image use "covers", for others use plural form
     const folderName = type === "favicon" 
       ? "favicons" 
-      : type === "editor-image" 
+      : type === "editor-image" || type === "comment-image"
         ? "covers" 
         : `${type}s`;
     const uploadDir = join(process.cwd(), "public", "uploads", folderName);

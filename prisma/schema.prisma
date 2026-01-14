@@ -36,6 +36,7 @@ model User {
   
   // Relations
   posts         Post[]
+  comments      Comment[]
   accounts      Account[]
   sessions      Session[]
 }
@@ -94,6 +95,8 @@ model Post {
   authorId    String
   author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   
+  comments    Comment[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -101,6 +104,29 @@ model Post {
   @@index([slug])
   @@index([views]) // Index for sorting by popularity
   @@index([publishedAt]) // Index for navigation
+}
+
+// Comment model
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  parentId  String?
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
 }
 
 // Site Settings (Singleton)

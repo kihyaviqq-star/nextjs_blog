@@ -11,6 +11,7 @@ import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github } from "lu
 import { prisma } from "@/lib/prisma";
 import { ViewIncrementer } from "@/components/view-incrementer";
 import { isUsernameReserved } from "@/lib/constants";
+import { CommentSection } from "@/components/comments/comment-section";
 
 interface PageProps {
   params: Promise<{
@@ -293,6 +294,9 @@ async function ArticlePage({ post }: { post: any }) {
             </div>
           </div>
         )}
+
+        {/* Comments Section */}
+        <CommentSection postId={post.id} />
 
         {/* Related Posts */}
         {relatedPostsWithParsedTags.length > 0 && (

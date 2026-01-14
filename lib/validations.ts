@@ -78,7 +78,8 @@ export function validateBodySize(contentLength: string | null): { valid: boolean
  * Format Zod errors for API response
  */
 export function formatZodError(error: z.ZodError): { message: string; errors: Array<{ field: string; message: string }> } {
-  const errors = error.errors.map(err => ({
+  const issues = error.issues || error.errors || [];
+  const errors = issues.map(err => ({
     field: err.path.join('.'),
     message: err.message,
   }));
