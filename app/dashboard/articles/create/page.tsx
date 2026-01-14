@@ -150,6 +150,11 @@ export default function CreatePostPage() {
   };
 
   const addTag = () => {
+    if (tags.length >= 3) {
+      toast.error("Максимум 3 тега");
+      return;
+    }
+    
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags([...tags, newTag.trim()]);
       setNewTag("");
@@ -283,10 +288,11 @@ export default function CreatePostPage() {
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && addTag()}
-                  placeholder="Введите тег и нажмите Enter"
-                  className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder={tags.length === 3 ? "Максимум 3 тега" : "Введите тег и нажмите Enter (макс. 3)"}
+                  className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={tags.length >= 3}
                 />
-                <Button onClick={addTag} type="button">
+                <Button onClick={addTag} type="button" disabled={tags.length >= 3 || !newTag.trim()}>
                   Добавить
                 </Button>
               </div>

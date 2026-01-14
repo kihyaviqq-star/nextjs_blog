@@ -145,7 +145,7 @@ export async function generateArticle(topic: string, context: string, model?: st
   - Не используй переносы строк (Enter) для форматирования самого JSON объекта.
   - Не используй неэкранированные управляющие символы.
   - Каждый блок должен иметь правильную структуру с "type" и "data".
-  - Генерируй релевантные теги на основе содержания статьи (3-5 тегов).
+  - Генерируй релевантные теги на основе содержания статьи (МАКСИМУМ 3 тега, не больше).
 
   Формат ответа (строго):
   {
@@ -154,7 +154,7 @@ export async function generateArticle(topic: string, context: string, model?: st
       { "type": "paragraph", "data": { "text": "Текст..." } },
       { "type": "header", "data": { "text": "Заголовок раздела", "level": 2 } }
     ],
-    "tags": ["тег1", "тег2", "тег3"],
+    "tags": ["тег1", "тег2", "тег3"] // МАКСИМУМ 3 тега, не больше!
     "slug": "url-friendly-slug-transliterated-to-english"
   }`;
 
@@ -192,7 +192,12 @@ export async function generateArticle(topic: string, context: string, model?: st
     const jsonContent = jsonMatch ? jsonMatch[0] : content;
     
     try {
-      return JSON.parse(jsonContent) as GeneratedArticle;
+      const article = JSON.parse(jsonContent) as GeneratedArticle;
+      // Ограничиваем количество тегов до 3 максимум
+      if (article.tags && article.tags.length > 3) {
+        article.tags = article.tags.slice(0, 3);
+      }
+      return article;
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
       console.error('Raw Content:', content);
@@ -206,7 +211,12 @@ export async function generateArticle(topic: string, context: string, model?: st
         .replace(/\r/g, '');
         
       try {
-        return JSON.parse(fixedContent) as GeneratedArticle;
+        const article = JSON.parse(fixedContent) as GeneratedArticle;
+        // Ограничиваем количество тегов до 3 максимум
+        if (article.tags && article.tags.length > 3) {
+          article.tags = article.tags.slice(0, 3);
+        }
+        return article;
       } catch (retryError) {
         throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
       }

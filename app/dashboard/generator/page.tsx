@@ -162,6 +162,11 @@ export default function GeneratorPage() {
 
       const article = result.data;
       
+      // Ограничиваем количество тегов до 3 максимум
+      if (article.tags && article.tags.length > 3) {
+        article.tags = article.tags.slice(0, 3);
+      }
+      
       // Convert blocks to Editor.js format
       const editorData: OutputData = {
         blocks: article.blocks,
@@ -200,6 +205,11 @@ export default function GeneratorPage() {
       }
 
       const article = articleResult.data;
+      
+      // Ограничиваем количество тегов до 3 максимум
+      if (article.tags && article.tags.length > 3) {
+        article.tags = article.tags.slice(0, 3);
+      }
       
       // Convert blocks to Editor.js format
       const editorData: OutputData = {
@@ -258,6 +268,13 @@ export default function GeneratorPage() {
 
   const handleAddTag = () => {
     if (!generatedArticle || !newTag.trim()) return;
+    
+    // Проверка на максимум 3 тега
+    if (generatedArticle.tags.length >= 3) {
+      toast.error("Максимум 3 тега");
+      return;
+    }
+    
     const trimmedTag = newTag.trim();
     if (generatedArticle.tags.includes(trimmedTag)) {
       toast.error("Тег уже существует");
@@ -619,7 +636,7 @@ export default function GeneratorPage() {
                     </div>
                     <div className="flex gap-2">
                       <Input
-                        placeholder="Добавить тег"
+                        placeholder={generatedArticle?.tags.length === 3 ? "Максимум 3 тега" : "Добавить тег (макс. 3)"}
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
                         onKeyDown={(e) => {
@@ -629,13 +646,14 @@ export default function GeneratorPage() {
                           }
                         }}
                         className="flex-1"
+                        disabled={(generatedArticle?.tags.length || 0) >= 3}
                       />
                       <Button
                         onClick={handleAddTag}
                         variant="outline"
                         size="sm"
                         className="gap-2"
-                        disabled={!newTag.trim()}
+                        disabled={!newTag.trim() || (generatedArticle?.tags.length || 0) >= 3}
                       >
                         <Plus className="w-4 h-4" />
                         Добавить
