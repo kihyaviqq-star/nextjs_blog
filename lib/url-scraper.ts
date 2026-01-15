@@ -138,7 +138,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
 
       if (src) {
         // Filter out icons, spacers, etc.
-        if (src.startsWith('data:') || src.includes('icon') || src.includes('logo') || src.includes('spacer')) {
+        if (src.startsWith('data:') || src.includes('icon') || src.includes('logo') || src.includes('spacer') || src.includes('pixel') || src.includes('avatar')) {
           $img.remove();
           return;
         }

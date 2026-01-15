@@ -114,54 +114,16 @@ export async function generateArticle(topic: string, context: string, model?: st
 
   const selectedModel = model || process.env.OPENROUTER_ARTICLE_MODEL || 'google/gemini-2.0-flash-thinking:free';
 
-  const systemPrompt = `Ты — профессиональный IT-журналист и редактор. 
-  Твоя задача — взять исходный контент (новость, статью или скрапленный текст) и написать увлекательную, структурированную статью на русском языке.
+  const systemPrompt = process.env.ARTICLE_GENERATION_PROMPT;
   
-  Если исходный контент содержит HTML-теги, лишние пробелы или неструктурированный текст — очисти его и преобразуй в читаемый формат.
-  Если контент уже хорошо структурирован — используй его как основу, но улучши стиль и читаемость.
-  
-  Формат вывода: EditorJS JSON Blocks (строго совместимый с Editor.js).
-  Ты должен вернуть массив блоков (blocks) внутри JSON объекта в формате Editor.js.
-  
-  Поддерживаемые типы блоков:
-  1. header: { "type": "header", "data": { "text": "Заголовок", "level": 2 } }
-  2. paragraph: { "type": "paragraph", "data": { "text": "Текст с <b>жирным</b> и <i>курсивом</i>" } }
-  3. list: { "type": "list", "data": { "style": "unordered", "items": ["Пункт 1", "Пункт 2"] } }
-  4. quote: { "type": "quote", "data": { "text": "Цитата", "caption": "Автор" } }
-  5. warning: { "type": "warning", "data": { "title": "Заголовок", "message": "Сообщение" } }
-  6. delimiter: { "type": "delimiter", "data": {} }
-  7. code: { "type": "code", "data": { "code": "код здесь" } }
-  8. image: { "type": "image", "data": { "file": { "url": "https://example.com/image.jpg" }, "caption": "Описание", "withBorder": false, "withBackground": false, "stretched": false } }
+  if (!systemPrompt) {
+    throw new Error('ARTICLE_GENERATION_PROMPT is not set in .env file');
+  }
 
-  Структура статьи:
-  - Введение (Paragraph) - краткое введение в тему
-  - Основной контент (Header level 2 + Paragraphs) - разбивай на логические разделы
-  - Изображения (Image) - ЕСЛИ в исходном тексте есть маркеры [IMAGE: url], ТЫ ОБЯЗАН включить их в статью (минимум 1, максимум 5). Преобразуй маркеры [IMAGE: url] в блоки типа 'image'. Используй оригинальный URL из маркера. Не выдумывай URL.
-  - Детали/Списки (List) - если есть перечисления
-  - Цитаты если есть (Quote)
-  - Заключение (Paragraph) - краткое резюме
+  const userPrompt = `Вот исходный текст на английском:
+${context}
 
-  ВАЖНО: Верни ответ ТОЛЬКО в формате валидного JSON (minified, в одну строку).
-  - Убедись, что это валидный JSON.
-  - Экранируй все двойные кавычки внутри контента (\\").
-  - Не используй переносы строк (Enter) для форматирования самого JSON объекта.
-  - Не используй неэкранированные управляющие символы.
-  - Каждый блок должен иметь правильную структуру с "type" и "data".
-  - Генерируй релевантные теги на основе содержания статьи (МАКСИМУМ 3 тега, не больше).
-
-  Формат ответа (строго):
-  {
-    "title": "Заголовок статьи",
-    "blocks": [
-      { "type": "paragraph", "data": { "text": "Текст..." } },
-      { "type": "image", "data": { "file": { "url": "..." }, "caption": "..." } },
-      { "type": "header", "data": { "text": "Заголовок раздела", "level": 2 } }
-    ],
-    "tags": ["тег1", "тег2", "тег3"] // МАКСИМУМ 3 тега, не больше!
-    "slug": "url-friendly-slug-transliterated-to-english"
-  }`;
-
-  const userPrompt = `Тема: ${topic}\n\nКонтекст/Источник:\n${context}`;
+Напиши на его основе статью на русском языке.`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -174,6 +136,7 @@ export async function generateArticle(topic: string, context: string, model?: st
       },
       body: JSON.stringify({
         model: selectedModel,
+        temperature: 0.7,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -195,7 +158,47 @@ export async function generateArticle(topic: string, context: string, model?: st
     const jsonContent = jsonMatch ? jsonMatch[0] : content;
     
     try {
-      const article = JSON.parse(jsonContent) as GeneratedArticle;
+      let article = JSON.parse(jsonContent) as GeneratedArticle;
+
+      // --- Force Image Injection Logic ---
+      // Extract images from context
+      const imageMarkers = context.match(/\[IMAGE: (.*?)\]/g);
+      if (imageMarkers && imageMarkers.length > 0) {
+        const sourceImages = imageMarkers.map(m => m.replace('[IMAGE: ', '').replace(']', '').trim());
+        
+        // Ensure blocks exists
+        if (!article.blocks) article.blocks = [];
+
+        // Check which images are already in the article blocks
+        const usedImages = new Set();
+        article.blocks.forEach(block => {
+           if (block.type === 'image' && block.data?.file?.url) {
+             usedImages.add(block.data.file.url);
+           }
+        });
+
+        // Identify missing images
+        const missingImages = sourceImages.filter(url => !usedImages.has(url));
+
+        // Inject missing images
+        if (missingImages.length > 0) {
+           // Insert missing images at the end of the article
+           missingImages.forEach((url) => {
+             article.blocks.push({
+               type: 'image',
+               data: {
+                 file: { url: url },
+                 caption: '',
+                 withBorder: false,
+                 withBackground: false,
+                 stretched: false
+               }
+             });
+           });
+        }
+      }
+      // -----------------------------------
+
       // Ограничиваем количество тегов до 3 максимум
       if (article.tags && article.tags.length > 3) {
         article.tags = article.tags.slice(0, 3);
@@ -203,18 +206,56 @@ export async function generateArticle(topic: string, context: string, model?: st
       return article;
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
-      console.error('Raw Content:', content);
-      
+      // console.error('Raw Content:', content); // Too large, maybe log substring
+      console.error('Raw Content Preview:', content.substring(0, 200) + '...' + content.substring(content.length - 200));
+
       // Попытка исправить распространенные ошибки
-      // 1. Экранируем некорректные слэши (Bad escaped character), исключая валидные управляющие символы и юникод
-      // 2. Экранируем переносы строк (частая проблема с HTML в JSON)
-      const fixedContent = jsonContent
-        .replace(/\\(?!["\\/bfnrtu])/g, "\\\\") 
-        .replace(/\n/g, '\\n')
-        .replace(/\r/g, '');
-        
+      let fixedContent = jsonContent;
+      
+      // 1. Remove invalid control characters (keep newlines/tabs as they are valid in JSON structure, but problematic in strings if unescaped)
+      // We'll trust the parser for main structure newlines.
+      fixedContent = fixedContent.replace(/[\x00-\x09\x0B-\x0C\x0E-\x1F]/g, "");
+
+      // 2. Fix bad escapes (backslashes that aren't escaping anything valid)
+      fixedContent = fixedContent.replace(/\\(?!["\\/bfnrtu])/g, "\\\\");
+
       try {
-        const article = JSON.parse(fixedContent) as GeneratedArticle;
+        let article = JSON.parse(fixedContent) as GeneratedArticle;
+
+        // --- Force Image Injection Logic (Duplicate for Retry) ---
+        // Extract images from context
+        const imageMarkers = context.match(/\[IMAGE: (.*?)\]/g);
+        if (imageMarkers && imageMarkers.length > 0) {
+          const sourceImages = imageMarkers.map(m => m.replace('[IMAGE: ', '').replace(']', '').trim());
+          
+          if (!article.blocks) article.blocks = [];
+
+          const usedImages = new Set();
+          article.blocks.forEach(block => {
+            if (block.type === 'image' && block.data?.file?.url) {
+              usedImages.add(block.data.file.url);
+            }
+          });
+
+          const missingImages = sourceImages.filter(url => !usedImages.has(url));
+
+          if (missingImages.length > 0) {
+            missingImages.forEach((url) => {
+              article.blocks.push({
+                type: 'image',
+                data: {
+                  file: { url: url },
+                  caption: '',
+                  withBorder: false,
+                  withBackground: false,
+                  stretched: false
+                }
+              });
+            });
+          }
+        }
+        // ---------------------------------------------------------
+
         // Ограничиваем количество тегов до 3 максимум
         if (article.tags && article.tags.length > 3) {
           article.tags = article.tags.slice(0, 3);
