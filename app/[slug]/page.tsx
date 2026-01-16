@@ -144,6 +144,10 @@ async function ArticlePage({ post }: { post: any }) {
 
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+      />
       <Header />
       
       {/* Back Button */}
@@ -157,21 +161,28 @@ async function ArticlePage({ post }: { post: any }) {
       </div>
 
       <main className="container mx-auto px-4 pb-16 max-w-4xl">
-        {/* Schema.org JSON-LD */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
-        />
         <article>
-          {/* Cover Image */}
+          {/* Cover Image with Ambilight Effect */}
           {post.coverImage && (
-            <div className="w-full h-[400px] relative mb-12 rounded-lg overflow-hidden bg-secondary">
-              <img
-                src={post.coverImage}
-                alt={post.title}
-                className="w-full h-full object-cover"
-                loading="eager"
-              />
+            <div className="relative mb-12 group">
+              {/* Ambilight Glow */}
+              <div className="absolute inset-0 -z-10 blur-3xl opacity-50 scale-105">
+                 <img
+                  src={post.coverImage}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  aria-hidden="true"
+                />
+              </div>
+
+              <div className="w-full h-[400px] relative rounded-lg overflow-hidden bg-secondary shadow-2xl">
+                <img
+                  src={post.coverImage}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                />
+              </div>
             </div>
           )}
 
