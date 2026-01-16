@@ -44,31 +44,52 @@ async function ArticlePage({ post }: { post: any }) {
   // Schema.org JSON-LD for Article
   const schemaData = {
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description: post.excerpt,
-    image: ogImage,
-    datePublished: post.publishedAt.toISOString(),
-    dateModified: post.updatedAt?.toISOString() || post.publishedAt.toISOString(),
-    author: {
-      "@type": "Person",
-      name: post.author.name || siteName,
-      url: post.author.username ? `${siteUrl}/${post.author.username}` : undefined,
-    },
-    publisher: {
-      "@type": "Organization",
-      name: siteName,
-      logo: {
-        "@type": "ImageObject",
-        url: siteSettings?.logoUrl 
-          ? (siteSettings.logoUrl.startsWith('http') ? siteSettings.logoUrl : `${siteUrl}${siteSettings.logoUrl}`)
-          : `${siteUrl}/og-default.jpg`,
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": post.title,
+        "description": post.excerpt,
+        "image": ogImage,
+        "datePublished": post.publishedAt.toISOString(),
+        "dateModified": post.updatedAt?.toISOString() || post.publishedAt.toISOString(),
+        "author": {
+          "@type": "Person",
+          "name": post.author.name || siteName,
+          "url": post.author.username ? `${siteUrl}/${post.author.username}` : undefined,
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": siteName,
+          "logo": {
+            "@type": "ImageObject",
+            "url": siteSettings?.logoUrl 
+              ? (siteSettings.logoUrl.startsWith('http') ? siteSettings.logoUrl : `${siteUrl}${siteSettings.logoUrl}`)
+              : `${siteUrl}/og-default.jpg`,
+          },
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": postUrl,
+        },
       },
-    },
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": postUrl,
-    },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Главная",
+            "item": siteUrl
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": post.title,
+            "item": postUrl
+          }
+        ]
+      }
+    ]
   };
 
   // Get related posts (same author or similar tags)
@@ -353,9 +374,33 @@ async function ArticlePage({ post }: { post: any }) {
 // User Profile Component
 function UserProfilePage({ user }: { user: any }) {
   const username = user.username || 'user';
+  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const userUrl = `${siteUrl}/${username}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "mainEntity": {
+      "@type": "Person",
+      "name": user.name || username,
+      "description": user.bio,
+      "image": user.avatarUrl ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${siteUrl}${user.avatarUrl}`) : undefined,
+      "url": userUrl,
+      "sameAs": [
+        user.telegram,
+        user.vk,
+        user.twitter,
+        user.github
+      ].filter(Boolean)
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
 
       <main className="container mx-auto px-4 py-12 max-w-4xl">

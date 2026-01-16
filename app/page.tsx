@@ -73,8 +73,28 @@ export default async function Home({ searchParams }: HomeProps) {
     tags: JSON.parse(post.tags),
   }));
 
+  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "mainEntity": {
+      "@type": "ItemList",
+      "itemListElement": posts.map((post, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "url": `${siteUrl}/${post.slug}`,
+        "name": post.title
+      }))
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
 
       <main className="flex-1 container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-6xl mt-4 md:mt-0">

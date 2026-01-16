@@ -83,14 +83,60 @@ export async function generateMetadata(): Promise<Metadata> {
   return metadata;
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch settings for Schema.org
+  const settings = await prisma.siteSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      siteName: true,
+      metaDescription: true,
+      logoUrl: true,
+    },
+  });
+
+  const siteName = settings?.siteName || "Blog";
+  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const logoUrl = settings?.logoUrl 
+    ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
+    : `${siteUrl}/og-default.jpg`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        "url": siteUrl,
+        "name": siteName,
+        "description": settings?.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+        "publisher": {
+          "@id": `${siteUrl}/#organization`
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        "name": siteName,
+        "url": siteUrl,
+        "logo": {
+          "@type": "ImageObject",
+          "url": logoUrl
+        }
+      }
+    ]
+  };
+
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <SessionProvider>
           <ThemeProvider
             attribute="class"
