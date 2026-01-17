@@ -15,13 +15,13 @@ const getSiteSettings = cache(async () => {
       },
     });
     return {
-      siteName: settings?.siteName || "Blog",
+      siteName: settings?.siteName || null,
       logoUrl: settings?.logoUrl || null,
     };
   } catch (error) {
     console.error("Failed to fetch site settings:", error);
     return {
-      siteName: "Blog",
+      siteName: null,
       logoUrl: null,
     };
   }

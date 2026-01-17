@@ -38,8 +38,8 @@ export async function generateMetadata(): Promise<Metadata> {
     });
   }
 
-  const siteName = settings.siteName || "Blog";
-  const siteDescription = settings.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
+  const siteName = settings.siteName || "";
+  const siteDescription = settings.metaDescription || "";
   const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const ogImage = settings.logoUrl 
     ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)

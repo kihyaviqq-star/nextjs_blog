@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { HeaderClient } from "./header-client";
 
 export function HeaderClientWrapper() {
-  const [settings, setSettings] = useState({
-    siteName: "Blog",
-    logoUrl: null as string | null,
+  const [settings, setSettings] = useState<{
+    siteName: string | null;
+    logoUrl: string | null;
+  }>({
+    siteName: null,
+    logoUrl: null,
   });
 
   useEffect(() => {
@@ -16,8 +19,8 @@ export function HeaderClientWrapper() {
         if (response.ok) {
           const data = await response.json();
           setSettings({
-            siteName: data.siteName || "Blog",
-            logoUrl: data.logoUrl,
+            siteName: data.siteName || null,
+            logoUrl: data.logoUrl || null,
           });
         }
       } catch (error) {

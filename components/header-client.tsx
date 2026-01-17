@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PenSquare, LogIn, Sparkles } from "lucide-react";
 
 interface HeaderClientProps {
-  siteName: string;
+  siteName: string | null;
   logoUrl: string | null;
 }
 
@@ -30,11 +30,13 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
             {logoUrl && (
               <img 
                 src={logoUrl} 
-                alt={siteName} 
+                alt={siteName || "Logo"} 
                 className="h-8 w-auto"
               />
             )}
-            <span className="text-xl font-semibold">{siteName}</span>
+            {siteName && (
+              <span className="text-xl font-semibold">{siteName}</span>
+            )}
           </Link>
 
           {/* Desktop actions - hidden on mobile */}
