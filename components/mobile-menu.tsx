@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Session } from "next-auth";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -11,8 +12,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { 
   Menu, 
   User, 
@@ -21,7 +22,10 @@ import {
   Settings, 
   LogOut, 
   PenSquare, 
-  LogIn 
+  LogIn,
+  X,
+  Moon,
+  Sun
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
@@ -34,6 +38,17 @@ interface MobileMenuProps {
 
 export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleThemeToggle = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   const handleLinkClick = () => {
     setOpen(false);
@@ -60,7 +75,16 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
         <SheetHeader className="px-6 pb-4">
           <div className="flex items-center justify-between">
             <SheetTitle>Меню</SheetTitle>
-            <ThemeToggle />
+            <SheetClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                aria-label="Закрыть меню"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </SheetClose>
           </div>
         </SheetHeader>
 
@@ -160,6 +184,19 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
                   <Settings className="w-5 h-5 flex-shrink-0" />
                   <span className="text-sm font-medium">Настройки</span>
                 </Link>
+
+                {/* Theme Toggle */}
+                <button
+                  onClick={handleThemeToggle}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors min-h-[44px] text-left cursor-pointer"
+                >
+                  {mounted && theme === "dark" ? (
+                    <Moon className="w-5 h-5 flex-shrink-0" />
+                  ) : (
+                    <Sun className="w-5 h-5 flex-shrink-0" />
+                  )}
+                  <span className="text-sm font-medium">Тема</span>
+                </button>
               </nav>
 
               <Separator />

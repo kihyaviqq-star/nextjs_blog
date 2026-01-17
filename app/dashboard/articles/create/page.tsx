@@ -231,31 +231,53 @@ export default function CreatePostPage() {
             </Button>
           </Link>
 
-          <div className="flex items-center justify-between mb-6">
-            <div>
+          <div className="mb-6">
+            <div className="mb-4 md:mb-0">
               <h1 className="text-4xl font-bold mb-2">Создание новой статьи</h1>
               <p className="text-muted-foreground">
                 Заполните информацию о статье и добавьте содержимое
               </p>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              size="lg"
-              className="gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Сохранение...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Опубликовать
-                </>
-              )}
-            </Button>
+            <div className="flex md:hidden mt-4">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                size="lg"
+                className="gap-2 w-full"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Сохранение...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Опубликовать
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="hidden md:flex items-center justify-end">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                size="lg"
+                className="gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Сохранение...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Опубликовать
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 

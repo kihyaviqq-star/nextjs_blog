@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, X, Clock, TrendingUp } from "lucide-react";
+import { Search, X, Clock, TrendingUp, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 export function SearchFilterBar() {
   const router = useRouter();
@@ -81,7 +89,7 @@ export function SearchFilterBar() {
           placeholder="Поиск статей..."
           value={searchValue}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10 pr-10"
+          className="pl-10 pr-10 hover:bg-secondary/50 transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 border-border"
         />
         {searchValue && (
           <Button
@@ -95,34 +103,45 @@ export function SearchFilterBar() {
         )}
       </div>
 
-      {/* Sort Buttons */}
-      <div className="flex gap-2 w-full sm:w-auto">
-        <Button
-          variant="outline"
-          size="default"
-          onClick={() => handleSort("newest")}
-          className={`gap-2 flex-1 sm:flex-initial ${
-            sortBy === "newest"
-              ? "border-primary border-2 bg-secondary/50"
-              : "border-border"
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          Последние
-        </Button>
-        <Button
-          variant="outline"
-          size="default"
-          onClick={() => handleSort("popular")}
-          className={`gap-2 flex-1 sm:flex-initial ${
-            sortBy === "popular"
-              ? "border-primary border-2 bg-secondary/50"
-              : "border-border"
-          }`}
-        >
-          <TrendingUp className="w-4 h-4" />
-          Популярное
-        </Button>
+      {/* Sort Dropdown */}
+      <div className="w-full sm:w-auto">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="default"
+              className="gap-2 w-full sm:w-auto"
+            >
+              {sortBy === "newest" ? (
+                <>
+                  <Clock className="w-4 h-4" />
+                  Последние
+                </>
+              ) : (
+                <>
+                  <TrendingUp className="w-4 h-4" />
+                  Популярное
+                </>
+              )}
+              <ChevronDown className="w-4 h-4 ml-auto" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuRadioGroup
+              value={sortBy}
+              onValueChange={(value) => handleSort(value as "newest" | "popular")}
+            >
+              <DropdownMenuRadioItem value="newest" className="gap-2 cursor-pointer">
+                <Clock className="w-4 h-4" />
+                Последние
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="popular" className="gap-2 cursor-pointer">
+                <TrendingUp className="w-4 h-4" />
+                Популярное
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

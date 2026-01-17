@@ -38,7 +38,7 @@ async function ArticlePage({ post }: { post: any }) {
     select: { siteName: true, logoUrl: true },
   });
   const siteName = siteSettings?.siteName || "";
-  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const postUrl = `${siteUrl}/${post.slug}`;
   const ogImage = post.coverImage 
     ? (post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`)
@@ -403,7 +403,7 @@ async function ArticlePage({ post }: { post: any }) {
 // User Profile Component
 function UserProfilePage({ user }: { user: any }) {
   const username = user.username || 'user';
-  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const userUrl = `${siteUrl}/${username}`;
 
   const jsonLd = {
@@ -739,7 +739,7 @@ export async function generateMetadata({ params }: PageProps) {
   });
   const siteName = siteSettings?.siteName || "";
   const siteDescription = siteSettings?.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
-  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const defaultImage = siteSettings?.logoUrl ? `${siteUrl}${siteSettings.logoUrl}` : `${siteUrl}/og-default.jpg`;
 
   // Try post first

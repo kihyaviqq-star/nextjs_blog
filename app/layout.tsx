@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { MetadataUpdater } from "@/components/metadata-updater";
+import { YandexMetrika } from "@/components/YandexMetrika";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { prisma } from "@/lib/prisma";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
@@ -40,15 +42,21 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const siteName = settings.siteName || "";
   const siteDescription = settings.metaDescription || "";
-  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const ogImage = settings.logoUrl 
     ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
     : `${siteUrl}/og-default.jpg`;
 
   const metadata: Metadata = {
-    title: siteName,
+    title: {
+      template: `%s | ${siteName}`,
+      default: siteName,
+    },
     description: siteDescription,
     metadataBase: new URL(siteUrl),
+    alternates: {
+      canonical: './',
+    },
     openGraph: {
       type: "website",
       locale: "ru_RU",
@@ -99,7 +107,7 @@ export default async function RootLayout({
   });
 
   const siteName = settings?.siteName || "Blog";
-  const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const logoUrl = settings?.logoUrl 
     ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
     : `${siteUrl}/og-default.jpg`;
@@ -149,6 +157,9 @@ export default async function RootLayout({
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </SessionProvider>
+        {/* Analytics */}
+        <GoogleAnalytics />
+        <YandexMetrika />
       </body>
     </html>
   );
