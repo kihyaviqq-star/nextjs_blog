@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Users, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { RoleSelector } from "@/components/role-selector";
 
 export default async function UsersPage() {
@@ -110,10 +111,13 @@ export default async function UsersPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {user.avatarUrl ? (
-                              <img
+                              <Image
                                 src={user.avatarUrl}
                                 alt={user.name || "User"}
-                                className="w-10 h-10 rounded-full object-cover"
+                                width={40}
+                                height={40}
+                                className="rounded-full object-cover"
+                                unoptimized={user.avatarUrl?.startsWith('http')}
                               />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

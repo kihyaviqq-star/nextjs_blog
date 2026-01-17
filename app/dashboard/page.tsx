@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileText, Eye, TrendingUp, Calendar } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -172,10 +173,13 @@ export default async function DashboardPage() {
                         <TableCell className="w-[200px]">
                           <div className="flex items-center gap-2">
                             {post.author.avatarUrl ? (
-                              <img
+                              <Image
                                 src={post.author.avatarUrl}
                                 alt={post.author.name || "User"}
-                                className="w-8 h-8 rounded-full object-cover"
+                                width={32}
+                                height={32}
+                                className="rounded-full object-cover"
+                                unoptimized={post.author.avatarUrl?.startsWith('http')}
                               />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

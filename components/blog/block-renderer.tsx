@@ -375,7 +375,7 @@ function LinkToolBlock({ data }: { data: any }) {
     >
       <div className="flex gap-4">
         {meta.image?.url && (
-          <Image
+          <ImageWithFallback
             src={meta.image.url}
             alt={meta.title || "Link preview"}
             width={96}

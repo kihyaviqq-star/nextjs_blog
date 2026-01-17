@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { HeaderClientWrapper } from "@/components/header";
 import { FooterClient } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -223,15 +224,15 @@ export default function ArticlesPage() {
               {filteredPosts.map((post) => (
                 <Card key={post.slug} className="p-4">
                   <div className="flex gap-3 mb-3">
-                    <div className="w-16 h-16 rounded overflow-hidden bg-secondary flex-shrink-0">
+                    <div className="w-16 h-16 rounded overflow-hidden bg-secondary flex-shrink-0 relative">
                       {post.coverImage ? (
-                        <img
+                        <Image
                           src={post.coverImage}
                           alt={post.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect fill='%23333' width='64' height='64'/%3E%3C/svg%3E";
-                          }}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                          unoptimized={post.coverImage?.startsWith('/') || post.coverImage?.startsWith('http')}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -272,10 +273,13 @@ export default function ArticlesPage() {
                       {post.author && (
                         <div className="flex items-center gap-2 mb-2">
                           {post.author.avatarUrl ? (
-                            <img
+                            <Image
                               src={post.author.avatarUrl}
                               alt={post.author.name || "User"}
-                              className="w-6 h-6 rounded-full object-cover"
+                              width={24}
+                              height={24}
+                              className="rounded-full object-cover"
+                              unoptimized={post.author.avatarUrl?.startsWith('http')}
                             />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -371,15 +375,15 @@ export default function ArticlesPage() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             {/* Thumbnail */}
-                            <div className="w-12 h-12 rounded overflow-hidden bg-secondary flex-shrink-0">
+                            <div className="w-12 h-12 rounded overflow-hidden bg-secondary flex-shrink-0 relative">
                               {post.coverImage ? (
-                                <img
+                                <Image
                                   src={post.coverImage}
                                   alt={post.title}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect fill='%23333' width='48' height='48'/%3E%3C/svg%3E";
-                                  }}
+                                  fill
+                                  className="object-cover"
+                                  sizes="48px"
+                                  unoptimized={post.coverImage?.startsWith('/') || post.coverImage?.startsWith('http')}
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
@@ -409,10 +413,13 @@ export default function ArticlesPage() {
                           {post.author ? (
                             <div className="flex items-center gap-2">
                               {post.author.avatarUrl ? (
-                                <img
+                                <Image
                                   src={post.author.avatarUrl}
                                   alt={post.author.name || "User"}
-                                  className="w-8 h-8 rounded-full object-cover"
+                                  width={32}
+                                  height={32}
+                                  className="rounded-full object-cover"
+                                  unoptimized={post.author.avatarUrl?.startsWith('http')}
                                 />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

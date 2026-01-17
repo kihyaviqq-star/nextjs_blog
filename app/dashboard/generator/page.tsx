@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { HeaderClientWrapper } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,13 +110,14 @@ export default function GeneratorPage() {
       }
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
   }, [news.length, loading, visibleNewsCount, isLoadingMore]); // Added dependencies
@@ -923,10 +925,13 @@ export default function GeneratorPage() {
                     </div>
                     {generatedArticle.coverImage ? (
                       <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                        <img
+                        <Image
                           src={generatedArticle.coverImage}
                           alt={generatedArticle.title}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 768px"
+                          unoptimized={generatedArticle.coverImage?.startsWith('/') || generatedArticle.coverImage?.startsWith('http')}
                         />
                       </div>
                     ) : (

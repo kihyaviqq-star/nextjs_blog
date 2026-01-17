@@ -77,7 +77,8 @@ export default function Editor({ data, onChange, holder }: EditorProps) {
         ref.current = null;
       }
     };
-  }, []); // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount - Editor.js should only initialize once
 
   return <div id={holder} className="prose prose-sm dark:prose-invert max-w-none min-h-[300px] bg-background rounded-md border p-4" />;
 }

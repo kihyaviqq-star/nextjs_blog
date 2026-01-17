@@ -29,11 +29,14 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 z-10"
           >
             {logoUrl && (
-              <img 
+              <Image 
                 src={logoUrl} 
                 alt={siteName || "Logo"} 
+                width={32}
+                height={32}
                 className="h-8 w-auto object-contain"
                 style={{ height: "2rem", width: "auto" }}
+                unoptimized={logoUrl?.startsWith('http')}
               />
             )}
             {siteName && (
