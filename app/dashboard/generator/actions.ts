@@ -7,6 +7,7 @@ import { generateArticle, GeneratedArticle } from '@/lib/ai-client';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { generateSlug, generateUniqueSlug } from '@/lib/slug';
 import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
@@ -276,11 +277,24 @@ export async function publishArticleAction(article: GeneratedArticle): Promise<{
       ? firstParagraph.data.text.replace(/<[^>]*>/g, '').substring(0, 150) + '...'
       : '';
 
+    // Use slug from article if provided, otherwise generate from title
+    let finalSlug = article.slug || generateSlug(article.title);
+    
+    // Ensure uniqueness - check if slug already exists
+    const { generateUniqueSlug } = await import('@/lib/slug');
+    finalSlug = await generateUniqueSlug(
+      finalSlug,
+      async (slugToCheck) => {
+        const exists = await prisma.post.findUnique({ where: { slug: slugToCheck } });
+        return !!exists;
+      }
+    );
+
     // Сохраняем в БД
     await prisma.post.create({
       data: {
         title: article.title,
-        slug: article.slug + '-' + Date.now(), // Ensure uniqueness
+        slug: finalSlug,
         // The article.blocks is already an array of blocks, we need to wrap it in the EditorJS structure
         content: JSON.stringify({
           time: Date.now(),

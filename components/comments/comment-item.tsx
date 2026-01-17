@@ -45,24 +45,56 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
   const [isReplying, setIsReplying] = useState(false);
   const [replies, setReplies] = useState<Comment[]>(comment.replies || []);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAllReplies, setShowAllReplies] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
   const isOwner = session?.user?.id === comment.author.id;
+  
+  // Логика для скрытия/показа ответов
+  const MAX_VISIBLE_REPLIES = 2;
+  const hasMoreThanTwoReplies = replies.length > MAX_VISIBLE_REPLIES;
+  const visibleReplies = showAllReplies ? replies : replies.slice(0, MAX_VISIBLE_REPLIES);
+  const hiddenRepliesCount = replies.length - MAX_VISIBLE_REPLIES;
 
   // Update replies when comment prop changes (e.g., after page reload)
+  // Но синхронизируем только если в prop есть новые комментарии
   useEffect(() => {
     if (comment.replies) {
-      setReplies(comment.replies);
+      const propReplyIds = new Set(comment.replies.map((r: Comment) => r.id));
+      const localReplyIds = new Set(replies.map((r: Comment) => r.id));
+      
+      // Проверяем, есть ли в prop комментарии, которых нет локально
+      const hasNewReplies = comment.replies.some((r: Comment) => !localReplyIds.has(r.id));
+      
+      // Также проверяем, есть ли удаленные комментарии в prop
+      const hasRemovedReplies = replies.some((r: Comment) => !propReplyIds.has(r.id));
+      
+      // Обновляем только если есть изменения
+      if (hasNewReplies || hasRemovedReplies) {
+        setReplies(comment.replies);
+      }
+    } else if (!comment.replies && replies.length > 0) {
+      // Если prop говорит что нет ответов, но локально есть - сбрасываем
+      setReplies([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comment.replies]);
 
   const handleReplySuccess = (newReply: Comment) => {
     console.log("handleReplySuccess called with:", newReply);
+    // Обновляем локальное состояние сразу для мгновенного отображения
     setReplies((prev) => {
       console.log("Updating replies from", prev, "to", [...prev, newReply]);
-      return [...prev, newReply];
+      const updated = [...prev, { ...newReply, replies: [] }];
+      // Если комментарий был скрыт, показываем все ответы чтобы новый комментарий был виден
+      if (!showAllReplies && updated.length > MAX_VISIBLE_REPLIES) {
+        // Используем setTimeout чтобы setShowAllReplies вызывался после обновления состояния
+        setTimeout(() => setShowAllReplies(true), 0);
+      }
+      return updated;
     });
     setIsReplying(false);
-    // Notify parent component to update total count
+    // Notify parent component to update state at all levels
     onReplyAdded(newReply);
   };
 
@@ -101,6 +133,25 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
   const profileUrl = comment.author.username 
     ? `/${comment.author.username}` 
     : `/${comment.author.id}`;
+
+  if (isCollapsed) {
+    return (
+      <div className={cn("group animate-in fade-in slide-in-from-top-2", level > 0 && "mt-4")}>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 gap-1.5"
+            onClick={() => setIsCollapsed(false)}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            {comment.author.name || "Пользователь"}
+            {hasReplies && ` (${replies.length} ${replies.length === 1 ? 'ответ' : replies.length < 5 ? 'ответа' : 'ответов'})`}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("group animate-in fade-in slide-in-from-top-2", level > 0 && "mt-4")}>
@@ -164,6 +215,17 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
           )}
 
           <div className="flex items-center gap-2 pt-1">
+            {hasReplies && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-muted-foreground hover:text-foreground -ml-2 gap-1.5"
+                onClick={() => setIsCollapsed(true)}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Свернуть
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm" 
@@ -223,22 +285,25 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
 
       {hasReplies && (
         <div className="mt-4 ml-4 md:ml-12 space-y-4 border-l-2 border-border/30 pl-4">
-          {replies.map((reply) => (
+          {visibleReplies.map((reply) => (
             <CommentItem 
               key={reply.id} 
               comment={reply} 
               postId={postId}
               onReplyAdded={(newReply) => {
-                // Update the specific reply's replies in the parent state
+                // Update the specific reply's replies in the parent state immediately
+                // newReply.parentId должен быть равен reply.id, если это ответ на reply
                 setReplies((prev) => {
                   const updateReplies = (repliesList: Comment[]): Comment[] => {
                     return repliesList.map((r) => {
-                      if (r.id === reply.id) {
+                      // Проверяем, является ли этот комментарий родителем нового ответа
+                      if (r.id === newReply.parentId) {
                         return {
                           ...r,
-                          replies: [...(r.replies || []), newReply]
+                          replies: [...(r.replies || []), { ...newReply, replies: [] }]
                         };
                       }
+                      // Рекурсивно обновляем ответы на этом комментарии
                       if (r.replies && r.replies.length > 0) {
                         return {
                           ...r,
@@ -250,7 +315,7 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
                   };
                   return updateReplies(prev);
                 });
-                // Also notify parent component
+                // Also notify parent component to update main state
                 onReplyAdded(newReply);
               }}
               onCommentDeleted={(deletedId) => {
@@ -264,6 +329,31 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
               level={level + 1}
             />
           ))}
+          
+          {/* Кнопка "N Ответов" для показа скрытых комментариев */}
+          {hasMoreThanTwoReplies && !showAllReplies && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-muted-foreground hover:text-primary gap-1.5 -ml-2"
+              onClick={() => setShowAllReplies(true)}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              {hiddenRepliesCount} {hiddenRepliesCount === 1 ? 'ответ' : hiddenRepliesCount < 5 ? 'ответа' : 'ответов'}
+            </Button>
+          )}
+          
+          {/* Кнопка "Свернуть" для скрытия показанных комментариев */}
+          {hasMoreThanTwoReplies && showAllReplies && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-muted-foreground hover:text-foreground gap-1.5 -ml-2"
+              onClick={() => setShowAllReplies(false)}
+            >
+              Свернуть
+            </Button>
+          )}
         </div>
       )}
     </div>

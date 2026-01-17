@@ -11,6 +11,51 @@ const commentSchema = z.object({
   imageUrl: z.string().nullable().optional(),
 });
 
+// Функция для построения дерева комментариев из плоского списка (неограниченная вложенность)
+function buildCommentTree(comments: any[]): any[] {
+  // Создаем мапу для быстрого доступа к комментариям по ID
+  const commentMap = new Map<string, any>();
+  const rootComments: any[] = [];
+
+  // Инициализируем все комментарии
+  comments.forEach((comment) => {
+    commentMap.set(comment.id, {
+      ...comment,
+      replies: [],
+    });
+  });
+
+  // Строим дерево
+  comments.forEach((comment) => {
+    const commentWithReplies = commentMap.get(comment.id);
+    
+    if (comment.parentId) {
+      // Это ответ - добавляем к родительскому комментарию
+      const parent = commentMap.get(comment.parentId);
+      if (parent) {
+        parent.replies.push(commentWithReplies);
+      }
+    } else {
+      // Это верхнеуровневый комментарий
+      rootComments.push(commentWithReplies);
+    }
+  });
+
+  // Сортируем ответы по дате создания
+  const sortReplies = (comment: any) => {
+    if (comment.replies && comment.replies.length > 0) {
+      comment.replies.sort((a: any, b: any) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      comment.replies.forEach(sortReplies);
+    }
+  };
+
+  rootComments.forEach(sortReplies);
+
+  return rootComments;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -32,11 +77,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`GET /api/comments: Fetching comments for post ${postId}, page ${page}, limit ${limit}`);
 
-    // Fetch top-level comments (parentId is null)
-    const comments = await prisma.comment.findMany({
+    // Загружаем все комментарии поста одним запросом (эффективнее чем рекурсивные запросы)
+    const allComments = await prisma.comment.findMany({
       where: {
         postId,
-        parentId: null,
       },
       include: {
         author: {
@@ -47,43 +91,21 @@ export async function GET(request: NextRequest) {
             avatarUrl: true,
           },
         },
-        replies: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                avatarUrl: true,
-              },
-            },
-            replies: {
-              include: {
-                author: {
-                  select: {
-                    id: true,
-                    name: true,
-                    username: true,
-                    avatarUrl: true,
-                  },
-                },
-              },
-              orderBy: {
-                createdAt: "asc",
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        },
       },
       orderBy: {
-        createdAt: "desc",
+        createdAt: "asc",
       },
-      take: limit,
-      skip: skip,
     });
+
+    // Строим дерево комментариев
+    const commentTree = buildCommentTree(allComments);
+
+    // Применяем пагинацию только к верхнеуровневым комментариям
+    const sortedRootComments = commentTree.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const comments = sortedRootComments.slice(skip, skip + limit);
 
     // Count total top-level comments for pagination
     const total = await prisma.comment.count({

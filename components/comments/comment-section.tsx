@@ -58,38 +58,95 @@ export function CommentSection({ postId }: CommentSectionProps) {
     fetchComments(nextPage);
   };
 
+  // Рекурсивная функция для добавления ответа к комментарию на любом уровне вложенности
+  const addReplyToComment = (comments: any[], parentId: string, newReply: any): any[] => {
+    return comments.map((c) => {
+      // Если это родительский комментарий, добавляем ответ
+      if (c.id === parentId) {
+        return {
+          ...c,
+          replies: [...(c.replies || []), { ...newReply, replies: [] }]
+        };
+      }
+      // Если у комментария есть ответы, рекурсивно ищем родителя в них
+      if (c.replies && c.replies.length > 0) {
+        return {
+          ...c,
+          replies: addReplyToComment(c.replies, parentId, newReply)
+        };
+      }
+      return c;
+    });
+  };
+
   const handleNewComment = (comment: any) => {
     console.log("handleNewComment called with:", comment);
     // If comment has parentId, it's a reply - need to update the parent comment's replies
     if (comment.parentId) {
-      const updateCommentWithReply = (comments: any[]): any[] => {
-        return comments.map((c) => {
-          if (c.id === comment.parentId) {
-            console.log(`Found parent comment ${c.id}, adding reply`);
-            return {
-              ...c,
-              replies: [...(c.replies || []), { ...comment, replies: [] }]
-            };
-          }
-          if (c.replies && c.replies.length > 0) {
-            return {
-              ...c,
-              replies: updateCommentWithReply(c.replies)
-            };
-          }
-          return c;
-        });
-      };
       setComments((prev) => {
-        const updated = updateCommentWithReply(prev);
-        console.log("Updated comments:", updated);
+        // Проверяем, нет ли уже этого комментария в дереве (избегаем дублирования)
+        const findCommentInTree = (comments: any[], id: string): boolean => {
+          for (const c of comments) {
+            if (c.id === id) return true;
+            if (c.replies && c.replies.length > 0) {
+              if (findCommentInTree(c.replies, id)) return true;
+            }
+          }
+          return false;
+        };
+        
+        // Если комментарий уже есть, не добавляем его снова
+        if (findCommentInTree(prev, comment.id)) {
+          console.log("Comment already exists in tree, skipping");
+          return prev;
+        }
+        
+        const updated = addReplyToComment(prev, comment.parentId, comment);
+        console.log("Updated comments with reply:", updated);
         return updated;
       });
     } else {
-      // Top-level comment
-      setComments((prev) => [{ ...comment, replies: [] }, ...prev]);
+      // Top-level comment - проверяем, нет ли уже этого комментария
+      setComments((prev) => {
+        const exists = prev.some((c) => c.id === comment.id);
+        if (exists) {
+          console.log("Top-level comment already exists, skipping");
+          return prev;
+        }
+        return [{ ...comment, replies: [] }, ...prev];
+      });
     }
     setTotal((prev) => prev + 1);
+  };
+
+  // Обработчик добавления ответа на любом уровне (для обновления главного состояния)
+  // Этот обработчик вызывается только для синхронизации главного состояния,
+  // но не должен дублировать обновления, которые уже были сделаны локально
+  const handleReplyAdded = (newReply: any) => {
+    if (newReply.parentId) {
+      // Используем функциональное обновление для правильной синхронизации
+      setComments((prev) => {
+        // Проверяем, есть ли уже этот комментарий в дереве
+        const findCommentInTree = (comments: any[], id: string): boolean => {
+          for (const comment of comments) {
+            if (comment.id === id) return true;
+            if (comment.replies && comment.replies.length > 0) {
+              if (findCommentInTree(comment.replies, id)) return true;
+            }
+          }
+          return false;
+        };
+        
+        // Если комментарий уже есть, не добавляем его снова
+        if (findCommentInTree(prev, newReply.id)) {
+          return prev;
+        }
+        
+        // Иначе добавляем к правильному родителю
+        return addReplyToComment(prev, newReply.parentId, newReply);
+      });
+      setTotal((prev) => prev + 1);
+    }
   };
 
   return (
@@ -112,7 +169,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
             key={comment.id} 
             comment={comment} 
             postId={postId}
-            onReplyAdded={() => {}} // We might not need to update the main list for deep replies
+            onReplyAdded={handleReplyAdded}
             onCommentDeleted={(deletedId) => {
               // Remove deleted comment from the list
               const removeComment = (commentsList: any[]): any[] => {

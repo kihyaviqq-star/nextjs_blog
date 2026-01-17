@@ -23,6 +23,7 @@ import { Sparkles, Loader2, CheckCircle2, ExternalLink, Settings, Globe, Trash2,
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import type { OutputData } from "@editorjs/editorjs";
+import { generateSlug } from "@/lib/slug";
 
 const EditorWrapper = dynamic(() => import("@/components/editor/editor-wrapper"), {
   ssr: false,
@@ -70,6 +71,8 @@ export default function GeneratorPage() {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [sources, setSources] = useState<RSSSource[]>([]);
   const [loadingSources, setLoadingSources] = useState(true);
   const [enabledSources, setEnabledSources] = useState<string[]>([]);
@@ -170,6 +173,14 @@ export default function GeneratorPage() {
       localStorage.setItem(STORAGE_KEY_SOURCES, JSON.stringify(enabledSources));
     }
   }, [enabledSources]);
+
+  // Автогенерация slug при изменении title
+  useEffect(() => {
+    if (generatedArticle?.title && !slugManuallyEdited) {
+      const generatedSlug = generateSlug(generatedArticle.title);
+      setSlug(generatedSlug);
+    }
+  }, [generatedArticle?.title, slugManuallyEdited]);
 
   const loadSources = async () => {
     setLoadingSources(true);
@@ -402,6 +413,11 @@ export default function GeneratorPage() {
       };
       editorDataRef.current = editorData;
       
+      // Reset slug and manual edit flag when generating new article
+      setSlugManuallyEdited(false);
+      const generatedSlug = generateSlug(article.title);
+      setSlug(generatedSlug);
+      
       setGeneratedArticle(article);
       setUrlInput("");
 
@@ -447,6 +463,11 @@ export default function GeneratorPage() {
         version: "2.29.1"
       };
       editorDataRef.current = editorData;
+      
+      // Reset slug and manual edit flag when generating new article
+      setSlugManuallyEdited(false);
+      const generatedSlug = generateSlug(article.title);
+      setSlug(generatedSlug);
       
       setGeneratedArticle(article);
 
@@ -541,8 +562,20 @@ export default function GeneratorPage() {
     }
   };
 
+  const handleSlugChange = (value: string) => {
+    setSlug(value);
+    setSlugManuallyEdited(true);
+  };
+
   const handlePublish = async () => {
     if (!generatedArticle) return;
+
+    if (!slug.trim()) {
+      toast.error("Заполните ссылку", {
+        description: "Пожалуйста, введите ссылку (slug) для статьи"
+      });
+      return;
+    }
 
     setPublishing(true);
     try {
@@ -550,9 +583,13 @@ export default function GeneratorPage() {
       const articleToPublish = editorDataRef.current
         ? {
             ...generatedArticle,
-            blocks: editorDataRef.current.blocks
+            blocks: editorDataRef.current.blocks,
+            slug: slug.trim()
           }
-        : generatedArticle;
+        : {
+            ...generatedArticle,
+            slug: slug.trim()
+          };
 
       const result = await publishArticleAction(articleToPublish);
       
@@ -916,6 +953,8 @@ export default function GeneratorPage() {
                           setGeneratedArticle(null);
                           setSelectedNews(null);
                           editorDataRef.current = null;
+                          setSlug("");
+                          setSlugManuallyEdited(false);
                           const newHolderId = `editor-${Date.now()}`;
                           editorHolderId.current = newHolderId;
                           setEditorKey(prev => prev + 1); // Force editor re-initialization
@@ -969,6 +1008,27 @@ export default function GeneratorPage() {
                         </p>
                       </div>
                     )}
+                  </div>
+
+                  {/* Slug Section */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Ссылка (Slug):</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">domain.com/</span>
+                        <Input
+                          type="text"
+                          value={slug}
+                          onChange={(e) => handleSlugChange(e.target.value)}
+                          placeholder="article-slug"
+                          className="flex-1 font-mono text-sm"
+                          pattern="[a-z0-9-]+"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Разрешены только строчные латинские буквы, цифры и дефисы
+                      </p>
+                    </div>
                   </div>
 
                   {/* Tags Section */}
