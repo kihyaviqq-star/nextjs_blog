@@ -1,9 +1,8 @@
 
 'use server';
 
-// Увеличиваем максимальное время выполнения для длительных AI операций (парсинг + генерация)
-// По умолчанию Next.js имеет лимит 10-60 секунд, увеличиваем до 120 секунд
-export const maxDuration = 300; // 5 минут
+// Примечание: maxDuration должен экспортироваться из layout.tsx или page.tsx (Server Components),
+// а не из файлов с 'use server'. См. app/dashboard/generator/layout.tsx
 
 import { fetchNewsFromSources, NewsItem, getAllSources } from '@/lib/news-fetcher';
 import { scrapeUrl } from '@/lib/url-scraper';
@@ -195,7 +194,7 @@ export async function generateArticleAction(topic: string, context: string): Pro
       generateArticleSchema.parse({ topic, context });
     } catch (validationError) {
       if (validationError instanceof z.ZodError) {
-        const firstError = validationError.errors[0];
+        const firstError = validationError.issues[0];
         return { 
           success: false, 
           error: firstError?.message || 'Invalid input parameters' 
