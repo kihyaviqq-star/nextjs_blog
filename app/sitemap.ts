@@ -2,6 +2,14 @@ import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Check if indexing is allowed (default: false - site is closed from indexing)
+  const allowIndexing = process.env.ALLOW_INDEXING === 'true';
+
+  // If indexing is disabled, return empty sitemap
+  if (!allowIndexing) {
+    return [];
+  }
+
   // Get base URL from environment variable or fallback
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 

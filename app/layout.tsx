@@ -47,6 +47,9 @@ export async function generateMetadata(): Promise<Metadata> {
     ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
     : `${siteUrl}/og-default.jpg`;
 
+  // Check if indexing is allowed (default: false - site is closed from indexing)
+  const allowIndexing = process.env.ALLOW_INDEXING === 'true';
+
   const metadata: Metadata = {
     title: {
       template: `%s | ${siteName}`,
@@ -54,6 +57,15 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: siteDescription,
     metadataBase: new URL(siteUrl),
+    // Block search engines from indexing if ALLOW_INDEXING is not 'true'
+    robots: allowIndexing ? undefined : {
+      index: false,
+      follow: false,
+      googleBot: {
+        index: false,
+        follow: false,
+      },
+    },
     alternates: {
       canonical: './',
     },
