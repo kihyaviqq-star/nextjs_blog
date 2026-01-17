@@ -81,6 +81,47 @@ export const authConfig: NextAuthConfig = {
           }
         }
       }
+
+      /**
+       * Backfill missing fields for old sessions.
+       * If user logged in before we started storing role/username/avatar in JWT,
+       * token.role can be undefined => dashboard access will be denied.
+       *
+       * We only hit DB when something important is missing to avoid extra load.
+       */
+      const tokenUserId = (token.id as string | undefined) ?? (token.sub as string | undefined);
+      const needsBackfill =
+        !!tokenUserId &&
+        (token.role === undefined ||
+          token.email === undefined ||
+          token.username === undefined ||
+          token.avatarUrl === undefined ||
+          token.name === undefined);
+
+      if (needsBackfill) {
+        try {
+          const freshUser = await prisma.user.findUnique({
+            where: { id: tokenUserId },
+            select: {
+              name: true,
+              username: true,
+              email: true,
+              role: true,
+              avatarUrl: true,
+            },
+          });
+
+          if (freshUser) {
+            if (token.name === undefined) token.name = freshUser.name ?? undefined;
+            if (token.username === undefined) token.username = freshUser.username ?? undefined;
+            if (token.email === undefined) token.email = freshUser.email ?? undefined;
+            if (token.role === undefined) token.role = freshUser.role ?? undefined;
+            if (token.avatarUrl === undefined) token.avatarUrl = freshUser.avatarUrl ?? undefined;
+          }
+        } catch (error) {
+          console.error("[Auth] Error backfilling token user data:", error);
+        }
+      }
       
       return token;
     },

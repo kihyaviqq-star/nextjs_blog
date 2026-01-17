@@ -16,7 +16,16 @@ export default async function DashboardPage() {
     redirect("/auth/signin");
   }
 
-  const userRole = (session.user as any).role;
+  // Prefer DB role for access checks (session role can be missing in old tokens)
+  const email = session.user.email;
+  const dbUser = email
+    ? await prisma.user.findUnique({
+        where: { email },
+        select: { role: true },
+      })
+    : null;
+
+  const userRole = dbUser?.role ?? ((session.user as any).role as string | undefined);
   const canAccess = userRole === "ADMIN" || userRole === "EDITOR";
 
   if (!canAccess) {
