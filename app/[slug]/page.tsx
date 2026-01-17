@@ -8,7 +8,6 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import BlockRenderer from "@/components/blog/block-renderer";
-import { ImageWithFallback } from "@/components/blog/image-with-fallback";
 import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ViewIncrementer } from "@/components/view-incrementer";
@@ -184,15 +183,15 @@ async function ArticlePage({ post }: { post: any }) {
               </div>
 
               <div className="w-full h-[400px] relative rounded-lg overflow-hidden bg-secondary shadow-2xl">
-                <ImageWithFallback
+                <Image
                   src={post.coverImage}
                   alt={post.title}
                   fill
                   sizes="(max-width: 768px) 100vw, 768px"
                   className="object-cover"
+                  style={{ objectFit: "cover" }}
                   priority
                   unoptimized={post.coverImage?.startsWith('/') || post.coverImage?.startsWith('http')}
-                  objectFit="cover"
                 />
               </div>
             </div>

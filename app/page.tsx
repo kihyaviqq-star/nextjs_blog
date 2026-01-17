@@ -7,7 +7,6 @@ import { SearchFilterBar } from "@/components/search-filter-bar";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, Tag, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
-import { ImageWithFallback } from "@/components/blog/image-with-fallback";
 import { prisma } from "@/lib/prisma";
 
 const POSTS_PER_PAGE = 9;
@@ -137,16 +136,15 @@ export default async function Home({ searchParams }: HomeProps) {
               <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden relative z-10 pointer-events-none">
                 <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative">
                   {post.coverImage ? (
-                    <ImageWithFallback
+                    <Image
                       src={post.coverImage}
                       alt={post.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      style={{ objectFit: "cover" }}
                       priority={index < 3}
                       unoptimized={post.coverImage?.startsWith('/') || post.coverImage?.startsWith('http')}
-                      showPlaceholder={true}
-                      placeholderClassName="w-full h-full"
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-secondary">
