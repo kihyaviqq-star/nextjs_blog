@@ -89,6 +89,16 @@ export default async function Home({ searchParams }: HomeProps) {
     }
   };
 
+  // Fetch site settings for homeSubtitle
+  const siteSettings = await prisma.siteSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      homeSubtitle: true,
+    },
+  });
+
+  const homeSubtitle = siteSettings?.homeSubtitle || "Будьте в курсе последних новостей, аналитики и разработок в области искусственного интеллекта.";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <script
@@ -103,7 +113,7 @@ export default async function Home({ searchParams }: HomeProps) {
             Последние статьи
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Будьте в курсе последних новостей, аналитики и разработок в области искусственного интеллекта.
+            {homeSubtitle}
           </p>
           
           {/* Search and Filter Bar */}

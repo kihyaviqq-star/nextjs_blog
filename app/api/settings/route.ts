@@ -89,7 +89,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { siteName, logoUrl, faviconUrl, metaDescription, footerText } = body;
+    const { siteName, logoUrl, faviconUrl, metaDescription, footerText, homeSubtitle } = body;
 
     // Update or create settings
     const settings = await prisma.siteSettings.upsert({
@@ -100,6 +100,7 @@ export async function PUT(request: NextRequest) {
         faviconUrl: faviconUrl || null,
         metaDescription: metaDescription || null,
         footerText: footerText || null,
+        homeSubtitle: homeSubtitle || null,
       },
       create: {
         id: "default",
@@ -108,6 +109,7 @@ export async function PUT(request: NextRequest) {
         faviconUrl: faviconUrl || null,
         metaDescription: metaDescription || null,
         footerText: footerText || null,
+        homeSubtitle: homeSubtitle || null,
       },
     });
 

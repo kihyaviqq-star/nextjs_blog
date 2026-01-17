@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { HeaderClientWrapper } from "@/components/header";
-import { FooterClient } from "@/components/footer";
+import { Footer } from "@/components/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileText, Eye, TrendingUp, Calendar } from "lucide-react";
@@ -285,7 +285,7 @@ export default async function DashboardPage() {
         </div>
       </main>
 
-      <FooterClient />
+      <Footer />
     </div>
   );
 }

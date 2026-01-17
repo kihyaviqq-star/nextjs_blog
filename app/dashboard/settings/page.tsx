@@ -7,6 +7,7 @@ import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ interface SiteSettings {
   faviconUrl: string | null;
   metaDescription: string | null;
   footerText: string | null;
+  homeSubtitle: string | null;
 }
 
 export default function SiteSettingsPage() {
@@ -31,6 +33,7 @@ export default function SiteSettingsPage() {
     faviconUrl: null,
     metaDescription: null,
     footerText: null,
+    homeSubtitle: null,
   });
 
   // Fetch settings on mount
@@ -199,6 +202,33 @@ export default function SiteSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Homepage Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Главная страница</CardTitle>
+              <CardDescription>
+                Настройка контента для главной страницы
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="homeSubtitle" className="text-sm font-medium">
+                  Подзаголовок главной страницы
+                </label>
+                <Textarea
+                  id="homeSubtitle"
+                  value={settings.homeSubtitle || ""}
+                  onChange={(e) => handleChange("homeSubtitle", e.target.value)}
+                  placeholder="Будьте в курсе последних новостей, аналитики и разработок в области искусственного интеллекта."
+                  className="min-h-[100px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Текст, отображаемый под заголовком "Последние статьи" на главной странице
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Footer Section */}
           <Card>
             <CardHeader>
@@ -253,7 +283,7 @@ export default function SiteSettingsPage() {
         </form>
       </main>
 
-      <FooterClient />
+      <FooterClient footerText={settings.footerText} />
     </div>
   );
 }

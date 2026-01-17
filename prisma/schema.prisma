@@ -137,6 +137,7 @@ model SiteSettings {
   faviconUrl      String?
   metaDescription String?  @default("Информационный портал о последних новостях и разработках в области искусственного интеллекта")
   footerText      String?  @default("Сделано с ❤ для всех, кто интересуется ИИ")
+  homeSubtitle    String?
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

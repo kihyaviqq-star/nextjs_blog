@@ -8,10 +8,10 @@ const getFooterText = cache(async () => {
       where: { id: "default" },
       select: { footerText: true },
     });
-    return settings?.footerText || "Сделано с ❤️";
+    return settings?.footerText || null;
   } catch (error) {
     console.error("Failed to fetch footer settings:", error);
-    return "Сделано с ❤️";
+    return null;
   }
 });
 
@@ -27,9 +27,11 @@ export async function Footer() {
           <div className="text-center sm:text-left">
             © {currentYear} — Все права защищены
           </div>
-          <div className="text-center sm:text-right">
-            {footerText}
-          </div>
+          {footerText && (
+            <div className="text-center sm:text-right">
+              {footerText}
+            </div>
+          )}
         </div>
       </div>
     </footer>
