@@ -108,19 +108,25 @@ export async function GET(request: NextRequest) {
     const comments = sortedRootComments.slice(skip, skip + limit);
 
     // Count total top-level comments for pagination
-    const total = await prisma.comment.count({
+    const totalTopLevel = await prisma.comment.count({
       where: {
         postId,
         parentId: null,
       },
     });
 
-    console.log(`GET /api/comments: Found ${comments.length} comments, total ${total}`);
+    // Total including replies (we already fetched all comments above)
+    const totalAll = allComments.length;
+
+    console.log(
+      `GET /api/comments: Found ${comments.length} root comments, totalTopLevel ${totalTopLevel}, totalAll ${totalAll}`
+    );
 
     return NextResponse.json({
       comments,
-      hasMore: skip + comments.length < total,
-      total,
+      hasMore: skip + comments.length < totalTopLevel,
+      totalTopLevel,
+      totalAll,
     });
   } catch (error: any) {
     console.error("GET /api/comments: Error fetching comments:", error);

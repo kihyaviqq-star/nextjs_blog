@@ -16,7 +16,10 @@ export function CommentSection({ postId }: CommentSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [total, setTotal] = useState(0);
+  // totalAll: все комментарии (включая ответы) — для счётчика в шапке
+  // totalTopLevel: только верхний уровень — для пагинации root-комментариев
+  const [totalAll, setTotalAll] = useState(0);
+  const [totalTopLevel, setTotalTopLevel] = useState(0);
 
   const fetchComments = async (pageNum: number) => {
     try {
@@ -39,7 +42,9 @@ export function CommentSection({ postId }: CommentSectionProps) {
       }
       
       setHasMore(data.hasMore);
-      setTotal(data.total);
+      // Backward compatible fallback if old API response is cached somewhere
+      setTotalAll(typeof data.totalAll === "number" ? data.totalAll : (data.total ?? 0));
+      setTotalTopLevel(typeof data.totalTopLevel === "number" ? data.totalTopLevel : (data.total ?? 0));
     } catch (error) {
       console.error(error);
     } finally {
@@ -116,7 +121,12 @@ export function CommentSection({ postId }: CommentSectionProps) {
         return [{ ...comment, replies: [] }, ...prev];
       });
     }
-    setTotal((prev) => prev + 1);
+    // Счётчик в шапке: увеличиваем всегда
+    setTotalAll((prev) => prev + 1);
+    // Для пагинации увеличиваем только если это root-комментарий
+    if (!comment.parentId) {
+      setTotalTopLevel((prev) => prev + 1);
+    }
   };
 
   // Обработчик добавления ответа на любом уровне (для обновления главного состояния)
@@ -145,7 +155,8 @@ export function CommentSection({ postId }: CommentSectionProps) {
         // Иначе добавляем к правильному родителю
         return addReplyToComment(prev, newReply.parentId, newReply);
       });
-      setTotal((prev) => prev + 1);
+      // Ответ влияет только на общий счётчик
+      setTotalAll((prev) => prev + 1);
     }
   };
 
@@ -155,7 +166,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         <h2 className="text-3xl font-bold">Комментарии</h2>
         <div className="px-3 py-1 rounded-full bg-secondary text-sm font-medium flex items-center gap-1.5">
           <MessageSquare className="w-4 h-4" />
-          {total}
+          {totalAll}
         </div>
       </div>
 
@@ -171,22 +182,51 @@ export function CommentSection({ postId }: CommentSectionProps) {
             postId={postId}
             onReplyAdded={handleReplyAdded}
             onCommentDeleted={(deletedId) => {
-              // Remove deleted comment from the list
-              const removeComment = (commentsList: any[]): any[] => {
-                return commentsList
-                  .filter((c) => c.id !== deletedId)
+              // Remove deleted comment from the list + корректно уменьшаем счётчики
+              const countSubtree = (node: any): number => {
+                const replies = Array.isArray(node?.replies) ? node.replies : [];
+                return 1 + replies.reduce((sum: number, r: any) => sum + countSubtree(r), 0);
+              };
+
+              const removeCommentAndCount = (
+                commentsList: any[],
+                id: string
+              ): { next: any[]; removedCount: number; removedTopLevel: boolean } => {
+                let removedCount = 0;
+                let removedTopLevel = false;
+
+                const next = commentsList
+                  .filter((c) => {
+                    if (c.id === id) {
+                      removedCount += countSubtree(c);
+                      removedTopLevel = true;
+                      return false;
+                    }
+                    return true;
+                  })
                   .map((c) => {
                     if (c.replies && c.replies.length > 0) {
-                      return {
-                        ...c,
-                        replies: removeComment(c.replies)
-                      };
+                      const res = removeCommentAndCount(c.replies, id);
+                      removedCount += res.removedCount;
+                      return { ...c, replies: res.next };
                     }
                     return c;
                   });
+
+                return { next, removedCount, removedTopLevel };
               };
-              setComments((prev) => removeComment(prev));
-              setTotal((prev) => Math.max(0, prev - 1));
+
+              setComments((prev) => {
+                const res = removeCommentAndCount(prev, deletedId);
+                // Обновляем счётчики синхронно с удалением
+                if (res.removedCount > 0) {
+                  setTotalAll((t) => Math.max(0, t - res.removedCount));
+                  if (res.removedTopLevel) {
+                    setTotalTopLevel((t) => Math.max(0, t - 1));
+                  }
+                }
+                return res.next;
+              });
             }}
           />
         ))}
