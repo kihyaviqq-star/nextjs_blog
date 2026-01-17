@@ -53,14 +53,85 @@ function normalizeEditorData(data?: OutputData): OutputData {
   
   // Filter out invalid blocks that might cause "invalid data" errors
   const validBlocks = data.blocks.filter((block) => {
-    return (
-      block &&
-      typeof block === "object" &&
-      block.type &&
-      typeof block.type === "string" &&
-      block.data &&
-      typeof block.data === "object"
-    );
+    // Basic structure validation
+    if (!block || typeof block !== "object" || !block.type || typeof block.type !== "string" || !block.data || typeof block.data !== "object") {
+      return false;
+    }
+
+    // Type-specific validation
+    switch (block.type) {
+      case "paragraph":
+        // Paragraph must have text property (can be empty string)
+        return typeof block.data.text === "string";
+      case "header":
+        // Header must have text property and level
+        return typeof block.data.text === "string" && typeof block.data.level === "number";
+      case "list":
+        // List must have style and items array
+        return typeof block.data.style === "string" && Array.isArray(block.data.items);
+      case "quote":
+        // Quote must have text
+        return typeof block.data.text === "string";
+      case "code":
+        // Code must have code property
+        return typeof block.data.code === "string";
+      case "checklist":
+        // Checklist must have items array
+        return Array.isArray(block.data.items);
+      case "table":
+        // Table must have content array
+        return Array.isArray(block.data.content);
+      case "linkTool":
+        // LinkTool must have link and meta
+        return typeof block.data.link === "string" && block.data.meta;
+      case "image":
+        // Image must have file.url or url
+        return (block.data.file && typeof block.data.file.url === "string") || typeof block.data.url === "string";
+      case "warning":
+        // Warning must have title and message
+        return typeof block.data.title === "string" && typeof block.data.message === "string";
+      case "embed":
+        // Embed must have service, source, embed, width, height, caption
+        return typeof block.data.service === "string" && typeof block.data.source === "string";
+      default:
+        // For unknown block types, just check basic structure
+        return true;
+    }
+  }).map((block) => {
+    // Normalize block data - ensure required fields exist with correct types
+    const normalizedBlock = { ...block };
+    
+    if (block.type === "paragraph") {
+      // Ensure paragraph has text property as string
+      if (typeof normalizedBlock.data.text === "undefined" || normalizedBlock.data.text === null) {
+        normalizedBlock.data = {
+          ...normalizedBlock.data,
+          text: "",
+        };
+      } else if (typeof normalizedBlock.data.text !== "string") {
+        // Convert non-string text to string
+        normalizedBlock.data = {
+          ...normalizedBlock.data,
+          text: String(normalizedBlock.data.text),
+        };
+      }
+    } else if (block.type === "header") {
+      // Ensure header has text and level
+      if (typeof normalizedBlock.data.text !== "string") {
+        normalizedBlock.data = {
+          ...normalizedBlock.data,
+          text: normalizedBlock.data.text ? String(normalizedBlock.data.text) : "",
+        };
+      }
+      if (typeof normalizedBlock.data.level !== "number") {
+        normalizedBlock.data = {
+          ...normalizedBlock.data,
+          level: normalizedBlock.data.level || 1,
+        };
+      }
+    }
+    
+    return normalizedBlock;
   });
 
   return {
@@ -83,6 +154,15 @@ export default function EditorWrapper({
   const pluginsRef = useRef<{ undo?: any; dragDrop?: any }>({});
   const dataLoadedRef = useRef(false); // Track if initial data has been loaded
   const holderRef = useRef<HTMLDivElement>(null);
+  const dataRef = useRef(data); // Track data prop changes
+
+  // Update data ref when prop changes (for key-based remounting)
+  if (dataRef.current !== data) {
+    dataRef.current = data;
+    // Reset refs when data prop changes (new key = new component instance)
+    initialDataRef.current = null;
+    dataLoadedRef.current = false;
+  }
 
   // Store initial data once and never change it
   if (initialDataRef.current === null) {

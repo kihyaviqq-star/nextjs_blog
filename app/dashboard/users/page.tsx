@@ -70,7 +70,8 @@ export default function UsersPage() {
           setIsLoading(false);
         });
     }
-  }, [session, status]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, status]); // router is stable and doesn't need to be in dependencies
 
   if (status === "loading" || isLoading) {
     return (
