@@ -77,7 +77,14 @@ export default function GeneratorPage() {
   const [loadingSources, setLoadingSources] = useState(true);
   const [enabledSources, setEnabledSources] = useState<string[]>([]);
   const [parsingUrl, setParsingUrl] = useState(false);
+  const [parsingStatus, setParsingStatus] = useState<{
+    stage: string;
+    progress: number;
+    elapsed: number;
+  } | null>(null);
   const [urlInput, setUrlInput] = useState("");
+  const parsingStartTimeRef = useRef<number | null>(null);
+  const parsingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [newSourceName, setNewSourceName] = useState("");
   const [newSourceUrl, setNewSourceUrl] = useState("");
   const [addingSource, setAddingSource] = useState(false);
@@ -166,6 +173,15 @@ export default function GeneratorPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabledSources, loadingSources]); // loadNews вызывается внутри, избегаем зацикливания
+
+  // Очистка интервала при размонтировании компонента
+  useEffect(() => {
+    return () => {
+      if (parsingIntervalRef.current) {
+        clearInterval(parsingIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Save enabled sources to localStorage
@@ -385,18 +401,80 @@ export default function GeneratorPage() {
     }
 
     setParsingUrl(true);
+    setParsingStatus({
+      stage: "Подключение к серверу...",
+      progress: 10,
+      elapsed: 0
+    });
+    parsingStartTimeRef.current = Date.now();
     setGeneratedArticle(null);
     editorDataRef.current = null;
     const newHolderId = `editor-${Date.now()}`;
     editorHolderId.current = newHolderId;
     setEditorKey(prev => prev + 1); // Force editor re-initialization
 
+    // Запускаем таймер для обновления времени выполнения
+    if (parsingIntervalRef.current) {
+      clearInterval(parsingIntervalRef.current);
+    }
+    parsingIntervalRef.current = setInterval(() => {
+      if (parsingStartTimeRef.current) {
+        const elapsed = Math.floor((Date.now() - parsingStartTimeRef.current) / 1000);
+        setParsingStatus(prev => prev ? {
+          ...prev,
+          elapsed
+        } : null);
+      }
+    }, 1000);
+
+    // Храним таймауты этапов для очистки в finally
+    const stageTimeouts: NodeJS.Timeout[] = [];
+
     try {
+      // Имитируем этапы парсинга с функциональными обновлениями
+      stageTimeouts.push(setTimeout(() => {
+        setParsingStatus(prev => prev ? {
+          ...prev,
+          stage: "Парсинг URL и извлечение контента...",
+          progress: 30
+        } : null);
+      }, 2000));
+
+      stageTimeouts.push(setTimeout(() => {
+        setParsingStatus(prev => prev ? {
+          ...prev,
+          stage: "Анализ контента с помощью ИИ...",
+          progress: 50
+        } : null);
+      }, 5000));
+
+      stageTimeouts.push(setTimeout(() => {
+        setParsingStatus(prev => prev ? {
+          ...prev,
+          stage: "Генерация статьи...",
+          progress: 70
+        } : null);
+      }, 15000));
+
+      stageTimeouts.push(setTimeout(() => {
+        setParsingStatus(prev => prev ? {
+          ...prev,
+          stage: "Извлечение изображений...",
+          progress: 85
+        } : null);
+      }, 30000));
+
       const result = await generateArticleFromUrlAction(urlInput.trim());
       
       if (!result.success || !result.data) {
         throw new Error(result.error || "Ошибка генерации");
       }
+
+      setParsingStatus(prev => prev ? {
+        ...prev,
+        stage: "Завершение...",
+        progress: 100
+      } : null);
 
       const article = result.data;
       
@@ -427,7 +505,16 @@ export default function GeneratorPage() {
         description: error.message || "Попробуйте позже"
       });
     } finally {
+      // Очищаем все таймауты этапов
+      stageTimeouts.forEach(timeout => clearTimeout(timeout));
+      
       setParsingUrl(false);
+      setParsingStatus(null);
+      parsingStartTimeRef.current = null;
+      if (parsingIntervalRef.current) {
+        clearInterval(parsingIntervalRef.current);
+        parsingIntervalRef.current = null;
+      }
     }
   };
 
@@ -799,7 +886,7 @@ export default function GeneratorPage() {
                   Вставьте ссылку на статью для автоматической генерации
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
                 <div className="flex gap-2">
                   <Input
                     placeholder="Вставьте ссылку на статью..."
@@ -831,6 +918,35 @@ export default function GeneratorPage() {
                     )}
                   </Button>
                 </div>
+
+                {/* Статус парсинга */}
+                {parsingStatus && (
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {parsingStatus.stage}
+                      </span>
+                      <span className="text-muted-foreground font-mono">
+                        {Math.floor(parsingStatus.elapsed / 60)}:{(parsingStatus.elapsed % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300 ease-out"
+                        style={{ width: `${parsingStatus.progress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{parsingStatus.progress}%</span>
+                      <span className="text-xs">
+                        {parsingStatus.progress < 50 && "Это может занять 1-2 минуты..."}
+                        {parsingStatus.progress >= 50 && parsingStatus.progress < 85 && "Почти готово..."}
+                        {parsingStatus.progress >= 85 && "Завершение..."}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

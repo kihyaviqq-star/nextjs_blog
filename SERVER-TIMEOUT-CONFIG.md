@@ -4,48 +4,114 @@
 
 ## 1. Next.js конфигурация (уже настроено)
 
-В `app/dashboard/generator/actions.ts` и `app/dashboard/generator/page.tsx` уже добавлено:
+В `app/dashboard/generator/layout.tsx` уже добавлено:
 ```typescript
-export const maxDuration = 120; // 2 минуты
+export const maxDuration = 300; // 5 минут
+export const dynamic = 'force-dynamic';
 ```
 
-## 2. Настройка Nginx (если используется)
+**Важно:** `maxDuration` НЕ должен экспортироваться из файлов с `'use server'` (например, `actions.ts`), так как это вызовет ошибку билда в Next.js 15. Он должен быть только в `layout.tsx` или `page.tsx` (Server Components).
 
-Если на сервере используется Nginx как reverse proxy, нужно увеличить таймауты:
+## 2. Настройка Nginx (КРИТИЧНО для продакшн сервера!) ⚠️
 
-**Файл: `/etc/nginx/sites-available/your-site` или `/etc/nginx/nginx.conf`**
+**ЭТО САМАЯ ВАЖНАЯ НАСТРОЙКА!** 
+
+Nginx по умолчанию имеет лимит **60 секунд**, а AI-парсинг может занимать **100+ секунд**. Это вызывает ошибку **504 Gateway Timeout**.
+
+Если на сервере используется Nginx как reverse proxy, **обязательно** нужно увеличить таймауты.
+
+**Как найти конфиг Nginx на вашем сервере:**
+```bash
+# 1. Найдите конфиг для вашего домена
+ls -la /etc/nginx/sites-available/
+ls -la /etc/nginx/sites-enabled/
+
+# 2. Или поищите по имени домена
+grep -r "mlcrosoft.ru" /etc/nginx/  # Замените на ваш домен
+
+# 3. Обычно это файл вида:
+# /etc/nginx/sites-available/mlcrosoft.ru
+# /etc/nginx/sites-available/default
+```
+
+**Файл: `/etc/nginx/sites-available/your-domain` или `/etc/nginx/nginx.conf`**
+
+**ВАЖНО:** Отредактируйте ваш конфиг Nginx и добавьте/замените блок `location /`:
 
 ```nginx
 server {
-    # ... другие настройки ...
+    listen 80;
+    listen [::]:80;
+    server_name mlcrosoft.ru www.mlcrosoft.ru;  # Замените на ваш домен
+    
+    # ... другие настройки (SSL, root, и т.д.) ...
     
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3000;  # Или другой порт, где работает Next.js
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         
-        # Увеличиваем таймауты для длительных запросов
-        proxy_connect_timeout 300s;
-        proxy_send_timeout 300s;
-        proxy_read_timeout 300s;
-        send_timeout 300s;
+        # КРИТИЧНО: Увеличиваем таймауты для длительных запросов
+        # По умолчанию Nginx имеет лимит 60 секунд, увеличиваем до 600 секунд (10 минут)
+        proxy_connect_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+        send_timeout 600s;
         
         # Увеличиваем размер буфера
         proxy_buffer_size 128k;
         proxy_buffers 4 256k;
         proxy_busy_buffers_size 256k;
+        
+        # Отключаем буферизацию для длительных запросов (важно для AI операций)
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+    
+    # Специальные настройки для API и dashboard (где происходят длительные операции)
+    location ~ ^/(api|dashboard) {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        
+        # Увеличенные таймауты для API/dashboard
+        proxy_connect_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+        send_timeout 600s;
+        
+        proxy_buffering off;
+        proxy_request_buffering off;
     }
 }
 ```
 
-После изменений:
+**После изменений:**
 ```bash
-sudo nginx -t  # Проверить конфигурацию
-sudo systemctl reload nginx  # Применить изменения
+# 1. ВАЖНО: Сначала проверьте конфигурацию (если ошибка, Nginx не запустится!)
+sudo nginx -t
+
+# 2. Если проверка прошла успешно ("syntax is ok", "test is successful"), примените изменения
+sudo systemctl reload nginx
+# или
+sudo nginx -s reload
+
+# 3. Проверьте, что Nginx работает
+sudo systemctl status nginx
+
+# 4. Проверьте логи на наличие ошибок
+sudo tail -f /var/log/nginx/error.log
 ```
+
+**Пример готового конфига также есть в файле `nginx-timeout-fix.conf` в корне проекта.**
 
 ## 3. Настройка PM2 (если используется)
 
