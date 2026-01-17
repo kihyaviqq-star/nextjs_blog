@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { updatePostSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE } from "@/lib/validations";
 import { handleApiError } from "@/lib/error-handler";
+import { generateSlug, generateUniqueSlug } from "@/lib/slug";
+import { createRedirect } from "@/lib/redirects";
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -129,6 +131,7 @@ export async function PUT(
     let body;
     try {
       body = await request.json();
+      console.log("[API PUT post] Received body coverImage:", body.coverImage, "type:", typeof body.coverImage);
     } catch (error) {
       return NextResponse.json(
         { error: "Invalid JSON in request body" },
@@ -148,20 +151,70 @@ export async function PUT(
     // 4. Валидация через Zod
     const validationResult = updatePostSchema.safeParse(body);
     if (!validationResult.success) {
+      console.error("[API PUT post] Validation error:", JSON.stringify(validationResult.error, null, 2));
       const formattedError = formatZodError(validationResult.error);
+      // Форматируем ошибки валидации для клиента (убираем дубликаты)
+      const uniqueErrors = formattedError.errors.reduce((acc: Array<{field: string, message: string}>, err) => {
+        const key = `${err.field}:${err.message}`;
+        if (!acc.find(e => `${e.field}:${e.message}` === key)) {
+          acc.push(err);
+        }
+        return acc;
+      }, []);
+      const errorMessage = uniqueErrors
+        .map(err => `${err.field ? `${err.field}: ` : ''}${err.message}`)
+        .join(', ') || formattedError.message || 'Validation failed';
       return NextResponse.json(
-        formattedError,
+        { error: errorMessage, details: formattedError },
         { status: 400 }
       );
     }
 
-    const { title, excerpt, coverImage, tags, sources, content } = validationResult.data;
+    const { title, excerpt, coverImage, tags, sources, content, slug: newSlug } = validationResult.data;
 
-    // Update post in database (keep original slug)
+    // Если передан новый slug и он отличается от текущего, проверяем уникальность и обновляем
+    let finalSlug = slug; // По умолчанию оставляем текущий slug
+    const oldSlug = slug; // Сохраняем старый slug для редиректа
+    
+    if (newSlug && newSlug.trim().length > 0 && newSlug !== slug) {
+      // Нормализуем новый slug
+      const normalizedSlug = generateSlug(newSlug);
+      if (normalizedSlug && normalizedSlug !== slug) {
+        // Проверяем уникальность (исключая текущий пост)
+        finalSlug = await generateUniqueSlug(
+          normalizedSlug,
+          async (slugToCheck) => {
+            const existing = await prisma.post.findUnique({ where: { slug: slugToCheck } });
+            // Если найденный пост - это текущий пост, то slug свободен
+            return existing ? existing.slug !== slug : false;
+          }
+        );
+        
+        // Создаем редирект со старого slug на новый
+        if (finalSlug !== oldSlug) {
+          console.log(`[API PUT post] Creating redirect: ${oldSlug} -> ${finalSlug}`);
+          try {
+            await createRedirect(oldSlug, finalSlug);
+            console.log(`[API PUT post] Redirect created successfully: ${oldSlug} -> ${finalSlug}`);
+            
+            // Очищаем кеш middleware для старого slug (если есть способ это сделать)
+            // В production можно использовать Redis pub/sub или другой механизм
+          } catch (error: any) {
+            console.error(`[API PUT post] Error creating redirect:`, error?.message || error);
+            // Не прерываем сохранение статьи, даже если редирект не создан
+          }
+        }
+      }
+    }
+
+    // Update post in database
+    // ВАЖНО: Если slug изменился, используем старый slug для поиска поста
+    // Но затем обновляем на новый slug
     const updatedPost = await prisma.post.update({
-      where: { slug },
+      where: { slug: oldSlug }, // Всегда используем старый slug для поиска
       data: {
         title,
+        slug: finalSlug, // Обновляем slug если он изменился
         excerpt,
         coverImage: coverImage || null,
         tags: JSON.stringify(tags || []),

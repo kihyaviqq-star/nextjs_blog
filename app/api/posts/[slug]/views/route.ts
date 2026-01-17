@@ -20,9 +20,11 @@ export async function POST(
     try {
       await limiter.check(1, `${ip}-${slug}`);
     } catch {
+      // Возвращаем успех даже при rate limit, чтобы не блокировать UI
+      // Просмотр уже был засчитан ранее
       return NextResponse.json(
-        { success: false, error: "Rate limit exceeded" },
-        { status: 429 }
+        { success: true, error: "Rate limit exceeded", views: null },
+        { status: 200 }
       );
     }
 

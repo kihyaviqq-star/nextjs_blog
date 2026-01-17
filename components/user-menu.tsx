@@ -57,6 +57,7 @@ export function UserMenu() {
               width={32}
               height={32}
               className="w-8 h-8 rounded-full object-cover"
+              style={{ width: "2rem", height: "2rem" }}
               unoptimized={avatarUrl.startsWith('http')}
             />
           ) : (

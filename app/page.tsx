@@ -128,20 +128,22 @@ export default async function Home({ searchParams }: HomeProps) {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {postsWithParsedTags.map((post) => (
+          {postsWithParsedTags.map((post, index) => (
             <SpotlightCard key={post.id} className="h-full relative">
               <Link href={`/${post.slug}`} className="absolute inset-0 z-0" aria-label={post.title}>
                 <span className="sr-only">Читать статью</span>
               </Link>
               <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden relative z-10 pointer-events-none">
                 {post.coverImage && (
-                  <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative" style={{ height: '192px' }}>
+                  <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative">
                     <Image
                       src={post.coverImage}
                       alt={post.title}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      style={{ objectFit: "cover" }}
+                      priority={index < 3}
                       unoptimized={true}
                     />
                   </div>
@@ -178,6 +180,7 @@ export default async function Home({ searchParams }: HomeProps) {
                           width={24}
                           height={24}
                           className="w-6 h-6 rounded-full object-cover"
+                          style={{ width: "1.5rem", height: "1.5rem" }}
                           unoptimized={post.author.avatarUrl.startsWith('http')}
                         />
                       ) : (

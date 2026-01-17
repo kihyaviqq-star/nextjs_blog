@@ -75,7 +75,8 @@ export default function SiteSettingsPage() {
         }
 
         toast.success("Настройки успешно сохранены");
-        router.refresh();
+        // Не вызываем router.refresh() чтобы избежать перезагрузки страницы
+        // Настройки уже обновлены через revalidatePath в API
       } catch (error: any) {
         console.error("Save error:", error);
         toast.error(error.message || "Не удалось сохранить настройки");

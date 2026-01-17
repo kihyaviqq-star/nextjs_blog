@@ -39,7 +39,8 @@ export default function ArticlesPage() {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
     }
-  }, [status, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // router стабилен и не должен быть в зависимостях
 
   useEffect(() => {
     const fetchPosts = async () => {

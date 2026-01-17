@@ -19,6 +19,7 @@ export function HeaderClientWrapper({
     siteName: initialSiteName ?? null,
     logoUrl: initialLogoUrl ?? null,
   });
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     // Если данные переданы через пропсы, используем их и не делаем запрос к API
@@ -30,24 +31,27 @@ export function HeaderClientWrapper({
       return;
     }
 
-    // Если данные не переданы, загружаем через API (для обратной совместимости)
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch("/api/settings");
-        if (response.ok) {
-          const data = await response.json();
-          setSettings({
-            siteName: data.siteName || null,
-            logoUrl: data.logoUrl || null,
-          });
+    // Если данные не переданы и еще не загружали, загружаем через API (для обратной совместимости)
+    if (!hasFetched) {
+      setHasFetched(true);
+      const fetchSettings = async () => {
+        try {
+          const response = await fetch("/api/settings");
+          if (response.ok) {
+            const data = await response.json();
+            setSettings({
+              siteName: data.siteName || null,
+              logoUrl: data.logoUrl || null,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch site settings:", error);
         }
-      } catch (error) {
-        console.error("Failed to fetch site settings:", error);
-      }
-    };
+      };
 
-    fetchSettings();
-  }, [initialSiteName, initialLogoUrl]);
+      fetchSettings();
+    }
+  }, [initialSiteName, initialLogoUrl, hasFetched]);
 
   // Используем переданные значения напрямую для отображения (избегаем мигания)
   // Если пропсы переданы, используем их сразу, иначе используем состояние

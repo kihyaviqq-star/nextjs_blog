@@ -10,10 +10,12 @@ import { HeaderClientWrapper } from "@/components/header";
 import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Eye, X } from "lucide-react";
 import type { OutputData } from "@editorjs/editorjs";
 import { BlogPost } from "@/lib/types";
 import { toast } from "sonner";
+import { generateSlug } from "@/lib/slug";
 
 const EditorWrapper = dynamic(() => import("@/components/editor/editor-wrapper"), {
   ssr: false,
@@ -34,11 +36,12 @@ interface PageProps {
 export default function EditPostPage({ params }: PageProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [slug, setSlug] = useState<string>("");
+  const [currentSlug, setCurrentSlug] = useState<string>(""); // Текущий slug из URL
   const [post, setPost] = useState<BlogPost | null>(null);
   const [editorData, setEditorData] = useState<OutputData | undefined>();
   const [editorKey, setEditorKey] = useState<number>(0);
   const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState(""); // Slug для редактирования
   const [excerpt, setExcerpt] = useState("");
   const [coverImage, setCoverImage] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -48,27 +51,34 @@ export default function EditPostPage({ params }: PageProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editorReady, setEditorReady] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
+      return;
     }
-  }, [status, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // router стабилен и не должен быть в зависимостях
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === "authenticated" && !hasLoaded) {
       const fetchPost = async () => {
         try {
           const { slug: postSlug } = await params;
-          setSlug(postSlug);
+          setCurrentSlug(postSlug);
           
           const response = await fetch(`/api/posts/${postSlug}`);
           if (response.ok) {
             const foundPost = await response.json();
+            console.log("[Edit] Loaded post coverImage:", foundPost.coverImage, "type:", typeof foundPost.coverImage);
             setPost(foundPost);
             setTitle(foundPost.title);
+            setSlug(foundPost.slug || postSlug); // Загружаем текущий slug
             setExcerpt(foundPost.excerpt);
-            setCoverImage(foundPost.coverImage || "");
+            // Нормализуем coverImage: null или undefined -> пустая строка для состояния
+            const normalizedCover = foundPost.coverImage ? String(foundPost.coverImage).trim() : "";
+            setCoverImage(normalizedCover);
             // Ограничиваем количество тегов до 3 максимум при загрузке
             const loadedTags = foundPost.tags || [];
             setTags(loadedTags.length > 3 ? loadedTags.slice(0, 3) : loadedTags);
@@ -80,6 +90,7 @@ export default function EditPostPage({ params }: PageProps) {
               setEditorKey(Date.now());
               setEditorReady(true);
             }, 100);
+            setHasLoaded(true);
           } else {
             alert("Статья не найдена");
             router.push("/dashboard/articles");
@@ -95,7 +106,8 @@ export default function EditPostPage({ params }: PageProps) {
       
       fetchPost();
     }
-  }, [params, status, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // Загружаем только при изменении статуса, params обрабатывается внутри
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -122,19 +134,43 @@ export default function EditPostPage({ params }: PageProps) {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`/api/posts/${slug}`, {
+      // Нормализуем coverImage
+      let normalizedCoverImage: string | null = null;
+      if (coverImage && typeof coverImage === 'string') {
+        const trimmed = coverImage.trim();
+        normalizedCoverImage = trimmed.length > 0 ? trimmed : null;
+      } else if (coverImage === null || coverImage === undefined || coverImage === "") {
+        normalizedCoverImage = null;
+      } else {
+        // Если это не строка и не null/undefined, пробуем преобразовать в строку
+        normalizedCoverImage = String(coverImage).trim() || null;
+      }
+      
+      console.log("[Edit] Original coverImage:", coverImage, "type:", typeof coverImage);
+      console.log("[Edit] Normalized coverImage:", normalizedCoverImage);
+      
+      const requestBody: any = {
+        title,
+        slug: slug.trim(),
+        excerpt,
+        coverImage: normalizedCoverImage, // Всегда отправляем, даже если null
+        tags,
+        sources,
+        content: editorData,
+      };
+      
+      console.log("[Edit] Sending request body:", {
+        ...requestBody,
+        coverImage: normalizedCoverImage,
+        content: "[EditorJS data]"
+      });
+
+      const response = await fetch(`/api/posts/${currentSlug}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          title,
-          excerpt,
-          coverImage,
-          tags,
-          sources,
-          content: editorData,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -143,13 +179,49 @@ export default function EditPostPage({ params }: PageProps) {
           description: "Статья успешно обновлена"
         });
         
-        // Refresh page to show updated content
-        router.refresh();
+        // Если slug изменился, перенаправляем на новый URL
+        if (data.slug && data.slug !== currentSlug) {
+          setTimeout(() => {
+            router.push(`/dashboard/articles/edit/${data.slug}`);
+          }, 500);
+        }
+        
+        // Не вызываем router.refresh() чтобы избежать перезагрузки страницы
       } else {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        console.error("Server error:", errorData);
+        // Пытаемся получить текст ошибки
+        let errorMessage = response.statusText || "Неизвестная ошибка";
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.error || errorData.message || errorMessage;
+              // Если есть детали валидации, добавляем их
+              if (errorData.details?.errors) {
+                const validationErrors = errorData.details.errors
+                  .map((err: any) => `${err.field}: ${err.message}`)
+                  .join(', ');
+                if (validationErrors) {
+                  errorMessage = `${errorMessage}. ${validationErrors}`;
+                }
+              }
+            } catch {
+              // Если не JSON, используем текст как есть
+              errorMessage = errorText || errorMessage;
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing error response:", e);
+        }
+        
+        console.error("Server error:", {
+          status: response.status,
+          statusText: response.statusText,
+          message: errorMessage
+        });
+        
         toast.error("Не удалось сохранить статью", {
-          description: errorData.error || response.statusText
+          description: errorMessage
         });
       }
     } catch (error) {
@@ -293,6 +365,34 @@ export default function EditPostPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
+          {/* Slug */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ссылка (Slug)</CardTitle>
+              <CardDescription>
+                URL-адрес статьи. Изменение slug создаст новую ссылку на статью.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">domain.com/</span>
+                  <Input
+                    type="text"
+                    value={slug}
+                    onChange={(e) => setSlug(generateSlug(e.target.value))}
+                    placeholder="article-slug"
+                    className="flex-1 font-mono text-sm"
+                    pattern="[a-z0-9-]+"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Разрешены только строчные латинские буквы, цифры и дефисы
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Excerpt */}
           <Card>
             <CardHeader>
@@ -322,8 +422,27 @@ export default function EditPostPage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <FileUpload
-                currentUrl={coverImage}
-                onUploadComplete={(url) => setCoverImage(url)}
+                currentUrl={coverImage || undefined}
+                onUploadComplete={(url) => {
+                  // Принимаем как абсолютные, так и относительные URL
+                  if (url && typeof url === 'string' && url.trim().length > 0) {
+                    const trimmedUrl = url.trim();
+                    // Проверяем, что это валидный формат (абсолютный или относительный путь)
+                    try {
+                      // Если это абсолютный URL, проверяем через URL конструктор
+                      if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+                        new URL(trimmedUrl);
+                      }
+                      // Относительные пути (начинающиеся с /) тоже валидны
+                      setCoverImage(trimmedUrl);
+                    } catch (e) {
+                      console.error("[Edit] Invalid URL from FileUpload:", url);
+                      toast.error("Некорректный URL изображения");
+                    }
+                  } else {
+                    setCoverImage("");
+                  }
+                }}
                 type="cover"
                 label="Загрузить обложку"
               />

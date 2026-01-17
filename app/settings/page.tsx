@@ -9,6 +9,7 @@ import { FileUpload } from "@/components/file-upload";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Mail, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -21,7 +22,8 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
-  const [email, setEmail] = useState("");
+  const [publicEmail, setPublicEmail] = useState("");
+  const [showEmail, setShowEmail] = useState(false);
   const [avatar, setAvatar] = useState("");
   const [telegram, setTelegram] = useState("");
   const [vk, setVk] = useState("");
@@ -30,17 +32,12 @@ export default function SettingsPage() {
   
   // Validation errors
   const [usernameError, setUsernameError] = useState("");
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
-    } else if (status === "authenticated" && session?.user) {
-      // Load user data
-      loadUserProfile();
-    }
-  }, [status, session, router]);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const loadUserProfile = async () => {
+    // Предотвращаем повторную загрузку, если уже загружается
+    if (isLoading || hasLoaded) return;
+    
     setIsLoading(true);
     try {
       const response = await fetch("/api/profile");
@@ -49,12 +46,14 @@ export default function SettingsPage() {
         setName(data.name || "");
         setUsername(data.username || "");
         setBio(data.bio || "");
-        setEmail(data.email || "");
+        setPublicEmail(data.publicEmail || "");
+        setShowEmail(data.showEmail || false);
         setAvatar(data.avatarUrl || "");
         setTelegram(data.telegram || "");
         setVk(data.vk || "");
         setTwitter(data.twitter || "");
         setGithub(data.github || "");
+        setHasLoaded(true);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -65,6 +64,19 @@ export default function SettingsPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+    
+    // Загружаем профиль только один раз при монтировании или смене статуса на authenticated
+    if (status === "authenticated" && session?.user) {
+      loadUserProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // Загружаем только при изменении status, не при каждом изменении session
 
   const handleSave = async () => {
     // Сброс ошибок валидации
@@ -121,7 +133,8 @@ export default function SettingsPage() {
           name,
           username,
           bio,
-          email: email || null,
+          publicEmail: publicEmail || null,
+          showEmail,
           avatarUrl: avatar,
           telegram,
           vk,
@@ -134,6 +147,18 @@ export default function SettingsPage() {
         const updatedUser = await response.json();
         console.log("[Settings] Profile saved successfully, updating session...");
         
+        // Обновляем локальное состояние из ответа API
+        setName(updatedUser.name || "");
+        setUsername(updatedUser.username || "");
+        setBio(updatedUser.bio || "");
+        setPublicEmail(updatedUser.publicEmail || "");
+        setShowEmail(updatedUser.showEmail || false);
+        setAvatar(updatedUser.avatarUrl || "");
+        setTelegram(updatedUser.telegram || "");
+        setVk(updatedUser.vk || "");
+        setTwitter(updatedUser.twitter || "");
+        setGithub(updatedUser.github || "");
+        
         // Обновляем сессию NextAuth с новыми данными для немедленного обновления UI
         await update({
           user: {
@@ -144,10 +169,10 @@ export default function SettingsPage() {
           },
         });
         
-        console.log("[Settings] Session updated, refreshing router...");
+        console.log("[Settings] Session updated");
         
-        // Обновляем серверные компоненты (Header и т.д.)
-        router.refresh();
+        // Не вызываем router.refresh() здесь, чтобы избежать перезагрузки страницы
+        // Страница уже обновлена через update() сессии
         
         toast.success("Профиль успешно обновлен!", {
           description: "Все изменения сохранены"
@@ -310,21 +335,40 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Контактная информация</CardTitle>
               <CardDescription>
-                Ваша электронная почта (отображается только если указана)
+                Публичный email для отображения в профиле (может отличаться от email для входа)
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <label className="flex items-center gap-2 text-sm font-medium mb-2">
-                <Mail className="w-4 h-4" />
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+            <CardContent className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium mb-2">
+                  <Mail className="w-4 h-4" />
+                  Публичный Email
+                </label>
+                <input
+                  type="email"
+                  value={publicEmail}
+                  onChange={(e) => setPublicEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Этот email может отличаться от email для входа на сайт
+                </p>
+              </div>
+              <div className="flex items-center justify-between pt-2">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">
+                    Показывать email в профиле
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Включите, чтобы email отображался на вашей публичной странице профиля
+                  </p>
+                </div>
+                <Switch
+                  checked={showEmail}
+                  onCheckedChange={setShowEmail}
+                />
+              </div>
             </CardContent>
           </Card>
 

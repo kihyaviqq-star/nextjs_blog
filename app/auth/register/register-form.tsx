@@ -58,7 +58,7 @@ export function RegisterForm() {
       } else {
         setTimeout(() => {
           router.push(`/${data.user.username}`);
-          router.refresh();
+          // router.refresh() не нужен - router.push() уже обновит страницу
         }, 500);
       }
     } catch (error) {

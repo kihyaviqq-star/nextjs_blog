@@ -13,6 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { ViewIncrementer } from "@/components/view-incrementer";
 import { isUsernameReserved } from "@/lib/constants";
 import { CommentSection } from "@/components/comments/comment-section";
+import { resolveRedirect } from "@/lib/redirects";
+import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{
@@ -174,6 +176,7 @@ async function ArticlePage({ post }: { post: any }) {
                   fill
                   sizes="100vw"
                   className="object-cover"
+                  style={{ objectFit: "cover" }}
                   aria-hidden="true"
                   unoptimized={true}
                 />
@@ -186,6 +189,7 @@ async function ArticlePage({ post }: { post: any }) {
                   fill
                   sizes="(max-width: 768px) 100vw, 768px"
                   className="object-cover"
+                  style={{ objectFit: "cover" }}
                   priority
                   unoptimized={true}
                 />
@@ -228,6 +232,7 @@ async function ArticlePage({ post }: { post: any }) {
                     width={40}
                     height={40}
                     className="w-10 h-10 rounded-full object-cover"
+                    style={{ width: "2.5rem", height: "2.5rem" }}
                     unoptimized={post.author.avatarUrl.startsWith('http')}
                   />
                 ) : (
@@ -356,6 +361,7 @@ async function ArticlePage({ post }: { post: any }) {
                             alt={relatedPost.title}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            style={{ objectFit: "cover" }}
                             unoptimized={relatedPost.coverImage.startsWith('http')}
                           />
                         </div>
@@ -419,14 +425,14 @@ function UserProfilePage({ user }: { user: any }) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Header />
 
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
+      <main className="container mx-auto px-4 py-12 max-w-4xl flex-1">
         {/* User Profile */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
@@ -510,13 +516,13 @@ function UserProfilePage({ user }: { user: any }) {
             </div>
           )}
 
-          {user.email && (
+          {user.showEmail && user.publicEmail && (
             <a
-              href={`mailto:${user.email}`}
+              href={`mailto:${user.publicEmail}`}
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
             >
               <Mail className="w-4 h-4" />
-              {user.email}
+              {user.publicEmail}
             </a>
           )}
         </div>
@@ -565,6 +571,7 @@ function UserProfilePage({ user }: { user: any }) {
                             alt={post.title}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            style={{ objectFit: "cover" }}
                             unoptimized={post.coverImage.startsWith('http')}
                           />
                         </div>
@@ -608,7 +615,9 @@ function UserProfilePage({ user }: { user: any }) {
         </div>
       </main>
 
-      <Footer />
+      <div className="mt-auto">
+        <Footer />
+      </div>
     </div>
   );
 }
@@ -619,6 +628,28 @@ export default async function DynamicPage({ params }: PageProps) {
   
   // Decode slug
   const decodedSlug = decodeURIComponent(slug);
+
+  // ВАЖНО: Сначала проверяем редиректы ДО поиска статьи
+  // Это гарантирует, что редиректы работают даже если middleware пропустил
+  let redirectTo: string | null = null;
+  try {
+    redirectTo = await resolveRedirect(decodedSlug);
+  } catch (error: any) {
+    // Логируем только реальные ошибки (не редиректы)
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[DynamicPage] Error checking redirect:`, error?.message || error);
+    }
+    // Игнорируем ошибки проверки редиректов и продолжаем
+  }
+  
+  // Если редирект найден, выполняем его ВНЕ try-catch
+  // redirect() выбрасывает специальное исключение NEXT_REDIRECT, которое Next.js обрабатывает
+  if (redirectTo && redirectTo !== decodedSlug) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DynamicPage] Redirecting ${decodedSlug} -> ${redirectTo}`);
+    }
+    redirect(`/${encodeURIComponent(redirectTo)}`);
+  }
 
   // Try to find a post first (priority to articles)
   // Articles can use any slug, even if it's in reserved list
@@ -658,6 +689,8 @@ export default async function DynamicPage({ params }: PageProps) {
       name: true,
       username: true,
       email: true,
+      publicEmail: true,
+      showEmail: true,
       avatarUrl: true,
       bio: true,
       role: true,

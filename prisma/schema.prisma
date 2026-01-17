@@ -15,12 +15,16 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   username      String?   @unique // URL-friendly username for profiles
-  email         String    @unique
+  email         String    @unique // Email for authentication/login
   password      String?   // Optional for OAuth users
   emailVerified DateTime?
   avatarUrl     String?
   bio           String?
   role          String    @default("USER") // USER, EDITOR, or ADMIN
+  
+  // Public profile email (can differ from login email)
+  publicEmail   String?   // Email to display on profile
+  showEmail     Boolean   @default(false) // Whether to show email on public profile
   
   // Social links
   telegram      String?
@@ -155,4 +159,15 @@ model RSSSource {
 
   @@unique([url])
   @@index([enabled])
+}
+
+// Redirect model for handling slug changes
+model Redirect {
+  id        String   @id @default(cuid())
+  fromSlug  String   @unique
+  toSlug    String
+  createdAt DateTime @default(now())
+
+  @@index([fromSlug])
+  @@index([toSlug])
 }

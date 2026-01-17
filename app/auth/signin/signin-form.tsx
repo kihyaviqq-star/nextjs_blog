@@ -40,7 +40,7 @@ export function SignInForm() {
       
       setTimeout(() => {
         router.push("/");
-        router.refresh();
+        // router.refresh() не нужен - router.push() уже обновит страницу
       }, 500);
     } catch (error) {
       toast.error("Произошла ошибка при входе");

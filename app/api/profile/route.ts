@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
         name: true,
         username: true,
         email: true,
+        publicEmail: true,
+        showEmail: true,
         bio: true,
         avatarUrl: true,
         telegram: true,
@@ -47,6 +49,8 @@ export async function GET(request: NextRequest) {
       name: user.name || "",
       username: user.username || "",
       email: user.email,
+      publicEmail: user.publicEmail || "",
+      showEmail: user.showEmail || false,
       bio: user.bio || "",
       avatarUrl: user.avatarUrl || "",
       telegram: user.telegram || "",
@@ -79,7 +83,7 @@ export async function PUT(request: NextRequest) {
     const userId = session.user.id;
     const body = await request.json();
     
-    const { name, username, bio, email, avatarUrl, telegram, vk, twitter, github } = body;
+    const { name, username, bio, email, publicEmail, showEmail, avatarUrl, telegram, vk, twitter, github } = body;
 
     console.log("[API] Updating profile with data:", { name, username, bio, email, avatarUrl, telegram, vk, twitter, github });
 
@@ -112,6 +116,20 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Validate publicEmail if provided
+    if (publicEmail !== undefined && publicEmail !== null && publicEmail !== "") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(publicEmail)) {
+        return NextResponse.json(
+          { error: "Некорректный формат публичного email адреса" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Note: email field is for authentication and should not be changed through profile API
+    // To change login email, user should use account recovery or contact admin
+
     // Обновляем профиль в базе данных
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -119,7 +137,8 @@ export async function PUT(request: NextRequest) {
         name: name || undefined,
         username: username ? username.toLowerCase() : undefined, // Always store lowercase
         bio: bio || undefined,
-        // email: email || null, // DISABLED: Email update requires verification
+        publicEmail: publicEmail !== undefined ? (publicEmail || null) : undefined,
+        showEmail: showEmail !== undefined ? showEmail : undefined,
         avatarUrl: avatarUrl || undefined,
         telegram: telegram || null,
         vk: vk || null,
@@ -130,16 +149,30 @@ export async function PUT(request: NextRequest) {
 
     console.log("[API] Profile updated successfully:", updatedUser.name, updatedUser.username);
 
-    // Инвалидируем кеш для обновления данных в UI
+    // Инвалидируем кеш для обновления аватара везде
+    // Инвалидируем layout для обновления session data в Header (UserMenu, MobileMenu)
+    revalidatePath('/', 'layout');
+    // Главная страница
     revalidatePath('/');
+    // Страница настроек
     revalidatePath('/settings');
+    // Страница админки
     revalidatePath('/admin');
+    // Все страницы статей (где есть аватар автора и комментарии)
+    revalidatePath('/[slug]', 'page');
+    // Страница профиля пользователя (динамический путь с username)
+    const userSlug = updatedUser.username || updatedUser.id;
+    if (userSlug) {
+      revalidatePath(`/${userSlug}`, 'page');
+    }
     
     return NextResponse.json({
       id: updatedUser.id,
       name: updatedUser.name || "",
       username: updatedUser.username || "",
       email: updatedUser.email,
+      publicEmail: updatedUser.publicEmail || "",
+      showEmail: updatedUser.showEmail || false,
       bio: updatedUser.bio || "",
       avatarUrl: updatedUser.avatarUrl || "",
       telegram: updatedUser.telegram || "",

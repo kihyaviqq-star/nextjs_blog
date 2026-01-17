@@ -10,9 +10,11 @@ import { HeaderClientWrapper } from "@/components/header";
 import { FooterClient } from "@/components/footer";
 import { FileUpload } from "@/components/file-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Eye, X } from "lucide-react";
 import type { OutputData } from "@editorjs/editorjs";
 import { toast } from "sonner";
+import { generateSlug } from "@/lib/slug";
 
 const EditorWrapper = dynamic(() => import("@/components/editor/editor-wrapper"), {
   ssr: false,
@@ -31,6 +33,8 @@ export default function CreatePostPage() {
   const router = useRouter();
   const [editorData, setEditorData] = useState<OutputData | undefined>();
   const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [excerpt, setExcerpt] = useState("");
   const [coverImage, setCoverImage] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -43,7 +47,8 @@ export default function CreatePostPage() {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
     }
-  }, [status, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // router стабилен и не должен быть в зависимостях
 
   if (status === "loading") {
     return (
@@ -83,10 +88,39 @@ export default function CreatePostPage() {
     );
   }
 
+  // Автогенерация slug при изменении title
+  useEffect(() => {
+    if (!slugManuallyEdited && title) {
+      const generatedSlug = generateSlug(title);
+      setSlug(generatedSlug);
+    }
+  }, [title, slugManuallyEdited]);
+
+  const handleTitleChange = (value: string) => {
+    setTitle(value);
+    // Если slug не редактировался вручную, обновляем его автоматически
+    if (!slugManuallyEdited) {
+      const generatedSlug = generateSlug(value);
+      setSlug(generatedSlug);
+    }
+  };
+
+  const handleSlugChange = (value: string) => {
+    setSlug(value);
+    setSlugManuallyEdited(true);
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Заполните заголовок", {
         description: "Пожалуйста, введите заголовок статьи"
+      });
+      return;
+    }
+
+    if (!slug.trim()) {
+      toast.error("Заполните ссылку", {
+        description: "Пожалуйста, введите ссылку (slug) для статьи"
       });
       return;
     }
@@ -115,8 +149,9 @@ export default function CreatePostPage() {
         },
         body: JSON.stringify({
           title,
+          slug: slug.trim(),
           excerpt,
-          coverImage,
+          coverImage: coverImage || null,
           tags,
           sources,
           content: editorData,
@@ -135,8 +170,15 @@ export default function CreatePostPage() {
         }, 500);
       } else {
         const errorData = await response.json().catch(() => ({}));
+        let errorMessage = errorData.error || errorData.message || "Попробуйте еще раз";
+        
+        // Если есть детальные ошибки валидации, показываем первую
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          errorMessage = `${errorData.errors[0].field}: ${errorData.errors[0].message}`;
+        }
+        
         toast.error("Не удалось сохранить статью", {
-          description: errorData.error || "Попробуйте еще раз"
+          description: errorMessage
         });
       }
     } catch (error) {
@@ -229,10 +271,38 @@ export default function CreatePostPage() {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Введите заголовок статьи..."
                 className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-lg"
               />
+            </CardContent>
+          </Card>
+
+          {/* Slug */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ссылка (Slug)</CardTitle>
+              <CardDescription>
+                URL-адрес статьи (автоматически генерируется из заголовка, можно редактировать вручную)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">domain.com/</span>
+                  <Input
+                    type="text"
+                    value={slug}
+                    onChange={(e) => handleSlugChange(e.target.value)}
+                    placeholder="article-slug"
+                    className="flex-1 font-mono text-sm"
+                    pattern="[a-z0-9-]+"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Разрешены только строчные латинские буквы, цифры и дефисы
+                </p>
+              </div>
             </CardContent>
           </Card>
 

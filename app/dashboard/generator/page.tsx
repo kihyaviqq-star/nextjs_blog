@@ -146,13 +146,14 @@ export default function GeneratorPage() {
   }, [sources]);
 
   useEffect(() => {
-    if (enabledSources.length > 0 && !loadingSources) {
+    if (enabledSources.length > 0 && !loadingSources && !loading) {
       loadNews();
     } else if (enabledSources.length === 0 && !loadingSources) {
       setNews([]);
       setLoading(false);
     }
-  }, [enabledSources, loadingSources]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabledSources, loadingSources]); // loadNews вызывается внутри, избегаем зацикливания
 
   useEffect(() => {
     // Save enabled sources to localStorage
