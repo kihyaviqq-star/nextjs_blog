@@ -6,7 +6,7 @@ import { Footer } from "@/components/footer";
 import { SearchFilterBar } from "@/components/search-filter-bar";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, Tag, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
+import { Calendar, Clock, Tag, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
 const POSTS_PER_PAGE = 9;
@@ -134,8 +134,8 @@ export default async function Home({ searchParams }: HomeProps) {
                 <span className="sr-only">Читать статью</span>
               </Link>
               <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden relative z-10 pointer-events-none">
-                <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative">
-                  {post.coverImage ? (
+                {post.coverImage ? (
+                  <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative">
                     <Image
                       src={post.coverImage}
                       alt={post.title}
@@ -146,13 +146,10 @@ export default async function Home({ searchParams }: HomeProps) {
                       priority={index < 3}
                       unoptimized={post.coverImage?.startsWith('/') || post.coverImage?.startsWith('http')}
                     />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-secondary">
-                      <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
-                      <span className="text-xs opacity-50">Нет обложки</span>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-48 border-b border-border"></div>
+                )}
                 <CardHeader>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[48px] items-start">
                     {post.tags.map((tag: string) => (
