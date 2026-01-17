@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Session } from "next-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,10 +77,13 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
               <div className="px-6 pb-4">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
                   {(session.user as any).avatarUrl ? (
-                    <img
+                    <Image
                       src={(session.user as any).avatarUrl}
                       alt={session.user.name || "User"}
+                      width={48}
+                      height={48}
                       className="w-12 h-12 rounded-full object-cover"
+                      unoptimized={(session.user as any).avatarUrl?.startsWith('http')}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
@@ -28,10 +29,14 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 z-10"
           >
             {logoUrl && (
-              <img 
+              <Image 
                 src={logoUrl} 
                 alt={siteName || "Logo"} 
-                className="h-8 w-auto"
+                width={120}
+                height={32}
+                className="h-8"
+                style={{ width: "auto", height: "2rem" }}
+                unoptimized={logoUrl.startsWith('http')}
               />
             )}
             {siteName && (

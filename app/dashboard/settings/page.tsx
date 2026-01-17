@@ -223,7 +223,7 @@ export default function SiteSettingsPage() {
                   className="min-h-[100px]"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Текст, отображаемый под заголовком "Последние статьи" на главной странице
+                  Текст, отображаемый под заголовком &quot;Последние статьи&quot; на главной странице
                 </p>
               </div>
             </CardContent>

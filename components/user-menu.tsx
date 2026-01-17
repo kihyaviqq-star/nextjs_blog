@@ -2,6 +2,7 @@
 
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -50,10 +51,13 @@ export function UserMenu() {
           className="flex items-center gap-2 px-3 py-1.5 h-auto"
         >
           {avatarUrl ? (
-            <img 
+            <Image 
               src={avatarUrl} 
               alt={session.user.name || "User"} 
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full object-cover"
+              unoptimized={avatarUrl.startsWith('http')}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

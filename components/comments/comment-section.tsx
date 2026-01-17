@@ -20,8 +20,16 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
   const fetchComments = async (pageNum: number) => {
     try {
+      if (!postId) {
+        console.error("postId is missing in fetchComments");
+        return;
+      }
       const res = await fetch(`/api/comments?postId=${postId}&page=${pageNum}&limit=15`);
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Failed to fetch comments: ${res.status} ${res.statusText}`, errorText);
+        throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
+      }
       const data = await res.json();
       
       if (pageNum === 1) {
@@ -50,7 +58,36 @@ export function CommentSection({ postId }: CommentSectionProps) {
   };
 
   const handleNewComment = (comment: any) => {
-    setComments((prev) => [comment, ...prev]);
+    console.log("handleNewComment called with:", comment);
+    // If comment has parentId, it's a reply - need to update the parent comment's replies
+    if (comment.parentId) {
+      const updateCommentWithReply = (comments: any[]): any[] => {
+        return comments.map((c) => {
+          if (c.id === comment.parentId) {
+            console.log(`Found parent comment ${c.id}, adding reply`);
+            return {
+              ...c,
+              replies: [...(c.replies || []), { ...comment, replies: [] }]
+            };
+          }
+          if (c.replies && c.replies.length > 0) {
+            return {
+              ...c,
+              replies: updateCommentWithReply(c.replies)
+            };
+          }
+          return c;
+        });
+      };
+      setComments((prev) => {
+        const updated = updateCommentWithReply(prev);
+        console.log("Updated comments:", updated);
+        return updated;
+      });
+    } else {
+      // Top-level comment
+      setComments((prev) => [{ ...comment, replies: [] }, ...prev]);
+    }
     setTotal((prev) => prev + 1);
   };
 
@@ -75,6 +112,24 @@ export function CommentSection({ postId }: CommentSectionProps) {
             comment={comment} 
             postId={postId}
             onReplyAdded={() => {}} // We might not need to update the main list for deep replies
+            onCommentDeleted={(deletedId) => {
+              // Remove deleted comment from the list
+              const removeComment = (commentsList: any[]): any[] => {
+                return commentsList
+                  .filter((c) => c.id !== deletedId)
+                  .map((c) => {
+                    if (c.replies && c.replies.length > 0) {
+                      return {
+                        ...c,
+                        replies: removeComment(c.replies)
+                      };
+                    }
+                    return c;
+                  });
+              };
+              setComments((prev) => removeComment(prev));
+              setTotal((prev) => Math.max(0, prev - 1));
+            }}
           />
         ))}
 

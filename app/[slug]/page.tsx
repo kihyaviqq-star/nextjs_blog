@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,20 +168,26 @@ async function ArticlePage({ post }: { post: any }) {
             <div className="relative mb-12 group">
               {/* Ambilight Glow */}
               <div className="absolute inset-0 -z-10 blur-3xl opacity-50 scale-105">
-                 <img
+                 <Image
                   src={post.coverImage}
                   alt=""
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
                   aria-hidden="true"
+                  unoptimized={true}
                 />
               </div>
 
               <div className="w-full h-[400px] relative rounded-lg overflow-hidden bg-secondary shadow-2xl">
-                <img
+                <Image
                   src={post.coverImage}
                   alt={post.title}
-                  className="w-full h-full object-cover"
-                  loading="eager"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="object-cover"
+                  priority
+                  unoptimized={true}
                 />
               </div>
             </div>
@@ -215,10 +222,13 @@ async function ArticlePage({ post }: { post: any }) {
                 className="flex items-center gap-2 hover:text-foreground transition-colors group"
               >
                 {post.author.avatarUrl ? (
-                  <img
+                  <Image
                     src={post.author.avatarUrl}
                     alt={post.author.name || "User"}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover"
+                    unoptimized={post.author.avatarUrl.startsWith('http')}
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -340,11 +350,13 @@ async function ArticlePage({ post }: { post: any }) {
                   <SpotlightCard className="h-full cursor-pointer">
                     <Card className="h-full border-0 bg-transparent shadow-none group">
                       {relatedPost.coverImage && (
-                        <div className="w-full h-32 overflow-hidden bg-secondary rounded-t-lg">
-                          <img
+                        <div className="w-full h-32 overflow-hidden bg-secondary rounded-t-lg relative">
+                          <Image
                             src={relatedPost.coverImage}
                             alt={relatedPost.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            unoptimized={relatedPost.coverImage.startsWith('http')}
                           />
                         </div>
                       )}
@@ -419,10 +431,13 @@ function UserProfilePage({ user }: { user: any }) {
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
             {user.avatarUrl ? (
-              <img
+              <Image
                 src={user.avatarUrl}
                 alt={user.name || username}
+                width={128}
+                height={128}
                 className="w-32 h-32 rounded-full border-4 border-border object-cover"
+                unoptimized={user.avatarUrl.startsWith('http')}
               />
             ) : (
               <div className="w-32 h-32 rounded-full border-4 border-border bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -544,11 +559,13 @@ function UserProfilePage({ user }: { user: any }) {
                   <SpotlightCard className="h-full cursor-pointer">
                     <Card className="h-full border-0 bg-transparent shadow-none group">
                       {post.coverImage && (
-                        <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg">
-                          <img
+                        <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative">
+                          <Image
                             src={post.coverImage}
                             alt={post.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            unoptimized={post.coverImage.startsWith('http')}
                           />
                         </div>
                       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -85,15 +86,22 @@ export function FileUpload({
       <div className="flex items-center gap-4">
         {/* Preview */}
         {previewUrl ? (
-          <div className="relative group">
-            <img
+          <div className={`relative group overflow-hidden ${
+            type === "avatar" ? "w-20 h-20 rounded-full" : 
+            type === "logo" || type === "favicon" ? "w-20 h-20" : 
+            "w-40 h-24"
+          }`}>
+            <Image
               src={previewUrl}
               alt="Preview"
+              width={type === "avatar" ? 80 : type === "logo" || type === "favicon" ? 80 : 160}
+              height={type === "avatar" ? 80 : type === "logo" || type === "favicon" ? 80 : 96}
               className={`object-cover rounded-lg border border-border ${
-                type === "avatar" ? "w-20 h-20 rounded-full" : 
-                type === "logo" ? "h-16 w-auto max-w-[200px]" : 
-                "w-40 h-24"
+                type === "avatar" ? "w-full h-full rounded-full" : 
+                type === "logo" || type === "favicon" ? "w-full h-full object-contain" : 
+                "w-full h-full"
               }`}
+              unoptimized={previewUrl.startsWith('blob:') || previewUrl.startsWith('data:')}
             />
             <button
               type="button"
@@ -107,7 +115,7 @@ export function FileUpload({
         ) : (
           <div className={`flex items-center justify-center bg-secondary rounded-lg border-2 border-dashed border-border ${
             type === "avatar" ? "w-20 h-20 rounded-full" : 
-            type === "logo" ? "h-16 w-32" : 
+            type === "logo" || type === "favicon" ? "w-20 h-20" : 
             "w-40 h-24"
           }`}>
             <ImageIcon className="w-8 h-8 text-muted-foreground" />

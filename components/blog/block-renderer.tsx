@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { EditorBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Check } from "lucide-react";
@@ -176,11 +177,16 @@ function ImageBlock({ data }: { data: any }) {
   
   return (
     <figure className="my-6">
-      <img
-        src={url}
-        alt={caption || ""}
-        className="rounded-lg w-full border border-border"
-      />
+      <div className="relative w-full rounded-lg border border-border overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '200px' }}>
+        <Image
+          src={url}
+          alt={caption || ""}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-contain rounded-lg"
+          unoptimized={true}
+        />
+      </div>
       {caption && (
         <figcaption className="text-sm text-muted-foreground text-center mt-2">
           {caption}
@@ -351,10 +357,13 @@ function LinkToolBlock({ data }: { data: any }) {
     >
       <div className="flex gap-4">
         {meta.image?.url && (
-          <img
+          <Image
             src={meta.image.url}
             alt={meta.title || "Link preview"}
+            width={96}
+            height={96}
             className="w-24 h-24 object-cover rounded flex-shrink-0"
+            unoptimized={meta.image.url.startsWith('http')}
           />
         )}
         <div className="flex-1 min-w-0">

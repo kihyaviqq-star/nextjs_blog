@@ -22,7 +22,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
     }
 
+    // Check if prisma is properly initialized
+    if (!prisma || !prisma.comment) {
+      console.error("GET /api/comments: Prisma client is not properly initialized");
+      return NextResponse.json({ error: "Database connection error" }, { status: 500 });
+    }
+
     const skip = (page - 1) * limit;
+
+    console.log(`GET /api/comments: Fetching comments for post ${postId}, page ${page}, limit ${limit}`);
 
     // Fetch top-level comments (parentId is null)
     const comments = await prisma.comment.findMany({
@@ -49,8 +57,8 @@ export async function GET(request: NextRequest) {
                 avatarUrl: true,
               },
             },
-            replies: { // Fetch 2nd level replies too (optional, but good for UX)
-               include: {
+            replies: {
+              include: {
                 author: {
                   select: {
                     id: true,
@@ -59,8 +67,11 @@ export async function GET(request: NextRequest) {
                     avatarUrl: true,
                   },
                 },
-               }
-            }
+              },
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
           },
           orderBy: {
             createdAt: "asc",
@@ -82,14 +93,24 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    console.log(`GET /api/comments: Found ${comments.length} comments, total ${total}`);
+
     return NextResponse.json({
       comments,
       hasMore: skip + comments.length < total,
       total,
     });
-  } catch (error) {
-    console.error("Error fetching comments:", error);
-    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
+  } catch (error: any) {
+    console.error("GET /api/comments: Error fetching comments:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
+    return NextResponse.json({ 
+      error: "Failed to fetch comments",
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    }, { status: 500 });
   }
 }
 
@@ -97,14 +118,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
+      console.error("POST /api/comments: No session found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
+    console.log("POST /api/comments: Body received", { postId: body.postId, hasContent: !!body.content, hasParentId: !!body.parentId });
+
     const result = commentSchema.safeParse(body);
 
     if (!result.success) {
-      console.error("Validation error:", result.error);
+      console.error("POST /api/comments: Validation error:", result.error);
       const errorMessage = Array.isArray(result.error.issues) 
         ? result.error.issues[0]?.message 
         : "Validation failed";
@@ -117,12 +141,43 @@ export async function POST(request: NextRequest) {
 
     const { postId, content, parentId, imageUrl } = result.data;
 
+    // Rate limiting: Check last comment by this user (max 1 per 5 seconds)
+    const fiveSecondsAgo = new Date(Date.now() - 5000);
+    const lastComment = await prisma.comment.findFirst({
+      where: {
+        authorId: session.user.id as string,
+        createdAt: {
+          gte: fiveSecondsAgo,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        createdAt: true,
+      },
+    });
+
+    if (lastComment) {
+      const timeSinceLastComment = Date.now() - lastComment.createdAt.getTime();
+      const remainingSeconds = Math.ceil((5000 - timeSinceLastComment) / 1000);
+      return NextResponse.json(
+        { 
+          error: "Слишком много комментариев. Попробуйте снова через несколько секунд.",
+          retryAfter: remainingSeconds
+        },
+        { status: 429 }
+      );
+    }
+
     // Check if post exists
     const post = await prisma.post.findUnique({
       where: { id: postId },
     });
 
     if (!post) {
+      console.error(`POST /api/comments: Post not found: ${postId}`);
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
@@ -132,19 +187,23 @@ export async function POST(request: NextRequest) {
         where: { id: parentId },
       });
       if (!parent) {
+        console.error(`POST /api/comments: Parent comment not found: ${parentId}`);
         return NextResponse.json({ error: "Parent comment not found" }, { status: 404 });
       }
     }
 
-    // Create user in DB if not exists (using email from session)
-    // Actually auth() ensures we have a session, but we need the DB user ID.
-    // The session.user.id *should* be the DB id if using PrismaAdapter, but let's be safe.
-    // With Auth.js + Prisma, session.user.id IS the DB ID.
+    console.log(`POST /api/comments: Creating comment for post ${postId} by user ${session.user.id}`);
+    
+    // Check if prisma is properly initialized
+    if (!prisma || !prisma.comment) {
+      console.error("POST /api/comments: Prisma client is not properly initialized");
+      return NextResponse.json({ error: "Database connection error" }, { status: 500 });
+    }
     
     const comment = await prisma.comment.create({
       data: {
         content,
-        imageUrl,
+        imageUrl: imageUrl || null,
         postId,
         authorId: session.user.id as string,
         parentId: parentId || null,
@@ -161,9 +220,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log(`POST /api/comments: Comment created successfully: ${comment.id}`);
     return NextResponse.json(comment);
-  } catch (error) {
-    console.error("Error creating comment:", error);
-    return NextResponse.json({ error: "Failed to create comment" }, { status: 500 });
+  } catch (error: any) {
+    console.error("POST /api/comments: Error creating comment:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
+    return NextResponse.json({ 
+      error: error?.message || "Failed to create comment",
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    }, { status: 500 });
   }
 }

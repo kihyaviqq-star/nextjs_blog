@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -134,11 +135,14 @@ export default async function Home({ searchParams }: HomeProps) {
               </Link>
               <Card className="h-full border-0 bg-transparent shadow-none group overflow-hidden relative z-10 pointer-events-none">
                 {post.coverImage && (
-                  <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg">
-                    <img
+                  <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative" style={{ height: '192px' }}>
+                    <Image
                       src={post.coverImage}
                       alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      unoptimized={true}
                     />
                   </div>
                 )}
@@ -168,10 +172,13 @@ export default async function Home({ searchParams }: HomeProps) {
                       className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                     >
                       {post.author.avatarUrl ? (
-                        <img
+                        <Image
                           src={post.author.avatarUrl}
                           alt={post.author.name || "User"}
+                          width={24}
+                          height={24}
                           className="w-6 h-6 rounded-full object-cover"
+                          unoptimized={post.author.avatarUrl.startsWith('http')}
                         />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
