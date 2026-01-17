@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import EditorJS, { OutputData } from "@editorjs/editorjs";
 // @ts-ignore
@@ -425,6 +425,7 @@ export default function EditorWrapper({
         console.error("Editor initialization error:", error);
         isInitialized.current = false;
         editorInstance.current = null;
+        // Don't set error state here - timeout will handle it
       });
 
     // Cleanup function - only runs on unmount
@@ -524,6 +525,34 @@ export default function EditorWrapper({
         dataLoadedRef.current = true; // Mark as loaded to prevent retries
       });
   }, [data]); // This will only run once because dataLoadedRef prevents re-runs
+
+  // Show error state if editor failed to initialize after timeout
+  const [initError, setInitError] = useState(false);
+
+  useEffect(() => {
+    // Set error flag if editor doesn't initialize within 10 seconds
+    const timeout = setTimeout(() => {
+      if (!isInitialized.current && !editorInstance.current) {
+        console.error('Editor failed to initialize within timeout');
+        setInitError(true);
+      }
+    }, 10000);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (initError) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center border border-border rounded-lg bg-secondary/20">
+        <div className="text-center space-y-4 p-8">
+          <p className="text-destructive font-semibold">Ошибка загрузки редактора</p>
+          <p className="text-sm text-muted-foreground">
+            Попробуйте обновить страницу. Если проблема сохраняется, проверьте консоль браузера (F12).
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

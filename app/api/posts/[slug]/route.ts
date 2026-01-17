@@ -5,6 +5,7 @@ import { updatePostSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE 
 import { handleApiError } from "@/lib/error-handler";
 import { generateSlug, generateUniqueSlug } from "@/lib/slug";
 import { createRedirect } from "@/lib/redirects";
+import { deletePostFiles, deleteUploadedFile, extractImageUrlsFromContent } from "@/lib/file-cleanup";
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -96,10 +97,14 @@ export async function PUT(
 
     const { slug } = await params;
     
-    // 4. Проверяем существование поста в БД
+    // 4. Проверяем существование поста в БД и получаем текущие данные для сравнения
     const existingPost = await prisma.post.findUnique({
       where: { slug },
-      select: { authorId: true }
+      select: { 
+        authorId: true,
+        coverImage: true,
+        content: true,
+      }
     });
 
     if (!existingPost) {
@@ -207,6 +212,37 @@ export async function PUT(
       }
     }
 
+    // Удаляем старые файлы, если они изменились
+    try {
+      // Удаляем старый coverImage, если он изменился или был удален
+      if (existingPost.coverImage && existingPost.coverImage.startsWith('/uploads/')) {
+        const newCoverImage = coverImage || null;
+        // Удаляем, если изображение изменилось или было удалено (новое = null)
+        if (existingPost.coverImage !== newCoverImage) {
+          await deleteUploadedFile(existingPost.coverImage);
+          console.log(`[API PUT post] Deleted old cover image: ${existingPost.coverImage}`);
+        }
+      }
+
+      // Сравниваем изображения в контенте и удаляем те, которые больше не используются
+      if (existingPost.content && content) {
+        const oldImageUrls = extractImageUrlsFromContent(existingPost.content);
+        const newImageUrls = extractImageUrlsFromContent(content);
+        
+        // Находим изображения, которые были удалены из контента
+        const deletedImages = oldImageUrls.filter(url => !newImageUrls.includes(url));
+        for (const deletedUrl of deletedImages) {
+          if (deletedUrl.startsWith('/uploads/')) {
+            await deleteUploadedFile(deletedUrl);
+            console.log(`[API PUT post] Deleted unused image from content: ${deletedUrl}`);
+          }
+        }
+      }
+    } catch (error: any) {
+      // Логируем ошибку, но не прерываем обновление поста
+      console.error(`[API PUT post] Error cleaning up old files:`, error?.message || error);
+    }
+
     // Update post in database
     // ВАЖНО: Если slug изменился, используем старый slug для поиска поста
     // Но затем обновляем на новый slug
@@ -291,10 +327,14 @@ export async function DELETE(
 
     const { slug } = await params;
     
-    // 4. Проверяем существование поста в БД
+    // 4. Проверяем существование поста в БД и получаем данные для удаления файлов
     const existingPost = await prisma.post.findUnique({
       where: { slug },
-      select: { authorId: true }
+      select: { 
+        authorId: true,
+        coverImage: true,
+        content: true,
+      }
     });
 
     if (!existingPost) {
@@ -312,6 +352,21 @@ export async function DELETE(
       );
     }
     
+    // 6. Удаляем связанные файлы (coverImage и изображения в контенте)
+    try {
+      const deletedCount = await deletePostFiles({
+        coverImage: existingPost.coverImage,
+        content: existingPost.content,
+      });
+      if (deletedCount > 0) {
+        console.log(`[API DELETE post] Deleted ${deletedCount} file(s) for post: ${slug}`);
+      }
+    } catch (error: any) {
+      // Логируем ошибку, но не прерываем удаление поста
+      console.error(`[API DELETE post] Error deleting files for ${slug}:`, error?.message || error);
+    }
+
+    // 7. Удаляем пост из БД
     await prisma.post.delete({
       where: { slug },
     });

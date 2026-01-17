@@ -15,11 +15,18 @@ const nextConfig: NextConfig = {
         protocol: 'http',
         hostname: 'localhost',
       },
+      {
+        protocol: 'http',
+        hostname: '**', // Для продакшена с HTTP
+      },
     ],
-    unoptimized: false,
+    // В продакшене можно отключить оптимизацию для локальных файлов
+    unoptimized: process.env.NODE_ENV === 'production' ? false : false,
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Разрешить загрузку изображений из /uploads
+    domains: [],
   },
   async headers() {
     return [

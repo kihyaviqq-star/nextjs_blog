@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+import { ImageWithFallback } from "@/components/blog/image-with-fallback";
 import { EditorBlock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Check } from "lucide-react";
@@ -13,17 +13,30 @@ interface BlockRendererProps {
 export default function BlockRenderer({ blocks, className }: BlockRendererProps) {
   // Safety check: ensure blocks is a valid array
   if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
-    return null;
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Контент статьи пуст или не найден.</p>
+      </div>
+    );
+  }
+
+  // Filter and validate blocks
+  const validBlocks = blocks.filter((block) => {
+    return block && typeof block === 'object' && block.type && typeof block.type === 'string';
+  });
+
+  if (validBlocks.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Нет валидных блоков контента для отображения.</p>
+      </div>
+    );
   }
 
   return (
     <article className={cn("prose prose-invert dark:prose-invert max-w-none", className)}>
-      {blocks.map((block, index) => {
-        // Safety check: ensure block is valid
-        if (!block || typeof block !== 'object' || !block.type) {
-          return null;
-        }
-        return <Block key={block.id || index} block={block} />;
+      {validBlocks.map((block, index) => {
+        return <Block key={block.id || `block-${index}`} block={block} />;
       })}
     </article>
   );
@@ -175,16 +188,21 @@ function ImageBlock({ data }: { data: any }) {
   
   const caption = file?.caption || data?.caption;
   
+  // Determine if we should use unoptimized
+  const isExternal = url.startsWith('http://') || url.startsWith('https://');
+  const isLocal = url.startsWith('/uploads/');
+  
   return (
     <figure className="my-6">
-      <div className="relative w-full rounded-lg border border-border overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '200px' }}>
-        <Image
+      <div className="relative w-full rounded-lg border border-border overflow-hidden bg-secondary" style={{ aspectRatio: '16/9', minHeight: '200px' }}>
+        <ImageWithFallback
           src={url}
           alt={caption || ""}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-contain rounded-lg"
-          unoptimized={true}
+          className="rounded-lg"
+          unoptimized={isExternal || isLocal}
+          objectFit="contain"
         />
       </div>
       {caption && (
