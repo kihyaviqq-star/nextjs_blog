@@ -1,6 +1,10 @@
 
 'use server';
 
+// Увеличиваем максимальное время выполнения для длительных AI операций (парсинг + генерация)
+// По умолчанию Next.js имеет лимит 10-60 секунд, увеличиваем до 120 секунд
+export const maxDuration = 300; // 5 минут
+
 import { fetchNewsFromSources, NewsItem, getAllSources } from '@/lib/news-fetcher';
 import { scrapeUrl } from '@/lib/url-scraper';
 import { generateArticle, GeneratedArticle } from '@/lib/ai-client';

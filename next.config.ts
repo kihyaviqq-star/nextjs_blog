@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Увеличиваем таймаут для длительных операций (AI парсинг может занимать до 90 секунд)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // Увеличенный лимит для body
+    },
+  },
   images: {
     remotePatterns: [
       {
