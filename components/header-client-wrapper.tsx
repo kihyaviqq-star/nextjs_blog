@@ -3,16 +3,34 @@
 import { useEffect, useState } from "react";
 import { HeaderClient } from "./header-client";
 
-export function HeaderClientWrapper() {
+interface HeaderClientWrapperProps {
+  siteName?: string | null;
+  logoUrl?: string | null;
+}
+
+export function HeaderClientWrapper({ 
+  siteName: initialSiteName, 
+  logoUrl: initialLogoUrl 
+}: HeaderClientWrapperProps = {}) {
   const [settings, setSettings] = useState<{
     siteName: string | null;
     logoUrl: string | null;
   }>({
-    siteName: null,
-    logoUrl: null,
+    siteName: initialSiteName ?? null,
+    logoUrl: initialLogoUrl ?? null,
   });
 
   useEffect(() => {
+    // Если данные переданы через пропсы, используем их и не делаем запрос к API
+    if (initialSiteName !== undefined || initialLogoUrl !== undefined) {
+      setSettings({
+        siteName: initialSiteName ?? null,
+        logoUrl: initialLogoUrl ?? null,
+      });
+      return;
+    }
+
+    // Если данные не переданы, загружаем через API (для обратной совместимости)
     const fetchSettings = async () => {
       try {
         const response = await fetch("/api/settings");
@@ -29,12 +47,21 @@ export function HeaderClientWrapper() {
     };
 
     fetchSettings();
-  }, []);
+  }, [initialSiteName, initialLogoUrl]);
+
+  // Используем переданные значения напрямую для отображения (избегаем мигания)
+  // Если пропсы переданы, используем их сразу, иначе используем состояние
+  const displaySiteName = initialSiteName !== undefined 
+    ? (initialSiteName || null)
+    : settings.siteName;
+  const displayLogoUrl = initialLogoUrl !== undefined 
+    ? (initialLogoUrl || null)
+    : settings.logoUrl;
 
   return (
     <HeaderClient 
-      siteName={settings.siteName}
-      logoUrl={settings.logoUrl}
+      siteName={displaySiteName}
+      logoUrl={displayLogoUrl}
     />
   );
 }

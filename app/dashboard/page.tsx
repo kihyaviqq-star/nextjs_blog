@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { HeaderClientWrapper } from "@/components/header";
+import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <HeaderClientWrapper />
+      <Header />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Аналитика</h1>

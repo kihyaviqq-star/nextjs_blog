@@ -34,7 +34,7 @@ async function ArticlePage({ post }: { post: any }) {
     where: { id: "default" },
     select: { siteName: true, logoUrl: true },
   });
-  const siteName = siteSettings?.siteName || "Blog";
+  const siteName = siteSettings?.siteName || "";
   const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const postUrl = `${siteUrl}/${post.slug}`;
   const ogImage = post.coverImage 
@@ -687,7 +687,7 @@ export async function generateMetadata({ params }: PageProps) {
       logoUrl: true,
     },
   });
-  const siteName = siteSettings?.siteName || "Blog";
+  const siteName = siteSettings?.siteName || "";
   const siteDescription = siteSettings?.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
   const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   const defaultImage = siteSettings?.logoUrl ? `${siteUrl}${siteSettings.logoUrl}` : `${siteUrl}/og-default.jpg`;

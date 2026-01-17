@@ -28,7 +28,7 @@ export default function SiteSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [settings, setSettings] = useState<SiteSettings>({
     id: "default",
-    siteName: "Blog",
+    siteName: "",
     logoUrl: null,
     faviconUrl: null,
     metaDescription: null,
@@ -93,7 +93,7 @@ export default function SiteSettingsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <HeaderClientWrapper />
+        <HeaderClientWrapper siteName={settings.siteName} logoUrl={settings.logoUrl} />
         <main className="container mx-auto px-4 py-12 max-w-4xl">
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -105,7 +105,7 @@ export default function SiteSettingsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <HeaderClientWrapper />
+      <HeaderClientWrapper siteName={settings.siteName} logoUrl={settings.logoUrl} />
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12 max-w-4xl">
         <div className="mb-8">
