@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { ImageIcon } from 'lucide-react';
 
 interface ImageWithFallbackProps {
   src: string;
@@ -15,6 +16,8 @@ interface ImageWithFallbackProps {
   priority?: boolean;
   unoptimized?: boolean;
   objectFit?: 'contain' | 'cover';
+  showPlaceholder?: boolean;
+  placeholderClassName?: string;
 }
 
 export function ImageWithFallback({
@@ -29,12 +32,23 @@ export function ImageWithFallback({
   priority,
   unoptimized,
   objectFit = 'cover',
+  showPlaceholder = true,
+  placeholderClassName = '',
 }: ImageWithFallbackProps) {
   const [hasError, setHasError] = useState(false);
   const [imgSrc, setImgSrc] = useState(src);
 
+  if (hasError && showPlaceholder) {
+    return (
+      <div className={`flex flex-col items-center justify-center bg-secondary text-muted-foreground ${placeholderClassName}`}>
+        <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
+        <span className="text-xs opacity-50">Изображение не загружено</span>
+      </div>
+    );
+  }
+
   if (hasError) {
-    return null; // Скрываем изображение при ошибке загрузки
+    return null;
   }
 
   const imageStyle = {
@@ -57,8 +71,6 @@ export function ImageWithFallback({
       onError={(e) => {
         console.error('Image failed to load:', imgSrc);
         setHasError(true);
-        // Можно также установить placeholder изображение:
-        // setImgSrc('/placeholder-image.jpg');
       }}
     />
   );
