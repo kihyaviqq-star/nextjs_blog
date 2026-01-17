@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,10 +22,24 @@ interface RoleSelectorProps {
 
 export function RoleSelector({ userId, currentRole }: RoleSelectorProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isChanging, setIsChanging] = useState(false);
+
+  // Check if this is the current user's own profile
+  const currentUserId = (session?.user as any)?.id;
+  const isOwnProfile = currentUserId === userId;
+  const isAdminChangingOwnRole = isOwnProfile && currentRole === "ADMIN";
 
   const handleRoleChange = async (newRole: string) => {
     if (newRole === currentRole) return;
+
+    // Prevent admin from changing their own role
+    if (isAdminChangingOwnRole) {
+      toast.error("Ошибка", {
+        description: "Нельзя изменить собственную роль администратора",
+      });
+      return;
+    }
 
     setIsChanging(true);
     try {
@@ -81,6 +96,16 @@ export function RoleSelector({ userId, currentRole }: RoleSelectorProps) {
     }
   };
 
+  // If admin is trying to change their own role, disable the button
+  if (isAdminChangingOwnRole) {
+    return (
+      <Button variant="ghost" size="sm" disabled className="gap-1" title="Нельзя изменить собственную роль администратора">
+        Изменить
+        <ChevronDown className="w-3 h-3" />
+      </Button>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -99,7 +124,7 @@ export function RoleSelector({ userId, currentRole }: RoleSelectorProps) {
             <DropdownMenuItem
               key={role}
               onClick={() => handleRoleChange(role)}
-              disabled={isActive}
+              disabled={isActive || isChanging}
               className={isActive ? "bg-secondary" : ""}
             >
               <Icon className="w-4 h-4 mr-2" />
