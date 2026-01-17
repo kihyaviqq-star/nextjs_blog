@@ -43,12 +43,21 @@ export default function CreatePostPage() {
   const [newSource, setNewSource] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // ВСЕ хуки должны быть вызваны ДО любых условных возвратов
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]); // router стабилен и не должен быть в зависимостях
+
+  // Автогенерация slug при изменении title (ПЕРЕД условными возвратами)
+  useEffect(() => {
+    if (!slugManuallyEdited && title) {
+      const generatedSlug = generateSlug(title);
+      setSlug(generatedSlug);
+    }
+  }, [title, slugManuallyEdited]);
 
   if (status === "loading") {
     return (
@@ -87,14 +96,6 @@ export default function CreatePostPage() {
       </div>
     );
   }
-
-  // Автогенерация slug при изменении title
-  useEffect(() => {
-    if (!slugManuallyEdited && title) {
-      const generatedSlug = generateSlug(title);
-      setSlug(generatedSlug);
-    }
-  }, [title, slugManuallyEdited]);
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
