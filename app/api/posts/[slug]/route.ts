@@ -40,12 +40,37 @@ export async function GET(
       );
     }
 
-    // Parse JSON fields
+    // Parse JSON fields with safe error handling
+    let tags: string[] = [];
+    let sources: string[] = [];
+    let content: any = { blocks: [] };
+    
+    try {
+      tags = JSON.parse(post.tags) || [];
+    } catch (error) {
+      console.error('[API GET post] Error parsing tags:', error);
+      tags = [];
+    }
+    
+    try {
+      sources = post.sources ? JSON.parse(post.sources) : [];
+    } catch (error) {
+      console.error('[API GET post] Error parsing sources:', error);
+      sources = [];
+    }
+    
+    try {
+      content = JSON.parse(post.content) || { blocks: [] };
+    } catch (error) {
+      console.error('[API GET post] Error parsing content:', error);
+      content = { blocks: [] };
+    }
+    
     const postWithParsedFields = {
       ...post,
-      tags: JSON.parse(post.tags),
-      sources: post.sources ? JSON.parse(post.sources) : [],
-      content: JSON.parse(post.content),
+      tags,
+      sources,
+      content,
     };
 
     return NextResponse.json(postWithParsedFields);
@@ -270,12 +295,37 @@ export async function PUT(
       },
     });
 
-    // Parse fields for response
+    // Parse fields for response with safe error handling
+    let tags: string[] = [];
+    let sources: string[] = [];
+    let content: any = { blocks: [] };
+    
+    try {
+      tags = JSON.parse(updatedPost.tags) || [];
+    } catch (error) {
+      console.error('[API PUT post] Error parsing tags in response:', error);
+      tags = [];
+    }
+    
+    try {
+      sources = updatedPost.sources ? JSON.parse(updatedPost.sources) : [];
+    } catch (error) {
+      console.error('[API PUT post] Error parsing sources in response:', error);
+      sources = [];
+    }
+    
+    try {
+      content = JSON.parse(updatedPost.content) || { blocks: [] };
+    } catch (error) {
+      console.error('[API PUT post] Error parsing content in response:', error);
+      content = { blocks: [] };
+    }
+    
     const response = {
       ...updatedPost,
-      tags: JSON.parse(updatedPost.tags),
-      sources: updatedPost.sources ? JSON.parse(updatedPost.sources) : [],
-      content: JSON.parse(updatedPost.content),
+      tags,
+      sources,
+      content,
     };
 
     return NextResponse.json(response);

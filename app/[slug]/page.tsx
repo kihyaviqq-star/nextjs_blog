@@ -8,7 +8,7 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import BlockRenderer from "@/components/blog/block-renderer";
-import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github } from "lucide-react";
+import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github, Image as ImageIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ViewIncrementer } from "@/components/view-incrementer";
 import { isUsernameReserved } from "@/lib/constants";
@@ -24,10 +24,31 @@ interface PageProps {
 
 // Article Page Component
 async function ArticlePage({ post }: { post: any }) {
-  // Parse JSON fields
-  const tags = JSON.parse(post.tags);
-  const contentData = JSON.parse(post.content);
-  const sources = post.sources ? JSON.parse(post.sources) : [];
+  // Parse JSON fields with safe error handling
+  let tags: string[] = [];
+  let contentData: any = { blocks: [] };
+  let sources: string[] = [];
+  
+  try {
+    tags = JSON.parse(post.tags) || [];
+  } catch (error) {
+    console.error('[ArticlePage] Error parsing tags:', error);
+    tags = [];
+  }
+  
+  try {
+    contentData = JSON.parse(post.content) || { blocks: [] };
+  } catch (error) {
+    console.error('[ArticlePage] Error parsing content:', error);
+    contentData = { blocks: [] };
+  }
+  
+  try {
+    sources = post.sources ? JSON.parse(post.sources) : [];
+  } catch (error) {
+    console.error('[ArticlePage] Error parsing sources:', error);
+    sources = [];
+  }
   
   // Extract blocks from EditorJS format
   const blocks = contentData?.blocks || (Array.isArray(contentData) ? contentData : []);
@@ -117,10 +138,19 @@ async function ArticlePage({ post }: { post: any }) {
     },
   });
 
-  const relatedPostsWithParsedTags = relatedPosts.map((p) => ({
-    ...p,
-    tags: JSON.parse(p.tags),
-  }));
+  const relatedPostsWithParsedTags = relatedPosts.map((p) => {
+    let tags: string[] = [];
+    try {
+      tags = JSON.parse(p.tags) || [];
+    } catch (error) {
+      console.error('[ArticlePage] Error parsing related post tags:', error);
+      tags = [];
+    }
+    return {
+      ...p,
+      tags,
+    };
+  });
 
   // Get previous and next posts for navigation
   const previousPost = await prisma.post.findFirst({
@@ -564,7 +594,7 @@ function UserProfilePage({ user }: { user: any }) {
                 <Link key={post.id} href={`/${post.slug}`}>
                   <SpotlightCard className="h-full cursor-pointer">
                     <Card className="h-full border-0 bg-transparent shadow-none group">
-                      {post.coverImage && (
+                      {post.coverImage ? (
                         <div className="w-full h-48 overflow-hidden bg-secondary rounded-t-lg relative">
                           <Image
                             src={post.coverImage}
@@ -572,8 +602,14 @@ function UserProfilePage({ user }: { user: any }) {
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                             style={{ objectFit: "cover" }}
-                            unoptimized={post.coverImage.startsWith('http')}
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                            unoptimized={post.coverImage?.startsWith('/') || post.coverImage?.startsWith('http')}
                           />
+                        </div>
+                      ) : (
+                        <div className="w-full h-48 flex flex-col items-center justify-center text-muted-foreground border-b border-border bg-secondary/30 rounded-t-lg">
+                          <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
+                          <span className="text-xs opacity-50">Нет обложки</span>
                         </div>
                       )}
                       <CardHeader>

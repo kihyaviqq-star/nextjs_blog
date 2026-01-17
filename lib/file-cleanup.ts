@@ -69,7 +69,12 @@ export function extractImageUrlsFromContent(content: string | any): string[] {
     // Парсим JSON, если это строка
     let contentData: any;
     if (typeof content === 'string') {
-      contentData = JSON.parse(content);
+      try {
+        contentData = JSON.parse(content);
+      } catch (parseError) {
+        console.error('[extractImageUrlsFromContent] Error parsing JSON content:', parseError);
+        contentData = { blocks: [] };
+      }
     } else {
       contentData = content;
     }

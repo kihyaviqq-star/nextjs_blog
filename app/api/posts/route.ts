@@ -22,12 +22,31 @@ export async function GET() {
       },
     });
 
-    // Parse JSON fields for client
-    const postsWithParsedFields = posts.map((post) => ({
-      ...post,
-      tags: JSON.parse(post.tags),
-      content: JSON.parse(post.content),
-    }));
+    // Parse JSON fields for client with safe error handling
+    const postsWithParsedFields = posts.map((post) => {
+      let tags: string[] = [];
+      let content: any = { blocks: [] };
+      
+      try {
+        tags = JSON.parse(post.tags) || [];
+      } catch (error) {
+        console.error('[API GET posts] Error parsing tags:', error);
+        tags = [];
+      }
+      
+      try {
+        content = JSON.parse(post.content) || { blocks: [] };
+      } catch (error) {
+        console.error('[API GET posts] Error parsing content:', error);
+        content = { blocks: [] };
+      }
+      
+      return {
+        ...post,
+        tags,
+        content,
+      };
+    });
 
     return NextResponse.json(postsWithParsedFields);
   } catch (error) {
@@ -185,11 +204,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Parse fields for response
+    // Parse fields for response with safe error handling
+    let tags: string[] = [];
+    let content: any = { blocks: [] };
+    
+    try {
+      tags = JSON.parse(newPost.tags) || [];
+    } catch (error) {
+      console.error('[API POST] Error parsing tags in response:', error);
+      tags = [];
+    }
+    
+    try {
+      content = JSON.parse(newPost.content) || { blocks: [] };
+    } catch (error) {
+      console.error('[API POST] Error parsing content in response:', error);
+      content = { blocks: [] };
+    }
+    
     const response = {
       ...newPost,
-      tags: JSON.parse(newPost.tags),
-      content: JSON.parse(newPost.content),
+      tags,
+      content,
     };
 
     console.log("[API] Post created successfully:", newPost.slug);

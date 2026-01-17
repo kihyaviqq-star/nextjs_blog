@@ -84,6 +84,7 @@ export default function GeneratorPage() {
   const [deletingSource, setDeletingSource] = useState(false);
   const editorDataRef = useRef<OutputData | null>(null);
   const editorHolderId = useRef(`editor-${Date.now()}`);
+  const [editorKey, setEditorKey] = useState(0); // Key to force re-initialization
   
   // Infinite scroll
   const [visibleNewsCount, setVisibleNewsCount] = useState(10);
@@ -134,7 +135,13 @@ export default function GeneratorPage() {
         : null;
       
       if (saved) {
-        const savedIds = JSON.parse(saved);
+        let savedIds: string[] = [];
+        try {
+          savedIds = JSON.parse(saved) || [];
+        } catch (error) {
+          console.error('[GeneratorPage] Error parsing saved sources from localStorage:', error);
+          savedIds = [];
+        }
         // Filter to only include sources that exist
         const validIds = savedIds.filter((id: string) => 
           sources.some(s => s.id === id)
@@ -369,7 +376,9 @@ export default function GeneratorPage() {
     setParsingUrl(true);
     setGeneratedArticle(null);
     editorDataRef.current = null;
-    editorHolderId.current = `editor-${Date.now()}`;
+    const newHolderId = `editor-${Date.now()}`;
+    editorHolderId.current = newHolderId;
+    setEditorKey(prev => prev + 1); // Force editor re-initialization
 
     try {
       const result = await generateArticleFromUrlAction(urlInput.trim());
@@ -411,7 +420,9 @@ export default function GeneratorPage() {
     setSelectedNews(newsItem);
     setGeneratedArticle(null);
     editorDataRef.current = null;
-    editorHolderId.current = `editor-${Date.now()}`;
+    const newHolderId = `editor-${Date.now()}`;
+    editorHolderId.current = newHolderId;
+    setEditorKey(prev => prev + 1); // Force editor re-initialization
 
     try {
       // Генерируем статью
@@ -461,9 +472,12 @@ export default function GeneratorPage() {
       const imageResult = await generateImageAction(generatedArticle.title, summary);
       
       if (imageResult.success && imageResult.imageUrl) {
+        // Preserve current editor blocks when updating cover image
+        const currentBlocks = editorDataRef.current?.blocks || generatedArticle.blocks || [];
         setGeneratedArticle({
           ...generatedArticle,
-          coverImage: imageResult.imageUrl
+          coverImage: imageResult.imageUrl,
+          blocks: currentBlocks
         });
         toast.success("Обложка успешно сгенерирована!");
       } else {
@@ -481,7 +495,13 @@ export default function GeneratorPage() {
   const handleDeleteTag = (index: number) => {
     if (!generatedArticle) return;
     const newTags = generatedArticle.tags.filter((_, i) => i !== index);
-    setGeneratedArticle({ ...generatedArticle, tags: newTags });
+    // Preserve current editor blocks when updating tags
+    const currentBlocks = editorDataRef.current?.blocks || generatedArticle.blocks || [];
+    setGeneratedArticle({ 
+      ...generatedArticle, 
+      tags: newTags,
+      blocks: currentBlocks
+    });
   };
 
   const handleAddTag = () => {
@@ -498,19 +518,25 @@ export default function GeneratorPage() {
       toast.error("Тег уже существует");
       return;
     }
+    // Preserve current editor blocks when updating tags
+    const currentBlocks = editorDataRef.current?.blocks || generatedArticle.blocks || [];
     setGeneratedArticle({
       ...generatedArticle,
-      tags: [...generatedArticle.tags, trimmedTag]
+      tags: [...generatedArticle.tags, trimmedTag],
+      blocks: currentBlocks
     });
     setNewTag("");
   };
 
   const handleEditorChange = (data: OutputData) => {
+    // Always update the ref first
     editorDataRef.current = data;
+    
+    // Update generatedArticle state to keep it in sync
     if (generatedArticle) {
       setGeneratedArticle({
         ...generatedArticle,
-        blocks: data.blocks
+        blocks: data.blocks || []
       });
     }
   };
@@ -890,7 +916,9 @@ export default function GeneratorPage() {
                           setGeneratedArticle(null);
                           setSelectedNews(null);
                           editorDataRef.current = null;
-                          editorHolderId.current = `editor-${Date.now()}`;
+                          const newHolderId = `editor-${Date.now()}`;
+                          editorHolderId.current = newHolderId;
+                          setEditorKey(prev => prev + 1); // Force editor re-initialization
                         }}
                       >
                         Очистить
@@ -996,8 +1024,9 @@ export default function GeneratorPage() {
                     <h3 className="font-semibold mb-2">Содержимое:</h3>
                     <div className="border border-border rounded-lg p-4 bg-background min-h-[400px]">
                       <EditorWrapper
+                        key={editorKey} // Force re-initialization when key changes
                         data={editorDataRef.current || {
-                          blocks: generatedArticle.blocks,
+                          blocks: generatedArticle.blocks || [],
                           time: Date.now(),
                           version: "2.29.1"
                         }}

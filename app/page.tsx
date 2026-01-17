@@ -68,11 +68,20 @@ export default async function Home({ searchParams }: HomeProps) {
     },
   });
 
-  // Parse tags from JSON string
-  const postsWithParsedTags = posts.map((post) => ({
-    ...post,
-    tags: JSON.parse(post.tags),
-  }));
+  // Parse tags from JSON string with safe error handling
+  const postsWithParsedTags = posts.map((post) => {
+    let tags: string[] = [];
+    try {
+      tags = JSON.parse(post.tags) || [];
+    } catch (error) {
+      console.error('[Home] Error parsing post tags:', error);
+      tags = [];
+    }
+    return {
+      ...post,
+      tags,
+    };
+  });
 
   const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
