@@ -296,36 +296,36 @@ export async function PUT(
     });
 
     // Parse fields for response with safe error handling
-    let tags: string[] = [];
-    let sources: string[] = [];
-    let content: any = { blocks: [] };
+    let parsedTags: string[] = [];
+    let parsedSources: string[] = [];
+    let parsedContent: any = { blocks: [] };
     
     try {
-      tags = JSON.parse(updatedPost.tags) || [];
+      parsedTags = JSON.parse(updatedPost.tags) || [];
     } catch (error) {
       console.error('[API PUT post] Error parsing tags in response:', error);
-      tags = [];
+      parsedTags = [];
     }
     
     try {
-      sources = updatedPost.sources ? JSON.parse(updatedPost.sources) : [];
+      parsedSources = updatedPost.sources ? JSON.parse(updatedPost.sources) : [];
     } catch (error) {
       console.error('[API PUT post] Error parsing sources in response:', error);
-      sources = [];
+      parsedSources = [];
     }
     
     try {
-      content = JSON.parse(updatedPost.content) || { blocks: [] };
+      parsedContent = JSON.parse(updatedPost.content) || { blocks: [] };
     } catch (error) {
       console.error('[API PUT post] Error parsing content in response:', error);
-      content = { blocks: [] };
+      parsedContent = { blocks: [] };
     }
     
     const response = {
       ...updatedPost,
-      tags,
-      sources,
-      content,
+      tags: parsedTags,
+      sources: parsedSources,
+      content: parsedContent,
     };
 
     return NextResponse.json(response);

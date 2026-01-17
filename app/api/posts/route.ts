@@ -205,27 +205,27 @@ export async function POST(request: NextRequest) {
     });
 
     // Parse fields for response with safe error handling
-    let tags: string[] = [];
-    let content: any = { blocks: [] };
+    let parsedTags: string[] = [];
+    let parsedContent: any = { blocks: [] };
     
     try {
-      tags = JSON.parse(newPost.tags) || [];
+      parsedTags = JSON.parse(newPost.tags) || [];
     } catch (error) {
       console.error('[API POST] Error parsing tags in response:', error);
-      tags = [];
+      parsedTags = [];
     }
     
     try {
-      content = JSON.parse(newPost.content) || { blocks: [] };
+      parsedContent = JSON.parse(newPost.content) || { blocks: [] };
     } catch (error) {
       console.error('[API POST] Error parsing content in response:', error);
-      content = { blocks: [] };
+      parsedContent = { blocks: [] };
     }
     
     const response = {
       ...newPost,
-      tags,
-      content,
+      tags: parsedTags,
+      content: parsedContent,
     };
 
     console.log("[API] Post created successfully:", newPost.slug);
