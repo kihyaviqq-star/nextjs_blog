@@ -6,7 +6,7 @@ import { Footer } from "@/components/footer";
 import { SearchFilterBar } from "@/components/search-filter-bar";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, Tag, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Tag, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
 const POSTS_PER_PAGE = 9;
@@ -148,7 +148,10 @@ export default async function Home({ searchParams }: HomeProps) {
                     />
                   </div>
                 ) : (
-                  <div className="w-full h-48 border-b border-border"></div>
+                  <div className="w-full h-48 flex flex-col items-center justify-center text-muted-foreground border-b border-border">
+                    <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
+                    <span className="text-xs opacity-50">Нет обложки</span>
+                  </div>
                 )}
                 <CardHeader>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[48px] items-start">
