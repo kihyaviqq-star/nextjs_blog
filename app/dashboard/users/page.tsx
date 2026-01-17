@@ -1,8 +1,10 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { HeaderClientWrapper } from "@/components/header";
+import { FooterClient } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,12 +13,78 @@ import { Users, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { RoleSelector } from "@/components/role-selector";
+import { UsersFilterBar } from "@/components/users-filter-bar";
 
-export default async function UsersPage() {
-  const session = await auth();
+type User = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  email: string;
+  avatarUrl: string | null;
+  role: string;
+  createdAt: Date;
+  _count: {
+    posts: number;
+  };
+};
+
+export default function UsersPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const handleFilteredUsersChange = useCallback((filtered: User[]) => {
+    setFilteredUsers(filtered);
+  }, []);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (status === "authenticated") {
+      const userRole = (session?.user as any)?.role;
+
+      // Only ADMINs can access this page
+      if (userRole !== "ADMIN") {
+        return;
+      }
+
+      // Fetch all users from database
+      fetch("/api/users")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) {
+            console.error("Error fetching users:", data.error);
+            return;
+          }
+          setUsers(data);
+          setFilteredUsers(data);
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching users:", error);
+          setIsLoading(false);
+        });
+    }
+  }, [session, status]);
+
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!session?.user) {
-    redirect("/auth/signin");
+    return null;
   }
 
   const userRole = (session.user as any).role;
@@ -36,28 +104,9 @@ export default async function UsersPage() {
     );
   }
 
-  // Fetch all users from database
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      email: true,
-      avatarUrl: true,
-      role: true,
-      createdAt: true,
-      _count: {
-        select: {
-          posts: true,
-        },
-      },
-    },
-  });
-
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <HeaderClientWrapper />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-6">
           <Link href="/dashboard/articles">
@@ -71,7 +120,9 @@ export default async function UsersPage() {
             <div>
               <h1 className="text-4xl font-bold mb-2">Управление пользователями</h1>
               <p className="text-muted-foreground">
-                Всего пользователей: {users.length}
+                {filteredUsers.length !== users.length 
+                  ? `Найдено: ${filteredUsers.length} из ${users.length}` 
+                  : `Всего пользователей: ${users.length}`}
               </p>
             </div>
           </div>
@@ -79,19 +130,33 @@ export default async function UsersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Пользователи системы
-            </CardTitle>
-            <CardDescription>
-              Управление ролями и правами доступа пользователей
-            </CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Пользователи системы
+                </CardTitle>
+                <CardDescription>
+                  Управление ролями и правами доступа пользователей
+                </CardDescription>
+              </div>
+              <UsersFilterBar 
+                users={users} 
+                onFilteredUsersChange={handleFilteredUsersChange}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             {users.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 space-y-4">
                 <Users className="w-16 h-16 text-muted-foreground" />
                 <p className="text-muted-foreground">Нет зарегистрированных пользователей</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <Users className="w-16 h-16 text-muted-foreground" />
+                <p className="text-muted-foreground">Пользователи не найдены</p>
+                <p className="text-sm text-muted-foreground">Попробуйте изменить параметры поиска</p>
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -106,7 +171,7 @@ export default async function UsersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {filteredUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -182,7 +247,7 @@ export default async function UsersPage() {
         </Card>
       </main>
 
-      <Footer />
+      <FooterClient />
     </div>
   );
 }
