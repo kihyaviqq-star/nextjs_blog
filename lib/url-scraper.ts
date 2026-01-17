@@ -1,9 +1,13 @@
 import { lookup } from 'dns/promises';
 import * as cheerio from 'cheerio';
 
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const SITE_NAME = 'AI-Stat Generator';
+
 /**
  * URL Scraper - Extracts main content from web pages
- * Uses fetch + Cheerio to extract article content
+ * Uses fetch + Cheerio (traditional) or AI parsing (intelligent extraction)
  */
 
 function isPrivateIP(ip: string): boolean {
@@ -30,9 +34,260 @@ export interface ScrapedContent {
   title: string;
   content: string;
   url: string;
+  images?: string[]; // Optional array of image URLs found in the content
 }
 
-export async function scrapeUrl(url: string): Promise<ScrapedContent> {
+/**
+ * AI-powered content extraction from HTML
+ * Fallback when direct AI browsing doesn't work - uses fetched HTML
+ */
+async function scrapeUrlWithAI(html: string, url: string): Promise<ScrapedContent> {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY is not set. AI parsing requires API key.');
+  }
+
+  const model = process.env.OPENROUTER_ARTICLE_MODEL || 'google/gemini-2.0-flash-thinking:free';
+
+  // Limit HTML size to avoid token limits (keep first 100KB)
+  const limitedHtml = html.length > 100000 ? html.substring(0, 100000) + '...' : html;
+
+  const systemPrompt = `Ты — эксперт по извлечению контента из веб-страниц. Твоя задача — проанализировать HTML и извлечь структурированную информацию об статье.
+
+Извлеки:
+1. Заголовок статьи (title)
+2. Основной текстовый контент статьи (удали навигацию, рекламу, комментарии, футер, хедер)
+3. Все изображения из статьи (URL абсолютные, включая lazy-loaded images, background-images из стилей, data-attributes)
+
+Верни результат в формате JSON:
+{
+  "title": "Заголовок статьи",
+  "content": "Текстовое содержание статьи, очищенное от HTML",
+  "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+}
+
+Важно:
+- Изображения должны быть абсолютными URL
+- Удали все рекламные элементы, навигацию, футеры, хедеры
+- Сохрани только основной контент статьи
+- Если есть lazy-loaded изображения (data-src, data-original), используй их`;
+
+  const userPrompt = `Вот HTML страницы (URL: ${url}):
+${limitedHtml}
+
+Извлеки структурированную информацию об статье.`;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': SITE_URL,
+        'X-Title': SITE_NAME,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        temperature: 0.3, // Lower temperature for more accurate extraction
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content.trim();
+    
+    let parsed: { title: string; content: string; images?: string[] };
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      throw new Error('AI returned invalid JSON format');
+    }
+
+    // Make image URLs absolute
+    const absoluteImages = (parsed.images || []).map(img => {
+      try {
+        return new URL(img, url).href;
+      } catch {
+        return img;
+      }
+    }).filter(Boolean);
+
+    // Format content with image markers
+    let formattedContent = parsed.content;
+    if (absoluteImages.length > 0) {
+      formattedContent += '\n\n' + absoluteImages.map(img => `[IMAGE: ${img}]`).join('\n');
+    }
+
+    return {
+      title: parsed.title || 'Untitled Article',
+      content: formattedContent,
+      url,
+      images: absoluteImages,
+    };
+  } catch (error: any) {
+    throw new Error(`AI parsing failed: ${error.message}`);
+  }
+}
+
+/**
+ * AI-powered content extraction directly from URL (bypassing fetch)
+ * Uses AI with web browsing capabilities to read and parse web pages
+ */
+async function scrapeUrlWithAIDirect(url: string): Promise<ScrapedContent> {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY is not set. AI parsing requires API key.');
+  }
+
+  // Use a model with web browsing capabilities
+  // Try :online variant first, or use web plugin
+  const model = (process.env.OPENROUTER_ARTICLE_MODEL || 'google/gemini-2.0-flash-thinking:free').replace(/:online$/, '');
+  const modelWithOnline = model.includes(':') ? model : `${model}:online`;
+
+  const systemPrompt = `Ты — эксперт по извлечению контента из веб-страниц. Твоя задача — прочитать веб-страницу и извлечь структурированную информацию об статье.
+
+Извлеки:
+1. Заголовок статьи (title)
+2. Основной текстовый контент статьи (удали навигацию, рекламу, комментарии, футер, хедер)
+3. Все изображения из статьи (URL абсолютные, включая lazy-loaded images, background-images из стилей, data-attributes)
+
+Верни результат ТОЛЬКО в формате JSON, без дополнительных комментариев:
+{
+  "title": "Заголовок статьи",
+  "content": "Текстовое содержание статьи, очищенное от HTML",
+  "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+}
+
+Важно:
+- Изображения должны быть абсолютными URL
+- Удали все рекламные элементы, навигацию, футеры, хедеры
+- Сохрани только основной контент статьи
+- Если есть lazy-loaded изображения (data-src, data-original), используй их`;
+
+  const userPrompt = `Прочитай следующую веб-страницу и извлеки структурированную информацию об статье:
+
+URL: ${url}
+
+Извлеки заголовок, основной контент и все изображения из статьи.`;
+
+  console.log(`[AI Direct Parsing] Starting AI web browsing for URL: ${url}`);
+  const startTime = Date.now();
+
+  try {
+    // Add timeout for AI requests (90 seconds max - web browsing can be slow)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout for AI
+
+    // Try with :online variant first (direct web browsing)
+    console.log(`[AI Direct Parsing] Trying model: ${modelWithOnline}`);
+    let response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': SITE_URL,
+        'X-Title': SITE_NAME,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: modelWithOnline,
+        temperature: 0.3, // Lower temperature for more accurate extraction
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    clearTimeout(timeoutId);
+
+    // If :online variant fails, try with web plugin
+    if (!response.ok) {
+      console.warn(`[AI Direct Parsing] Model ${modelWithOnline} failed (${response.status}), trying with web plugin...`);
+      const pluginController = new AbortController();
+      const pluginTimeoutId = setTimeout(() => pluginController.abort(), 90000);
+      
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': SITE_URL,
+          'X-Title': SITE_NAME,
+          'Content-Type': 'application/json',
+        },
+        signal: pluginController.signal,
+        body: JSON.stringify({
+          model: model,
+          temperature: 0.3,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          response_format: { type: 'json_object' },
+          plugins: [{ id: 'web' }]
+        })
+      });
+      
+      clearTimeout(pluginTimeoutId);
+    }
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content.trim();
+    
+    let parsed: { title: string; content: string; images?: string[] };
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      throw new Error('AI returned invalid JSON format');
+    }
+
+    // Make image URLs absolute
+    const absoluteImages = (parsed.images || []).map(img => {
+      try {
+        return new URL(img, url).href;
+      } catch {
+        return img;
+      }
+    }).filter(Boolean);
+
+    // Format content with image markers
+    let formattedContent = parsed.content;
+    if (absoluteImages.length > 0) {
+      formattedContent += '\n\n' + absoluteImages.map(img => `[IMAGE: ${img}]`).join('\n');
+    }
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[AI Direct Parsing] Successfully parsed in ${elapsed}ms, found ${absoluteImages.length} images`);
+    
+    return {
+      title: parsed.title || 'Untitled Article',
+      content: formattedContent,
+      url,
+      images: absoluteImages,
+    };
+  } catch (error: any) {
+    const elapsed = Date.now() - startTime;
+    if (error.name === 'AbortError') {
+      console.error(`[AI Direct Parsing] Request timeout after ${elapsed}ms`);
+      throw new Error(`AI parsing timeout: The request took too long (90s limit). The website may be slow or the AI model is overloaded.`);
+    }
+    console.error(`[AI Direct Parsing] Error after ${elapsed}ms:`, error.message);
+    throw new Error(`AI parsing failed: ${error.message}`);
+  }
+}
+
+export async function scrapeUrl(url: string, useAI: boolean = true): Promise<ScrapedContent> {
   try {
     const parsedUrl = new URL(url);
     
@@ -41,7 +296,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
       throw new Error('Invalid protocol. Only HTTP/HTTPS allowed.');
     }
 
-    // SSRF Protection: Resolve and check IP
+    // SSRF Protection: Resolve and check IP (skip for AI direct browsing, but still validate URL)
     try {
       const { address } = await lookup(parsedUrl.hostname);
       if (isPrivateIP(address)) {
@@ -52,14 +307,55 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
       console.warn(`DNS lookup failed for ${parsedUrl.hostname}: ${e.message}`);
     }
 
-    // Fetch the page with browser-like headers
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    // Try AI direct web browsing first (bypasses fetch issues completely)
+    if (useAI && OPENROUTER_API_KEY) {
+      try {
+        return await scrapeUrlWithAIDirect(url);
+      } catch (aiDirectError: any) {
+        console.warn('AI direct web browsing failed, trying fetch + AI parsing:', aiDirectError.message);
+        // Continue to fetch + AI parsing fallback
       }
-    });
+    }
+
+    // Fetch the page with browser-like headers and timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Cache-Control': 'max-age=0',
+        },
+        signal: controller.signal,
+        // @ts-ignore - Next.js fetch supports this
+        next: { revalidate: 0 }, // Disable caching
+      });
+      
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Request timeout: The website took too long to respond (30s limit)');
+      }
+      // Check for common fetch errors
+      if (fetchError.message?.includes('fetch failed') || fetchError.message?.includes('ECONNREFUSED')) {
+        throw new Error(`Connection failed: The website may be down or unreachable. ${fetchError.message}`);
+      }
+      if (fetchError.message?.includes('certificate') || fetchError.message?.includes('SSL') || fetchError.message?.includes('TLS')) {
+        throw new Error(`SSL/TLS error: ${fetchError.message}`);
+      }
+      throw new Error(`Network error: ${fetchError.message || 'Unknown error'}`);
+    }
 
     if (!response.ok) {
       if (response.status === 403 || response.status === 401) {
@@ -75,6 +371,17 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
       throw new Error('Site is protected by anti-bot system (Cloudflare/DDoS-Guard)');
     }
 
+    // Use AI parsing if requested
+    if (useAI && OPENROUTER_API_KEY) {
+      try {
+        return await scrapeUrlWithAI(html, url);
+      } catch (aiError: any) {
+        console.warn('AI parsing failed, falling back to traditional parsing:', aiError.message);
+        // Fall through to traditional parsing
+      }
+    }
+
+    // Traditional Cheerio-based parsing
     const $ = cheerio.load(html);
 
     // Remove unwanted elements

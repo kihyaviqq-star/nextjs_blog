@@ -1019,10 +1019,14 @@ export default function GeneratorPage() {
                         <Input
                           type="text"
                           value={slug}
-                          onChange={(e) => handleSlugChange(e.target.value)}
+                          onChange={(e) => {
+                            // Client-side validation: only allow lowercase letters, numbers, and hyphens
+                            const value = e.target.value;
+                            const validated = value.replace(/[^a-z0-9-]/gi, '').toLowerCase();
+                            handleSlugChange(validated);
+                          }}
                           placeholder="article-slug"
                           className="flex-1 font-mono text-sm"
-                          pattern="[a-z0-9-]+"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">

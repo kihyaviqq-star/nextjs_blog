@@ -82,8 +82,36 @@ export async function parseUrlAction(url: string): Promise<{ success: boolean; d
       return { success: false, error: 'Invalid URL format' };
     }
 
-    const scraped = await scrapeUrl(url);
-    return { success: true, data: scraped };
+    // Use AI parsing by default for better content extraction with images
+    // But first try traditional fetch, if it fails then use AI
+    const useAI = process.env.USE_AI_PARSING !== 'false'; // Default to true unless explicitly disabled
+    
+    console.log(`[parseUrlAction] Parsing URL: ${url}, useAI: ${useAI}`);
+    const startTime = Date.now();
+    
+    try {
+      // First try with AI direct browsing (bypasses fetch issues)
+      // If that's too slow or fails, fall back to fetch + AI or traditional
+      const scraped = await scrapeUrl(url, useAI);
+      const elapsed = Date.now() - startTime;
+      console.log(`[parseUrlAction] Successfully parsed URL in ${elapsed}ms`);
+      return { success: true, data: scraped };
+    } catch (error: any) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[parseUrlAction] Failed after ${elapsed}ms:`, error.message);
+      // If AI parsing fails or times out, try traditional parsing as fallback
+      if (useAI && error.message?.includes('timeout')) {
+        console.log('[parseUrlAction] AI timeout, trying traditional parsing...');
+        try {
+          const scraped = await scrapeUrl(url, false); // Disable AI for this attempt
+          console.log(`[parseUrlAction] Traditional parsing succeeded in ${Date.now() - startTime}ms`);
+          return { success: true, data: scraped };
+        } catch (fallbackError: any) {
+          return { success: false, error: fallbackError.message || 'Failed to scrape URL' };
+        }
+      }
+      return { success: false, error: error.message || 'Failed to scrape URL' };
+    }
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to scrape URL' };
   }
