@@ -63,7 +63,8 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
                 height={32}
                 className="h-8 w-auto object-contain"
                 style={{ height: "2rem", width: "auto" }}
-                unoptimized={normalizedLogoUrl?.startsWith('http')}
+                // Avoid Next.js optimizer for uploads (prevents 400s if file missing / wrong headers)
+                unoptimized={normalizedLogoUrl?.startsWith('http') || normalizedLogoUrl?.startsWith('/uploads/')}
               />
             )}
             {siteName && (

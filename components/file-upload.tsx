@@ -101,7 +101,13 @@ export function FileUpload({
                 type === "logo" || type === "favicon" ? "w-full h-full object-contain" : 
                 "w-full h-full"
               }`}
-              unoptimized={previewUrl.startsWith('blob:') || previewUrl.startsWith('data:')}
+              // For /uploads/* on production, Next.js optimizer often returns 400 if file is missing
+              // or served with unexpected headers. Render it directly instead.
+              unoptimized={
+                previewUrl.startsWith('blob:') ||
+                previewUrl.startsWith('data:') ||
+                previewUrl.startsWith('/uploads/')
+              }
             />
             <button
               type="button"
