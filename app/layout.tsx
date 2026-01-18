@@ -8,8 +8,39 @@ import { MetadataUpdater } from "@/components/metadata-updater";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
+
+async function getBaseUrlFromRequest(): Promise<string> {
+  const envBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
+  if (envBase) return envBase;
+
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  if (host) return `${proto}://${host}`;
+
+  return "http://localhost:3000";
+}
+
+function normalizePathOrUrl(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  // ensure leading slash for public assets like /uploads/...
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
+function toAbsoluteUrl(baseUrl: string, value?: string | null): string | undefined {
+  const normalized = normalizePathOrUrl(value);
+  if (!normalized) return undefined;
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) return normalized;
+  try {
+    return new URL(normalized, baseUrl).toString();
+  } catch {
+    return normalized;
+  }
+}
 
 // Generate metadata with site settings
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,13 +73,20 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const siteName = settings.siteName || "";
   const siteDescription = settings.metaDescription || "";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const ogImage = settings.logoUrl 
-    ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
-    : `${siteUrl}/og-default.jpg`;
+  const siteUrl = await getBaseUrlFromRequest();
+  const ogImage =
+    toAbsoluteUrl(siteUrl, settings.logoUrl) || toAbsoluteUrl(siteUrl, "/og-default.jpg")!;
 
   // Check if indexing is allowed (default: false - site is closed from indexing)
   const allowIndexing = process.env.ALLOW_INDEXING === 'true';
+
+  const metadataBase = (() => {
+    try {
+      return new URL(siteUrl);
+    } catch {
+      return new URL("http://localhost:3000");
+    }
+  })();
 
   const metadata: Metadata = {
     title: {
@@ -56,7 +94,7 @@ export async function generateMetadata(): Promise<Metadata> {
       default: siteName,
     },
     description: siteDescription,
-    metadataBase: new URL(siteUrl),
+    metadataBase,
     // Block search engines from indexing if ALLOW_INDEXING is not 'true'
     robots: allowIndexing ? undefined : {
       index: false,
@@ -95,8 +133,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
   // Add favicon if available
   if (settings.faviconUrl) {
+    const favicon = toAbsoluteUrl(siteUrl, settings.faviconUrl) || normalizePathOrUrl(settings.faviconUrl);
     metadata.icons = {
-      icon: settings.faviconUrl,
+      icon: favicon,
     };
   }
 
@@ -119,10 +158,9 @@ export default async function RootLayout({
   });
 
   const siteName = settings?.siteName || "Blog";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const logoUrl = settings?.logoUrl 
-    ? (settings.logoUrl.startsWith('http') ? settings.logoUrl : `${siteUrl}${settings.logoUrl}`)
-    : `${siteUrl}/og-default.jpg`;
+  const siteUrl = await getBaseUrlFromRequest();
+  const logoUrl =
+    toAbsoluteUrl(siteUrl, settings?.logoUrl) || toAbsoluteUrl(siteUrl, "/og-default.jpg")!;
 
   const jsonLd = {
     "@context": "https://schema.org",

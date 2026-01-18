@@ -38,7 +38,35 @@ export function MetadataUpdater() {
               faviconLink.setAttribute('rel', 'icon');
               document.head.appendChild(faviconLink);
             }
-            faviconLink.href = data.faviconUrl;
+            // Normalize favicon URL:
+            // - ensure leading slash for local paths
+            // - if we are on https and URL is http, upgrade to https to avoid mixed content
+            const raw: string = data.faviconUrl;
+            const normalized =
+              raw.startsWith("http://") || raw.startsWith("https://")
+                ? raw
+                : raw.startsWith("/")
+                  ? raw
+                  : `/${raw}`;
+
+            let resolved = normalized;
+            try {
+              if (!resolved.startsWith("http://") && !resolved.startsWith("https://")) {
+                resolved = new URL(resolved, window.location.origin).toString();
+              }
+              // Mixed content guard (best-effort)
+              if (window.location.protocol === "https:" && resolved.startsWith("http://")) {
+                const u = new URL(resolved);
+                if (u.hostname === window.location.hostname) {
+                  u.protocol = "https:";
+                  resolved = u.toString();
+                }
+              }
+            } catch {
+              // ignore
+            }
+
+            faviconLink.href = resolved;
           }
         }
       } catch (error) {

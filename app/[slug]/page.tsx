@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
@@ -20,6 +21,44 @@ interface PageProps {
   params: Promise<{
     slug: string;
   }>;
+}
+
+async function getBaseUrlFromRequest(): Promise<string> {
+  const envBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
+  if (envBase) return envBase;
+
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  if (host) return `${proto}://${host}`;
+
+  return "http://localhost:3000";
+}
+
+function normalizePathOrUrl(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
+function toAbsoluteUrl(baseUrl: string, value?: string | null): string | undefined {
+  const normalized = normalizePathOrUrl(value);
+  if (!normalized) return undefined;
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) return normalized;
+  try {
+    return new URL(normalized, baseUrl).toString();
+  } catch {
+    return normalized;
+  }
+}
+
+function toPageUrl(baseUrl: string, pathname: string): string {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  try {
+    return new URL(normalized, baseUrl).toString();
+  } catch {
+    return `${baseUrl}${normalized}`;
+  }
 }
 
 // Article Page Component
@@ -59,11 +98,12 @@ async function ArticlePage({ post }: { post: any }) {
     select: { siteName: true, logoUrl: true },
   });
   const siteName = siteSettings?.siteName || "";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const postUrl = `${siteUrl}/${post.slug}`;
-  const ogImage = post.coverImage 
-    ? (post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`)
-    : (siteSettings?.logoUrl ? `${siteUrl}${siteSettings.logoUrl}` : `${siteUrl}/og-default.jpg`);
+  const siteUrl = await getBaseUrlFromRequest();
+  const postUrl = toPageUrl(siteUrl, `/${post.slug}`);
+  const ogImage =
+    toAbsoluteUrl(siteUrl, post.coverImage) ||
+    toAbsoluteUrl(siteUrl, siteSettings?.logoUrl) ||
+    toAbsoluteUrl(siteUrl, "/og-default.jpg")!;
 
   // Schema.org JSON-LD for Article
   const schemaData = {
@@ -86,9 +126,9 @@ async function ArticlePage({ post }: { post: any }) {
           "name": siteName,
           "logo": {
             "@type": "ImageObject",
-            "url": siteSettings?.logoUrl 
-              ? (siteSettings.logoUrl.startsWith('http') ? siteSettings.logoUrl : `${siteUrl}${siteSettings.logoUrl}`)
-              : `${siteUrl}/og-default.jpg`,
+            "url":
+              toAbsoluteUrl(siteUrl, siteSettings?.logoUrl) ||
+              toAbsoluteUrl(siteUrl, "/og-default.jpg")!,
           },
         },
         "mainEntityOfPage": {
@@ -431,10 +471,10 @@ async function ArticlePage({ post }: { post: any }) {
 }
 
 // User Profile Component
-function UserProfilePage({ user }: { user: any }) {
+async function UserProfilePage({ user }: { user: any }) {
   const username = user.username || 'user';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const userUrl = `${siteUrl}/${username}`;
+  const siteUrl = await getBaseUrlFromRequest();
+  const userUrl = toPageUrl(siteUrl, `/${username}`);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -752,7 +792,7 @@ export default async function DynamicPage({ params }: PageProps) {
   });
 
   if (user) {
-    return <UserProfilePage user={user} />;
+    return await UserProfilePage({ user });
   }
 
   // If neither found, show 404
@@ -775,8 +815,9 @@ export async function generateMetadata({ params }: PageProps) {
   });
   const siteName = siteSettings?.siteName || "";
   const siteDescription = siteSettings?.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const defaultImage = siteSettings?.logoUrl ? `${siteUrl}${siteSettings.logoUrl}` : `${siteUrl}/og-default.jpg`;
+  const siteUrl = await getBaseUrlFromRequest();
+  const defaultImage =
+    toAbsoluteUrl(siteUrl, siteSettings?.logoUrl) || toAbsoluteUrl(siteUrl, "/og-default.jpg")!;
 
   // Try post first
   const post = await prisma.post.findUnique({
@@ -791,10 +832,8 @@ export async function generateMetadata({ params }: PageProps) {
   });
 
   if (post) {
-    const postUrl = `${siteUrl}/${decodedSlug}`;
-    const ogImage = post.coverImage 
-      ? (post.coverImage.startsWith('http') ? post.coverImage : `${siteUrl}${post.coverImage}`)
-      : defaultImage;
+    const postUrl = toPageUrl(siteUrl, `/${decodedSlug}`);
+    const ogImage = toAbsoluteUrl(siteUrl, post.coverImage) || defaultImage;
 
     return {
       title: `${post.title} | ${siteName}`,
@@ -841,10 +880,8 @@ export async function generateMetadata({ params }: PageProps) {
   });
 
   if (user) {
-    const userUrl = `${siteUrl}/${decodedSlug}`;
-    const ogImage = user.avatarUrl 
-      ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${siteUrl}${user.avatarUrl}`)
-      : defaultImage;
+    const userUrl = toPageUrl(siteUrl, `/${decodedSlug}`);
+    const ogImage = toAbsoluteUrl(siteUrl, user.avatarUrl) || defaultImage;
 
     return {
       title: `${user.name || decodedSlug} | ${siteName}`,
