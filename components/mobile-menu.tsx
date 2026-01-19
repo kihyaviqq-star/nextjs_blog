@@ -107,7 +107,7 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
                       width={48}
                       height={48}
                       className="w-12 h-12 rounded-full object-cover"
-                      unoptimized={(session.user as any).avatarUrl?.startsWith('http')}
+                      unoptimized={(session.user as any).avatarUrl?.startsWith('http') || (session.user as any).avatarUrl?.startsWith('/uploads/')}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">

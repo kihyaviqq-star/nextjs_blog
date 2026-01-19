@@ -188,7 +188,7 @@ export default async function DashboardPage() {
                                 width={32}
                                 height={32}
                                 className="rounded-full object-cover"
-                                unoptimized={post.author.avatarUrl?.startsWith('http')}
+                                unoptimized={post.author.avatarUrl?.startsWith('http') || post.author.avatarUrl?.startsWith('/uploads/')}
                               />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

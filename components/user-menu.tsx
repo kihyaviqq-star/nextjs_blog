@@ -58,7 +58,7 @@ export function UserMenu() {
               height={32}
               className="w-8 h-8 rounded-full object-cover"
               style={{ width: "2rem", height: "2rem" }}
-              unoptimized={avatarUrl.startsWith('http')}
+              unoptimized={avatarUrl?.startsWith('http') || avatarUrl?.startsWith('/uploads/')}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

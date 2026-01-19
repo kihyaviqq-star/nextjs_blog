@@ -279,7 +279,7 @@ export default function ArticlesPage() {
                               width={24}
                               height={24}
                               className="rounded-full object-cover"
-                              unoptimized={post.author.avatarUrl?.startsWith('http')}
+                              unoptimized={post.author.avatarUrl?.startsWith('http') || post.author.avatarUrl?.startsWith('/uploads/')}
                             />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -419,7 +419,7 @@ export default function ArticlesPage() {
                                   width={32}
                                   height={32}
                                   className="rounded-full object-cover"
-                                  unoptimized={post.author.avatarUrl?.startsWith('http')}
+                                  unoptimized={post.author.avatarUrl?.startsWith('http') || post.author.avatarUrl?.startsWith('/uploads/')}
                                 />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

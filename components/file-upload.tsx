@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
@@ -26,6 +26,14 @@ export function FileUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync preview when currentUrl loads (e.g. /api/profile); don't overwrite local data/blob while selecting
+  useEffect(() => {
+    setPreviewUrl(prev => {
+      if (prev?.startsWith("data:") || prev?.startsWith("blob:")) return prev;
+      return currentUrl || null;
+    });
+  }, [currentUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -303,7 +303,7 @@ async function ArticlePage({ post }: { post: any }) {
                     height={40}
                     className="w-10 h-10 rounded-full object-cover"
                     style={{ width: "2.5rem", height: "2.5rem" }}
-                    unoptimized={post.author.avatarUrl.startsWith('http')}
+                    unoptimized={post.author.avatarUrl.startsWith('http') || post.author.avatarUrl.startsWith('/uploads/')}
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -513,7 +513,7 @@ async function UserProfilePage({ user }: { user: any }) {
                 width={128}
                 height={128}
                 className="w-32 h-32 rounded-full border-4 border-border object-cover"
-                unoptimized={user.avatarUrl.startsWith('http')}
+                unoptimized={user.avatarUrl.startsWith('http') || user.avatarUrl.startsWith('/uploads/')}
               />
             ) : (
               <div className="w-32 h-32 rounded-full border-4 border-border bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

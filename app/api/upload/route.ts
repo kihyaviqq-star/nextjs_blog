@@ -83,6 +83,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    try {
+      await limiter.check(15, `upload-${session.user.id}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Слишком много загрузок. Подождите минуту." },
+        { status: 429 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const type = formData.get("type") as string; // 'avatar', 'logo', 'cover', 'favicon', 'editor-image'

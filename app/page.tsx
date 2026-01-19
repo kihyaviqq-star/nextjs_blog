@@ -195,7 +195,7 @@ export default async function Home({ searchParams }: HomeProps) {
                           height={24}
                           className="w-6 h-6 rounded-full object-cover"
                           style={{ width: "1.5rem", height: "1.5rem" }}
-                          unoptimized={post.author.avatarUrl.startsWith('http')}
+                          unoptimized={post.author.avatarUrl.startsWith('http') || post.author.avatarUrl.startsWith('/uploads/')}
                         />
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
