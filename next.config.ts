@@ -1,9 +1,23 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+function getAllowedImageHosts(): string[] {
+  const defaultHosts = ["image.pollinations.ai", "openrouter.ai"];
+  const fromEnv = (process.env.ALLOWED_IMAGE_HOSTS || "")
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+
+  return Array.from(new Set([...defaultHosts, ...fromEnv]));
+}
+
+const allowedImageHosts = getAllowedImageHosts();
+
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   // Увеличиваем таймаут для длительных операций (AI парсинг может занимать до 90 секунд)
   experimental: {
@@ -13,23 +27,23 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-      },
-      {
-        protocol: 'http',
-        hostname: '**', // Для продакшена с HTTP
-      },
+      ...allowedImageHosts.map((hostname) => ({
+        protocol: "https" as const,
+        hostname,
+      })),
+      ...(isDev
+        ? [
+            {
+              protocol: "http" as const,
+              hostname: "localhost",
+            },
+          ]
+        : []),
     ],
     // В продакшене можно отключить оптимизацию для локальных файлов
-    unoptimized: process.env.NODE_ENV === 'production' ? false : false,
-    dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
+    unoptimized: false,
+    dangerouslyAllowSVG: false,
+    contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Разрешить загрузку изображений из /uploads
     domains: [],
@@ -65,7 +79,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; img-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https: http:;"
+            value: "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'self';"
           }
         ]
       }

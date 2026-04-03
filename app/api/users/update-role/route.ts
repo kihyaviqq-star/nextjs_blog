@@ -3,6 +3,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { handleApiError } from "@/lib/error-handler";
 import { MAX_JSON_BODY_SIZE } from "@/lib/validations";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 500,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +16,15 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+      await limiter.check(20, `update-role-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many role update attempts. Please wait." },
+        { status: 429 }
+      );
     }
 
     // Проверка роли через запрос к БД (безопаснее, чем из сессии)
@@ -93,9 +108,7 @@ export async function POST(request: NextRequest) {
       data: { role },
     });
 
-    console.log(
-      `[Admin] Role changed: ${user.email} (${user.role} → ${updatedUser.role}) by ${session.user.email}`
-    );
+    console.log(`[Admin] Role changed for userId=${user.id} (${user.role} -> ${updatedUser.role})`);
 
     return NextResponse.json({
       success: true,

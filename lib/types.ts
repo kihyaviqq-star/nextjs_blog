@@ -13,8 +13,10 @@ export interface EditorData {
 export interface Author {
   id: string;
   name: string;
+  username?: string;
   slug: string;
-  avatar: string;
+  avatar?: string;
+  avatarUrl?: string;
   bio: string;
   title: string;
   email: string;

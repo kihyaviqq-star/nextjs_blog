@@ -15,17 +15,22 @@ import {
 
 type UserRole = "ALL" | "USER" | "EDITOR" | "ADMIN";
 
-interface User {
+export interface FilterableUser {
   id: string;
   name: string | null;
   username: string | null;
   email: string;
+  avatarUrl: string | null;
   role: string;
+  createdAt: string | Date;
+  _count: {
+    posts: number;
+  };
 }
 
 interface UsersFilterBarProps {
-  users: User[];
-  onFilteredUsersChange: (filteredUsers: User[]) => void;
+  users: FilterableUser[];
+  onFilteredUsersChange: (filteredUsers: FilterableUser[]) => void;
 }
 
 export function UsersFilterBar({ users, onFilteredUsersChange }: UsersFilterBarProps) {

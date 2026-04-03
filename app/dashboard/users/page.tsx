@@ -14,19 +14,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { RoleSelector } from "@/components/role-selector";
 import { UsersFilterBar } from "@/components/users-filter-bar";
+import type { FilterableUser } from "@/components/users-filter-bar";
 
-type User = {
-  id: string;
-  name: string | null;
-  username: string | null;
-  email: string;
-  avatarUrl: string | null;
-  role: string;
-  createdAt: Date;
-  _count: {
-    posts: number;
-  };
-};
+type User = FilterableUser;
 
 export default function UsersPage() {
   const { data: session, status } = useSession();

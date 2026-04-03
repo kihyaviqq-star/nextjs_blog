@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { deleteCommentImage } from "@/lib/file-cleanup";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 1000,
+});
 
 export async function DELETE(
   request: NextRequest,
@@ -11,6 +17,15 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+      await limiter.check(20, `comments-delete-${session.user.id}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many delete requests. Please wait." },
+        { status: 429 }
+      );
     }
 
     const { id } = await params;
@@ -73,7 +88,6 @@ export async function DELETE(
     return NextResponse.json(
       {
         error: "Failed to delete comment",
-        details: process.env.NODE_ENV === "development" ? error?.message : undefined,
       },
       { status: 500 }
     );

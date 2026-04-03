@@ -110,8 +110,6 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ New user registered:", {
       id: user.id,
-      email: user.email,
-      username: user.username,
     });
 
     return NextResponse.json(

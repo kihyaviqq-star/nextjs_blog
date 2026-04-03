@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { createPostSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE } from "@/lib/validations";
 import { handleApiError } from "@/lib/error-handler";
 import { generateSlug, generateUniqueSlug } from "@/lib/slug";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 1000,
+});
 
 // GET all posts
 export async function GET() {
@@ -84,6 +90,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    try {
+      await limiter.check(20, `posts-create-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many post create requests. Please wait." },
+        { status: 429 }
+      );
+    }
+
     // 3. Проверка роли через запрос к БД (безопаснее, чем из сессии)
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -127,7 +142,7 @@ export async function POST(request: NextRequest) {
     
     const validationResult = createPostSchema.safeParse(body);
     if (!validationResult.success) {
-      console.error("[API] Validation failed:", validationResult.error.errors);
+      console.error("[API] Validation failed:", validationResult.error.issues);
       const formattedError = formatZodError(validationResult.error);
       return NextResponse.json(
         formattedError,
@@ -234,7 +249,7 @@ export async function POST(request: NextRequest) {
     console.error("[API] Error creating post:", error);
     const { message, status } = handleApiError(error, "API POST posts");
     return NextResponse.json(
-      { error: message, details: error instanceof Error ? error.message : String(error) },
+      { error: message },
       { status }
     );
   }

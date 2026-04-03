@@ -13,6 +13,7 @@ import { revalidatePath } from 'next/cache';
 import { generateSlug, generateUniqueSlug } from '@/lib/slug';
 import fs from 'fs/promises';
 import path from 'path';
+import { lookup } from 'dns/promises';
 import { z } from 'zod';
 import rateLimit from '@/lib/rate-limit';
 
@@ -26,6 +27,68 @@ const imageGenerationLimiter = rateLimit({
   interval: 60 * 1000, // 1 minute
   uniqueTokenPerInterval: 500,
 });
+
+const MAX_DOWNLOADED_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const DEFAULT_ALLOWED_IMAGE_HOSTS = ['image.pollinations.ai', 'openrouter.ai'];
+
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(Number.isNaN)) return false;
+
+  if (parts[0] === 127) return true;
+  if (parts[0] === 10) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  if (parts[0] === 0) return true;
+
+  return false;
+}
+
+function resolveAllowedImageHosts(): Set<string> {
+  const envHosts = process.env.ALLOWED_IMAGE_HOSTS
+    ? process.env.ALLOWED_IMAGE_HOSTS.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  return new Set([...DEFAULT_ALLOWED_IMAGE_HOSTS, ...envHosts]);
+}
+
+async function validateImageDownloadUrl(url: string): Promise<void> {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new Error('Invalid image URL');
+  }
+
+  if (parsedUrl.protocol !== 'https:') {
+    throw new Error('Only HTTPS image URLs are allowed');
+  }
+
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const allowedHosts = resolveAllowedImageHosts();
+  if (!allowedHosts.has(hostname)) {
+    throw new Error(`Image host is not allowed: ${hostname}`);
+  }
+
+  if (hostname === 'localhost' || hostname.endsWith('.local')) {
+    throw new Error('Local hostnames are not allowed');
+  }
+
+  const { address } = await lookup(hostname);
+  if (address.includes(':')) {
+    // Basic IPv6 deny for loopback and unique-local ranges.
+    const normalized = address.toLowerCase();
+    if (normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80')) {
+      throw new Error('Resolved IPv6 address is private');
+    }
+    return;
+  }
+
+  if (isPrivateIPv4(address)) {
+    throw new Error('Resolved IPv4 address is private');
+  }
+}
 
 export async function getNewsAction(enabledSourceIds?: string[]): Promise<{ success: boolean; data?: NewsItem[]; error?: string }> {
   try {
@@ -253,11 +316,39 @@ export async function generateImageAction(topic: string, summary: string): Promi
       const base64Data = imageUrl.split(',')[1];
       buffer = Buffer.from(base64Data, 'base64');
     } else {
-      // Download image from URL
-      const response = await fetch(imageUrl);
+      // Download image from URL with SSRF and size/content checks
+      await validateImageDownloadUrl(imageUrl);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(imageUrl, {
+        signal: controller.signal,
+        redirect: 'error',
+      });
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) throw new Error('Failed to download image');
+
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.toLowerCase().startsWith('image/')) {
+        throw new Error('Downloaded content is not an image');
+      }
+
+      const contentLength = response.headers.get('content-length');
+      if (contentLength) {
+        const size = Number.parseInt(contentLength, 10);
+        if (!Number.isNaN(size) && size > MAX_DOWNLOADED_IMAGE_SIZE) {
+          throw new Error('Downloaded image is too large');
+        }
+      }
       
       const arrayBuffer = await response.arrayBuffer();
+      if (arrayBuffer.byteLength > MAX_DOWNLOADED_IMAGE_SIZE) {
+        throw new Error('Downloaded image exceeds size limit');
+      }
+
       buffer = Buffer.from(arrayBuffer);
     }
     

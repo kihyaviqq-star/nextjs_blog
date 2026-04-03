@@ -4,6 +4,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { validateUsername, generateUsernameSlug } from "@/lib/constants";
 import { handleApiError } from "@/lib/error-handler";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 1000,
+});
 
 // GET - получить профиль текущего пользователя
 export async function GET(request: NextRequest) {
@@ -80,12 +86,21 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    try {
+      await limiter.check(20, `profile-update-${session.user.id}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many profile update attempts. Please wait." },
+        { status: 429 }
+      );
+    }
+
     const userId = session.user.id;
     const body = await request.json();
     
     const { name, username, bio, email, publicEmail, showEmail, avatarUrl, telegram, vk, twitter, github } = body;
 
-    console.log("[API] Updating profile with data:", { name, username, bio, email, avatarUrl, telegram, vk, twitter, github });
+    console.log("[API] Updating profile", { userId });
 
     // Validate username if it's being changed
     if (username && username !== (session.user as any).username) {
@@ -147,7 +162,7 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    console.log("[API] Profile updated successfully:", updatedUser.name, updatedUser.username);
+    console.log("[API] Profile updated successfully", { userId: updatedUser.id });
 
     // Инвалидируем кеш для обновления аватара везде
     // Инвалидируем layout для обновления session data в Header (UserMenu, MobileMenu)

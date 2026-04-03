@@ -13,10 +13,27 @@ export async function GET() {
       );
     }
 
-    const userRole = (session.user as any).role;
+    if (!session.user.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
 
     // Only ADMINs can access this endpoint
-    if (userRole !== "ADMIN") {
+    if (dbUser.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Forbidden" },
         { status: 403 }

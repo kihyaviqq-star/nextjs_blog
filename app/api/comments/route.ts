@@ -3,12 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import rateLimit from "@/lib/rate-limit";
 
 const commentSchema = z.object({
   postId: z.string(),
   content: z.string().min(1, "Comment cannot be empty").max(1000, "Comment is too long"),
   parentId: z.string().optional(),
   imageUrl: z.string().nullable().optional(),
+});
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 1000,
 });
 
 // Функция для построения дерева комментариев из плоского списка (неограниченная вложенность)
@@ -60,8 +66,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const postId = searchParams.get("postId");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "15");
+    const pageRaw = parseInt(searchParams.get("page") || "1", 10);
+    const limitRaw = parseInt(searchParams.get("limit") || "15", 10);
+    const page = Number.isNaN(pageRaw) ? 1 : Math.max(pageRaw, 1);
+    const limit = Number.isNaN(limitRaw) ? 15 : Math.min(Math.max(limitRaw, 1), 50);
 
     if (!postId) {
       return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
@@ -77,10 +85,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`GET /api/comments: Fetching comments for post ${postId}, page ${page}, limit ${limit}`);
 
-    // Загружаем все комментарии поста одним запросом (эффективнее чем рекурсивные запросы)
-    const allComments = await prisma.comment.findMany({
+    // 1) Загружаем только верхнеуровневые комментарии текущей страницы
+    const rootComments = await prisma.comment.findMany({
       where: {
         postId,
+        parentId: null,
       },
       include: {
         author: {
@@ -93,19 +102,11 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
+      skip,
+      take: limit,
     });
-
-    // Строим дерево комментариев
-    const commentTree = buildCommentTree(allComments);
-
-    // Применяем пагинацию только к верхнеуровневым комментариям
-    const sortedRootComments = commentTree.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    const comments = sortedRootComments.slice(skip, skip + limit);
 
     // Count total top-level comments for pagination
     const totalTopLevel = await prisma.comment.count({
@@ -115,16 +116,72 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Total including replies (we already fetched all comments above)
-    const totalAll = allComments.length;
+    // Total count including replies
+    const totalAll = await prisma.comment.count({
+      where: {
+        postId,
+      },
+    });
+
+    if (rootComments.length === 0) {
+      return NextResponse.json({
+        comments: [],
+        hasMore: false,
+        totalTopLevel,
+        totalAll,
+      });
+    }
+
+    // 2) Дозагружаем только потомков для корней текущей страницы (BFS по parentId)
+    const descendants: any[] = [];
+    let frontier = rootComments.map((comment) => comment.id);
+
+    // Hard cap to avoid accidental unbounded memory growth
+    const maxDescendants = 2000;
+
+    while (frontier.length > 0 && descendants.length < maxDescendants) {
+      const batch = await prisma.comment.findMany({
+        where: {
+          postId,
+          parentId: {
+            in: frontier,
+          },
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      if (batch.length === 0) {
+        break;
+      }
+
+      descendants.push(...batch);
+      frontier = batch.map((comment) => comment.id);
+    }
+
+    const commentsForTree = [...rootComments, ...descendants];
+
+    // Строим дерево комментариев
+    const commentTree = buildCommentTree(commentsForTree);
 
     console.log(
-      `GET /api/comments: Found ${comments.length} root comments, totalTopLevel ${totalTopLevel}, totalAll ${totalAll}`
+      `GET /api/comments: Found ${commentTree.length} root comments, totalTopLevel ${totalTopLevel}, totalAll ${totalAll}`
     );
 
     return NextResponse.json({
-      comments,
-      hasMore: skip + comments.length < totalTopLevel,
+      comments: commentTree,
+      hasMore: skip + commentTree.length < totalTopLevel,
       totalTopLevel,
       totalAll,
     });
@@ -137,7 +194,6 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ 
       error: "Failed to fetch comments",
-      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     }, { status: 500 });
   }
 }
@@ -148,6 +204,15 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       console.error("POST /api/comments: No session found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+      await limiter.check(30, `comments-${session.user.id}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many comment requests. Please try again later." },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();
@@ -258,8 +323,7 @@ export async function POST(request: NextRequest) {
       name: error?.name,
     });
     return NextResponse.json({ 
-      error: error?.message || "Failed to create comment",
-      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      error: "Failed to create comment",
     }, { status: 500 });
   }
 }

@@ -1,14 +1,41 @@
 import { auth } from "@/lib/auth";
 
-export default auth((req) => {
+async function getDbBackedRole(req: Request): Promise<string | null> {
+  try {
+    const profileUrl = new URL("/api/profile", (req as any).nextUrl ?? req.url);
+    const cookie = req.headers.get("cookie") || "";
+
+    const response = await fetch(profileUrl.toString(), {
+      headers: {
+        cookie,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return typeof data?.role === "string" ? data.role : null;
+  } catch {
+    return null;
+  }
+}
+
+export default auth(async (req) => {
   const isLoggedIn = !!req.auth;
-  const userRole = (req.auth?.user as any)?.role;
   const isOnDashboard = req.nextUrl.pathname.startsWith("/dashboard");
 
   // Protect all /dashboard routes
   if (isOnDashboard) {
     // Not logged in -> redirect to signin
     if (!isLoggedIn) {
+      return Response.redirect(new URL("/auth/signin", req.nextUrl));
+    }
+
+    const userRole = await getDbBackedRole(req as unknown as Request);
+    if (!userRole) {
       return Response.redirect(new URL("/auth/signin", req.nextUrl));
     }
     

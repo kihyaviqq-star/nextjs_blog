@@ -11,6 +11,21 @@ const SITE_NAME = 'AI-Stat Generator';
  */
 
 function isPrivateIP(ip: string): boolean {
+  const normalized = ip.toLowerCase().trim();
+
+  if (normalized.includes(':')) {
+    if (normalized === '::1' || normalized === '0:0:0:0:0:0:0:1') return true;
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+    if (normalized.startsWith('fe80') || normalized.startsWith('fe81') || normalized.startsWith('fe82') || normalized.startsWith('fe83')) return true;
+
+    if (normalized.startsWith('::ffff:')) {
+      const mapped = normalized.slice(7);
+      return isPrivateIP(mapped);
+    }
+
+    return false;
+  }
+
   const parts = ip.split('.').map(Number);
   if (parts.length !== 4) return false;
 
@@ -296,6 +311,10 @@ export async function scrapeUrl(url: string, useAI: boolean = true): Promise<Scr
       throw new Error('Invalid protocol. Only HTTP/HTTPS allowed.');
     }
 
+    if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname.endsWith('.local')) {
+      throw new Error('Access denied to local hostnames');
+    }
+
     // SSRF Protection: Resolve and check IP (skip for AI direct browsing, but still validate URL)
     try {
       const { address } = await lookup(parsedUrl.hostname);
@@ -304,7 +323,7 @@ export async function scrapeUrl(url: string, useAI: boolean = true): Promise<Scr
       }
     } catch (e: any) {
       if (e.message.includes('Access denied')) throw e;
-      console.warn(`DNS lookup failed for ${parsedUrl.hostname}: ${e.message}`);
+      throw new Error(`Failed to resolve hostname ${parsedUrl.hostname}: ${e.message}`);
     }
 
     // Try AI direct web browsing first (bypasses fetch issues completely)
@@ -395,7 +414,7 @@ export async function scrapeUrl(url: string, useAI: boolean = true): Promise<Scr
 
     // Find main content
     // Try specific selectors first, then fallback
-    let $content = $('article').first();
+    let $content: cheerio.Cheerio<any> = $('article').first();
     
     if ($content.length === 0) {
       $content = $('main').first();
@@ -412,7 +431,7 @@ export async function scrapeUrl(url: string, useAI: boolean = true): Promise<Scr
         const found = $(selector);
         if (found.length > 0) {
           // Pick the one with the most text
-          let bestEl = found.first();
+          let bestEl: cheerio.Cheerio<any> = found.first();
           let maxLen = bestEl.text().length;
           
           found.each((i, el) => {

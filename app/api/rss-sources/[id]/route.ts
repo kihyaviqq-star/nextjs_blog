@@ -3,6 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { updateRSSSourceSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE } from '@/lib/validations';
 import { handleApiError } from '@/lib/error-handler';
+import rateLimit from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 500,
+});
 
 // PUT - обновить источник (включить/выключить)
 export async function PUT(
@@ -13,6 +19,15 @@ export async function PUT(
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+      await limiter.check(30, `rss-source-update-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: 'Too many RSS source update requests. Please wait.' },
+        { status: 429 }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -111,6 +126,15 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+      await limiter.check(20, `rss-source-delete-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: 'Too many RSS source delete requests. Please wait.' },
+        { status: 429 }
+      );
     }
 
     const user = await prisma.user.findUnique({

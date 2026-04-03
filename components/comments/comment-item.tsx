@@ -25,6 +25,7 @@ interface CommentAuthor {
 
 interface Comment {
   id: string;
+  parentId?: string | null;
   content: string;
   imageUrl: string | null;
   createdAt: string;

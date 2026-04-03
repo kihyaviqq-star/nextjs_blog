@@ -33,19 +33,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const prismaAny = prisma as any;
+
     // Check if RSSSource model exists in Prisma Client
-    if (!prisma.rSSSource) {
+    if (!prismaAny.rSSSource) {
       console.error('RSSSource model not found in Prisma Client. Keys:', Object.keys(prisma));
       // Fallback check for different casing
-      // @ts-ignore
-      if (prisma.RSSSource) {
+      if (prismaAny.RSSSource) {
         console.log('Found RSSSource as prisma.RSSSource');
-        // @ts-ignore
-        prisma.rSSSource = prisma.RSSSource;
-      } else if (prisma.rssSource) {
+        prismaAny.rSSSource = prismaAny.RSSSource;
+      } else if (prismaAny.rssSource) {
         console.log('Found rssSource as prisma.rssSource');
-        // @ts-ignore
-        prisma.rSSSource = prisma.rssSource;
+        prismaAny.rSSSource = prismaAny.rssSource;
       } else {
         return NextResponse.json(
             { error: 'Database model not initialized. Please restart the server.' },
@@ -54,7 +53,7 @@ export async function GET() {
       }
     }
 
-    const sources = await prisma.rSSSource.findMany({
+    const sources = await prismaAny.rSSSource.findMany({
       orderBy: [
         { createdAt: 'desc' }
       ]
@@ -194,16 +193,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const prismaAny = prisma as any;
+
     // Ensure prisma.rSSSource exists (fix for potential casing issues or stale client)
-    if (!prisma.rSSSource) {
+    if (!prismaAny.rSSSource) {
       console.error('RSSSource model not found in Prisma Client (POST). Keys:', Object.keys(prisma));
-      // @ts-ignore
-      if (prisma.RSSSource) {
-        // @ts-ignore
-        prisma.rSSSource = prisma.RSSSource;
-      } else if (prisma.rssSource) {
-        // @ts-ignore
-        prisma.rSSSource = prisma.rssSource;
+      if (prismaAny.RSSSource) {
+        prismaAny.rSSSource = prismaAny.RSSSource;
+      } else if (prismaAny.rssSource) {
+        prismaAny.rSSSource = prismaAny.rssSource;
       } else {
         return NextResponse.json(
             { error: 'Database model not initialized. Please restart the server.' },
@@ -213,7 +211,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if RSS feed URL already exists
-    const existing = await prisma.rSSSource.findUnique({
+    const existing = await prismaAny.rSSSource.findUnique({
       where: { url: rssFeedUrl }
     });
 
@@ -224,7 +222,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const source = await prisma.rSSSource.create({
+    const source = await prismaAny.rSSSource.create({
       data: {
         name: sourceName,
         url: rssFeedUrl,

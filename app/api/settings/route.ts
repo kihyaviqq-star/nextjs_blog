@@ -4,6 +4,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { handleApiError } from "@/lib/error-handler";
 import { MAX_JSON_BODY_SIZE } from "@/lib/validations";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 500,
+});
 
 // GET - Fetch site settings
 export async function GET() {
@@ -47,6 +53,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    try {
+      await limiter.check(10, `settings-update-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many settings update requests. Please wait." },
+        { status: 429 }
       );
     }
 

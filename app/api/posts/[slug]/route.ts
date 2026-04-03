@@ -6,6 +6,12 @@ import { handleApiError } from "@/lib/error-handler";
 import { generateSlug, generateUniqueSlug } from "@/lib/slug";
 import { createRedirect } from "@/lib/redirects";
 import { deletePostFiles, deleteUploadedFile, extractImageUrlsFromContent } from "@/lib/file-cleanup";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 1000,
+});
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -96,6 +102,15 @@ export async function PUT(
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    try {
+      await limiter.check(30, `posts-update-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many post update requests. Please wait." },
+        { status: 429 }
       );
     }
 
@@ -351,6 +366,15 @@ export async function DELETE(
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    try {
+      await limiter.check(20, `posts-delete-${session.user.email}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Too many post delete requests. Please wait." },
+        { status: 429 }
       );
     }
 

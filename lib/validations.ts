@@ -1,13 +1,158 @@
 import { z } from 'zod';
 
 /**
- * Editor.js Block Schema
+ * Editor.js strict block schemas
  */
-const editorBlockSchema = z.object({
+const headerBlockSchema = z.object({
   id: z.string().optional(),
-  type: z.string().min(1, 'Block type is required'),
-  data: z.any().optional(), // Editor.js data structure can vary by block type
-}).passthrough(); // Allow additional fields
+  type: z.literal('header'),
+  data: z.object({
+    text: z.string().min(1).max(1000),
+    level: z.number().int().min(1).max(6),
+  }).strict(),
+}).strict();
+
+const paragraphBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('paragraph'),
+  data: z.object({
+    text: z.string().max(20000),
+  }).strict(),
+}).strict();
+
+const listBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('list'),
+  data: z.object({
+    style: z.enum(['ordered', 'unordered']),
+    items: z.array(z.string().max(5000)).max(500),
+  }).strict(),
+}).strict();
+
+const checklistBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('checklist'),
+  data: z.object({
+    items: z.array(
+      z.object({
+        text: z.string().max(5000),
+        checked: z.boolean(),
+      }).strict()
+    ).max(500),
+  }).strict(),
+}).strict();
+
+const codeBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('code'),
+  data: z.object({
+    code: z.string().max(100000),
+  }).strict(),
+}).strict();
+
+const quoteBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('quote'),
+  data: z.object({
+    text: z.string().min(1).max(10000),
+    caption: z.string().max(500).optional(),
+  }).strict(),
+}).strict();
+
+const warningBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('warning'),
+  data: z.object({
+    title: z.string().max(300).optional(),
+    message: z.string().max(5000).optional(),
+  }).strict().refine((v) => Boolean(v.title || v.message), {
+    message: 'Warning block requires title or message',
+  }),
+}).strict();
+
+const delimiterBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('delimiter'),
+  data: z.object({}).strict().optional().default({}),
+}).strict();
+
+const tableBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('table'),
+  data: z.object({
+    withHeadings: z.boolean().optional(),
+    content: z.array(z.array(z.string().max(2000)).max(30)).max(200),
+  }).strict(),
+}).strict();
+
+const imageBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('image'),
+  data: z.object({
+    file: z.object({
+      url: z.string().max(5000),
+    }).strict().optional(),
+    url: z.string().max(5000).optional(),
+    caption: z.string().max(1000).optional(),
+    withBorder: z.boolean().optional(),
+    withBackground: z.boolean().optional(),
+    stretched: z.boolean().optional(),
+  }).strict().refine((v) => Boolean(v.file?.url || v.url), {
+    message: 'Image block requires file.url or url',
+  }),
+}).strict();
+
+const embedBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('embed'),
+  data: z.object({
+    service: z.string().max(200).optional(),
+    source: z.string().max(5000).optional(),
+    embed: z.string().max(10000),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
+    caption: z.string().max(1000).optional(),
+  }).strict(),
+}).strict();
+
+const linkToolBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('linkTool'),
+  data: z.object({
+    link: z.string().max(5000),
+    meta: z.object({
+      title: z.string().max(500).optional(),
+      description: z.string().max(5000).optional(),
+      image: z.object({
+        url: z.string().max(5000).optional(),
+      }).strict().optional(),
+    }).strict(),
+  }).strict(),
+}).strict();
+
+const rawBlockSchema = z.object({
+  id: z.string().optional(),
+  type: z.literal('raw'),
+  data: z.object({
+    html: z.string().max(20000),
+  }).strict(),
+}).strict();
+
+const editorBlockSchema = z.discriminatedUnion('type', [
+  headerBlockSchema,
+  paragraphBlockSchema,
+  listBlockSchema,
+  checklistBlockSchema,
+  codeBlockSchema,
+  quoteBlockSchema,
+  warningBlockSchema,
+  delimiterBlockSchema,
+  tableBlockSchema,
+  imageBlockSchema,
+  embedBlockSchema,
+  linkToolBlockSchema,
+  rawBlockSchema,
+]);
 
 /**
  * Editor.js OutputData Schema
@@ -135,7 +280,7 @@ export function validateBodySize(contentLength: string | null): { valid: boolean
  * Format Zod errors for API response
  */
 export function formatZodError(error: z.ZodError): { message: string; errors: Array<{ field: string; message: string }> } {
-  const issues = error.issues || error.errors || [];
+  const issues = error.issues;
   const errors = issues.map(err => ({
     field: err.path.join('.'),
     message: err.message,

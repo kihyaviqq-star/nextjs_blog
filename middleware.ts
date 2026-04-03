@@ -1,20 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Простое in-memory кеширование для редиректов (можно заменить на Redis в продакшене)
-// ВАЖНО: Кеш может показывать устаревшие данные, поэтому TTL короткий
-const redirectCache = new Map<string, { toSlug: string; timestamp: number } | null>();
-const CACHE_TTL = 5 * 1000; // 5 секунд для быстрого обновления
-
 async function checkRedirect(slug: string): Promise<string | null> {
-  // Проверяем кеш (но только если там есть положительный результат)
-  // Не кешируем отрицательные результаты (отсутствие редиректа), 
-  // чтобы новые редиректы были видны сразу
-  const cached = redirectCache.get(slug);
-  if (cached && cached !== null && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.toSlug;
-  }
-
   // Динамически импортируем prisma только при необходимости
   try {
     const { prisma } = await import('@/lib/prisma');
@@ -38,12 +25,8 @@ async function checkRedirect(slug: string): Promise<string | null> {
     });
 
     if (redirect) {
-      // Сохраняем в кеш только положительные результаты
-      redirectCache.set(slug, { toSlug: redirect.toSlug, timestamp: Date.now() });
       return redirect.toSlug;
     }
-    
-    // НЕ кешируем отсутствие редиректа, чтобы новые редиректы были видны сразу
   } catch (error: any) {
     // В случае ошибки пропускаем запрос дальше (без логирования в продакшене)
     if (process.env.NODE_ENV === 'development') {
@@ -83,10 +66,12 @@ export async function middleware(request: NextRequest) {
 
   if (redirectTo) {
     // Найден редирект, делаем постоянный редирект 308
-    console.log(`[Middleware] Redirecting ${slug} -> ${redirectTo}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Middleware] Redirecting ${slug} -> ${redirectTo}`);
+    }
     const newUrl = new URL(`/${encodeURIComponent(redirectTo)}`, request.url);
     return NextResponse.redirect(newUrl, { status: 308 });
-  } else {
+  } else if (process.env.NODE_ENV === 'development') {
     console.log(`[Middleware] No redirect found for slug: "${slug}"`);
   }
 
