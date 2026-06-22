@@ -41,6 +41,7 @@ model User {
   // Relations
   posts         Post[]
   comments      Comment[]
+  reviews       Review[]
   accounts      Account[]
   sessions      Session[]
 }
@@ -170,4 +171,54 @@ model Redirect {
 
   @@index([fromSlug])
   @@index([toSlug])
+}
+
+// AI Tools Directory Models
+
+model SoftwareCategory {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  icon      String?
+  tools     Software[]
+  createdAt DateTime   @default(now())
+}
+
+model Software {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  shortDesc   String
+  websiteUrl  String?
+  logoUrl     String?
+  pricing     String   @default("Free") // e.g. Free, Freemium, Paid
+  
+  categoryId  String
+  category    SoftwareCategory @relation(fields: [categoryId], references: [id])
+  
+  reviews     Review[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int
+  content     String?
+  
+  softwareId  String
+  software    Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([softwareId])
+  @@index([authorId])
 }

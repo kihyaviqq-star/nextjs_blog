@@ -25,7 +25,8 @@ import {
   LogIn,
   X,
   Moon,
-  Sun
+  Sun,
+  Sparkles
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
@@ -90,6 +91,27 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
         </SheetHeader>
 
         <div className="flex flex-col h-[calc(100vh-5rem)]">
+          {/* Public Navigation */}
+          <div className="px-6 py-4 space-y-2">
+            <Link
+              href="/"
+              onClick={handleLinkClick}
+              className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-base font-medium">Блог</span>
+            </Link>
+            <Link
+              href="/tools"
+              onClick={handleLinkClick}
+              className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-primary"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="text-base font-medium">Каталог ИИ</span>
+            </Link>
+          </div>
+          <Separator />
+
           {status === "loading" ? (
             <div className="px-6 space-y-3">
               <div className="h-16 bg-secondary/50 animate-pulse rounded-lg" />

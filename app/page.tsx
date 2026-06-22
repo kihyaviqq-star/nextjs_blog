@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { HeroBackground } from "@/components/ui/hero-background";
 import { FeaturedPost } from "@/components/featured-post";
 import { AnimatedGrid } from "@/components/animated-grid";
+import { AnimatedTitle } from "@/components/ui/animated-title";
 
 const POSTS_PER_PAGE = 9;
 
@@ -145,7 +146,8 @@ export default async function Home({ searchParams }: HomeProps) {
   const siteName = siteSettings?.siteName || "AI Aggregator";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans selection:bg-primary/20">
+    <div className="min-h-screen bg-transparent flex flex-col font-sans selection:bg-primary/20 relative">
+      <HeroBackground />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -154,17 +156,16 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <main className="flex-1 flex flex-col">
         {/* Hero Section - Apple Style */}
-        <section className="relative pt-24 pb-28 md:pt-36 md:pb-40 px-4 md:px-6 overflow-hidden flex flex-col items-center justify-center border-b border-border/10">
-          <HeroBackground />
+        <section className="relative pt-24 pb-28 md:pt-36 md:pb-40 px-4 md:px-6 flex flex-col items-center justify-center border-b border-border/10">
           <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-background/60 backdrop-blur-xl border border-border/50 text-primary mb-8 text-sm font-medium shadow-sm transition-all hover:bg-background/80">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-background/60 backdrop-blur-xl border border-border/50 text-primary mb-6 text-sm font-medium shadow-sm transition-all hover:bg-background/80">
               <Sparkles className="w-4 h-4" />
               <span>Добро пожаловать в будущее</span>
             </div>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent pb-2">
-              {siteName}
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light">
+            
+            <AnimatedTitle text={siteName} />
+            
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light mt-4">
               {homeSubtitle}
             </p>
             

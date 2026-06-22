@@ -73,6 +73,14 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
             )}
           </Link>
 
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium mx-auto">
+            <Link href="/" className="transition-colors hover:text-primary text-foreground/80">Блог</Link>
+            <Link href="/tools" className="transition-colors text-primary flex items-center gap-1">
+              <Sparkles className="w-4 h-4" /> Каталог ИИ
+            </Link>
+          </nav>
+
           {/* Desktop actions - hidden on mobile */}
           <div className="hidden md:flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {status === "loading" ? (
