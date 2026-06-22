@@ -89,7 +89,7 @@ export function SearchFilterBar() {
           placeholder="Поиск статей..."
           value={searchValue}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-10 pr-10 hover:bg-secondary/50 transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 border-border"
+          className="pl-10 pr-10 h-12 text-base hover:bg-secondary/80 transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 border-border/50 bg-background/50 backdrop-blur-md rounded-xl"
         />
         {searchValue && (
           <Button
@@ -110,7 +110,7 @@ export function SearchFilterBar() {
             <Button
               variant="outline"
               size="default"
-              className="gap-2 w-full sm:w-auto"
+              className="gap-2 w-full sm:w-auto h-12 px-6 rounded-xl border-border/50 bg-background/50 backdrop-blur-md hover:bg-secondary/80"
             >
               {sortBy === "newest" ? (
                 <>
