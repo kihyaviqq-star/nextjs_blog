@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
+import { SignInModal } from "@/components/signin-modal";
 
 interface MobileMenuProps {
   session: Session | null;
@@ -214,16 +215,12 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
             </>
           ) : (
             <div className="px-6 py-4">
-              <Button
-                asChild
-                className="w-full gap-2 min-h-[44px]"
-                onClick={handleLinkClick}
-              >
-                <Link href="/auth/signin">
+              <SignInModal onLoginSuccess={handleLinkClick}>
+                <Button className="w-full gap-2 min-h-[44px]">
                   <LogIn className="w-5 h-5" />
                   Войти
-                </Link>
-              </Button>
+                </Button>
+              </SignInModal>
             </div>
           )}
         </div>

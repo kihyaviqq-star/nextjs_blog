@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/user-menu";
 import { MobileMenu } from "@/components/mobile-menu";
 import { Button } from "@/components/ui/button";
 import { PenSquare, LogIn, Sparkles } from "lucide-react";
+import { SignInModal } from "@/components/signin-modal";
 
 interface HeaderClientProps {
   siteName: string | null;
@@ -98,12 +99,12 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
                 <UserMenu />
               </>
             ) : (
-              <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link href="/auth/signin">
+              <SignInModal>
+                <Button variant="outline" size="sm" className="gap-2">
                   <LogIn className="w-4 h-4" />
                   Войти
-                </Link>
-              </Button>
+                </Button>
+              </SignInModal>
             )}
             <ThemeToggle />
           </div>
