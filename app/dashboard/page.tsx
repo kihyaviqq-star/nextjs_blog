@@ -264,6 +264,22 @@ export default async function DashboardPage() {
                   </div>
                 </Link>
               )}
+              {userRole === "ADMIN" && (
+                <Link href="/admin">
+                  <div className="flex items-center gap-2 p-3 rounded-lg hover:bg-secondary transition-colors cursor-pointer">
+                    <LayoutDashboard className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">База программ</span>
+                  </div>
+                </Link>
+              )}
+              {userRole === "ADMIN" && (
+                <Link href="/dashboard/automation">
+                  <div className="flex items-center gap-2 p-3 rounded-lg hover:bg-secondary transition-colors cursor-pointer">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">Автоматизация сайта</span>
+                  </div>
+                </Link>
+              )}
             </CardContent>
           </Card>
 
