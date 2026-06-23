@@ -21,7 +21,7 @@ services:
     container_name: blog-nextjs
     restart: always
     ports:
-      - "3000:3000"
+      - "3005:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-mysecretpassword}@db:5432/blog_db?schema=public
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
