@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV !== "production";
 
 function getAllowedImageHosts(): string[] {
-  const defaultHosts = ["image.pollinations.ai", "openrouter.ai"];
+  const defaultHosts = ["image.pollinations.ai", "openrouter.ai", "images.unsplash.com", "source.unsplash.com"];
   const fromEnv = (process.env.ALLOWED_IMAGE_HOSTS || "")
     .split(",")
     .map((v) => v.trim().toLowerCase())

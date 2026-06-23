@@ -1,82 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-async function checkRedirect(slug: string): Promise<string | null> {
-  // Динамически импортируем prisma только при необходимости
-  try {
-    const { prisma } = await import('@/lib/prisma');
-    
-    // Проверяем, существует ли статья с таким slug
-    // Если существует, не проверяем редирект (статья имеет приоритет)
-    const post = await prisma.post.findUnique({
-      where: { slug },
-      select: { id: true }
-    });
-
-    if (post) {
-      // Статья найдена, редирект не нужен
-      return null;
-    }
-    
-    // Статья не найдена, проверяем редиректы
-    const redirect = await prisma.redirect.findUnique({
-      where: { fromSlug: slug },
-      select: { toSlug: true }
-    });
-
-    if (redirect) {
-      return redirect.toSlug;
-    }
-  } catch (error: any) {
-    // В случае ошибки пропускаем запрос дальше (без логирования в продакшене)
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[Middleware] Error checking redirect:', error?.message || error);
-    }
-  }
-
-  return null;
-}
-
 export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  
-  // Пропускаем системные маршруты
-  if (
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/robots.txt') ||
-    pathname.startsWith('/sitemap.xml') ||
-    pathname === '/'
-  ) {
-    return NextResponse.next();
-  }
-
-  // Извлекаем slug из пути (убираем начальный /)
-  const slug = decodeURIComponent(pathname.slice(1));
-
-  if (!slug) {
-    return NextResponse.next();
-  }
-
-  // Проверяем редиректы (оптимизировано с кешированием)
-  const redirectTo = await checkRedirect(slug);
-
-  if (redirectTo) {
-    // Найден редирект, делаем постоянный редирект 308
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Middleware] Redirecting ${slug} -> ${redirectTo}`);
-    }
-    const newUrl = new URL(`/${encodeURIComponent(redirectTo)}`, request.url);
-    return NextResponse.redirect(newUrl, { status: 308 });
-  } else if (process.env.NODE_ENV === 'development') {
-    console.log(`[Middleware] No redirect found for slug: "${slug}"`);
-  }
-
-  // Если редирект не найден, пропускаем запрос дальше
-  // (проверка статьи и профиля пользователя будет в page.tsx)
+  // Middleware intentionally empty of DB calls to avoid Edge Runtime errors.
+  // Custom redirects can be handled at the page level if needed.
   return NextResponse.next();
 }
 
