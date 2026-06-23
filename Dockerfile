@@ -7,6 +7,7 @@ RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Получаем DATABASE_URL из аргументов docker-compose
@@ -19,7 +20,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN apk add --no-cache openssl
+RUN apk add --no-cache libc6-compat openssl
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
