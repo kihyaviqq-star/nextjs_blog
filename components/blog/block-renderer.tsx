@@ -103,9 +103,10 @@ function HeaderBlock({ data }: { data: any }) {
   };
 
   return (
-    <Tag className={styles[level as keyof typeof styles] || styles[2]}>
-      {text}
-    </Tag>
+    <Tag 
+      className={styles[level as keyof typeof styles] || styles[2]}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
+    />
   );
 }
 
@@ -113,9 +114,10 @@ function ParagraphBlock({ data }: { data: any }) {
   if (!data || !data.text) return null;
   
   return (
-    <p className="text-base leading-7 text-foreground mb-4">
-      {data.text}
-    </p>
+    <p 
+      className="text-base leading-7 text-foreground mb-4"
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.text) }}
+    />
   );
 }
 
@@ -128,9 +130,11 @@ function ListBlock({ data }: { data: any }) {
     return (
       <ol className="list-decimal list-inside space-y-2 mb-4 text-foreground">
         {items.map((item: string, index: number) => (
-          <li key={index} className="leading-7">
-            {item}
-          </li>
+          <li 
+            key={index} 
+            className="leading-7"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item) }}
+          />
         ))}
       </ol>
     );
@@ -139,9 +143,11 @@ function ListBlock({ data }: { data: any }) {
   return (
     <ul className="list-disc list-inside space-y-2 mb-4 text-foreground">
       {items.map((item: string, index: number) => (
-        <li key={index} className="leading-7">
-          {item}
-        </li>
+        <li 
+          key={index} 
+          className="leading-7"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item) }}
+        />
       ))}
     </ul>
   );
@@ -166,9 +172,10 @@ function QuoteBlock({ data }: { data: any }) {
   
   return (
     <blockquote className="border-l-4 border-primary pl-4 py-2 my-6 italic">
-      <p className="text-lg text-foreground mb-2">
-        «{text}»
-      </p>
+      <p 
+        className="text-lg text-foreground mb-2"
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
+      />
       {caption && (
         <footer className="text-sm text-muted-foreground">
           — {caption}
@@ -234,12 +241,13 @@ function ChecklistBlock({ data }: { data: any }) {
             )}>
               {item.checked && <Check className="w-3 h-3" />}
             </span>
-            <span className={cn(
-              "leading-7",
-              item.checked && "line-through text-muted-foreground"
-            )}>
-              {item.text || ""}
-            </span>
+            <span 
+              className={cn(
+                "leading-7",
+                item.checked && "line-through text-muted-foreground"
+              )}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.text || "") }}
+            />
           </li>
         );
       })}
@@ -300,9 +308,8 @@ function TableBlock({ data }: { data: any }) {
                 <th
                   key={index}
                   className="px-4 py-2 text-left text-sm font-semibold border-b border-border"
-                >
-                  {cell}
-                </th>
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cell) }}
+                />
               ))}
             </tr>
           </thead>
@@ -314,9 +321,8 @@ function TableBlock({ data }: { data: any }) {
                 <td
                   key={cellIndex}
                   className="px-4 py-2 text-sm"
-                >
-                  {cell}
-                </td>
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cell) }}
+                />
               ))}
             </tr>
           ))}
