@@ -225,7 +225,7 @@ export function AiModelLayout({ tool }: { tool: any }) {
                     {Object.entries(items).map(([test, score]) => (
                       <div key={test} className="flex justify-between items-center">
                         <span className="font-medium">{test}</span>
-                        <span className="font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm">{score}%</span>
+                        <span className="font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-md text-sm">{String(score)}%</span>
                       </div>
                     ))}
                   </div>
