@@ -44,8 +44,15 @@ function toAbsoluteUrl(baseUrl: string, value?: string | null): string | undefin
 
 // Generate metadata with site settings
 export async function generateMetadata(): Promise<Metadata> {
-  let settings = await prisma.siteSettings.findUnique({
+  // Create default if not exists using atomic upsert to prevent race conditions during build
+  const settings = await prisma.siteSettings.upsert({
     where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      siteName: "Blog",
+      metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+    },
     select: {
       siteName: true,
       metaDescription: true,
@@ -53,23 +60,6 @@ export async function generateMetadata(): Promise<Metadata> {
       logoUrl: true,
     },
   });
-
-  // Create default if not exists
-  if (!settings) {
-    settings = await prisma.siteSettings.create({
-      data: {
-        id: "default",
-        siteName: "Blog",
-        metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
-      },
-      select: {
-        siteName: true,
-        metaDescription: true,
-        faviconUrl: true,
-        logoUrl: true,
-      },
-    });
-  }
 
   const siteName = settings.siteName || "";
   const siteDescription = settings.metaDescription || "";
