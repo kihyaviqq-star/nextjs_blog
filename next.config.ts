@@ -15,6 +15,7 @@ function getAllowedImageHosts(): string[] {
 const allowedImageHosts = getAllowedImageHosts();
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   /* config options here */
   typescript: {
     ignoreBuildErrors: false,
