@@ -91,10 +91,10 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
   };
 
   // Update views in background
-  prisma.software.update({
-    where: { id: tool.id },
-    data: { views: { increment: 1 } },
-  }).catch(console.error);
+  // prisma.software.update({
+  //   where: { id: tool.id },
+  //   data: { views: { increment: 1 } },
+  // }).catch(console.error);
 
   if (tool.isAi) {
     return (

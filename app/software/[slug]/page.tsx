@@ -92,10 +92,10 @@ export default async function SoftwareDetailsPage({ params }: { params: Promise<
   };
 
   // Update views in background
-  prisma.software.update({
-    where: { id: tool.id },
-    data: { views: { increment: 1 } },
-  }).catch(console.error);
+  // prisma.software.update({
+  //   where: { id: tool.id },
+  //   data: { views: { increment: 1 } },
+  // }).catch(console.error);
 
   // If this is an AI model, use the dedicated AI layout instead of the Software layout
   if (tool.isAi) {
