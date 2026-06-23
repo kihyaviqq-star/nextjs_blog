@@ -3,15 +3,15 @@ import * as cheerio from 'cheerio';
 import { prisma } from '@/lib/prisma';
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
 export async function runAiStatScraper(
   limit: number = 5,
   onProgress?: (msg: string, current: number, total: number) => void
 ): Promise<{ added: number, names: string[] }> {
+  const openai = new OpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY || "dummy-key-for-build",
+  });
+
   console.log(`🤖 Запуск AI-Скрапера (Лимит: ${limit}) 🤖`);
   
   const BASE_URL = 'https://ai-stat.ru';

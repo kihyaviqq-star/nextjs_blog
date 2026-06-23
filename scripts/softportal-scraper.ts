@@ -45,6 +45,7 @@ const DEFAULT_CATEGORY_SLUG = 'system';
 
 async function main() {
   console.log('🤖 Запуск Робота-Скрапера (SoftPortal) 🤖');
+  let processedCount = 0;
   
   // Ensure we have a default category for scraped software
   let category = await prisma.softwareCategory.findUnique({
