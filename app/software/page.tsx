@@ -28,15 +28,6 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
   const page = typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
   const currentPage = isNaN(page) || page < 1 ? 1 : page;
 
-  const categories = await prisma.softwareCategory.findMany({
-    where: {
-      tools: {
-        some: { isAi: false }
-      }
-    },
-    orderBy: { name: 'asc' }
-  });
-
   const whereClause: any = {
     isAi: false
   };
@@ -45,7 +36,7 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
     whereClause.OR = [
       { name: { contains: search.toLowerCase() } },
       { shortDesc: { contains: search.toLowerCase() } },
-      { tags: { contains: search.toLowerCase() } }, // Also search within tags
+      { tags: { contains: search.toLowerCase() } },
     ];
   }
 
@@ -67,17 +58,31 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
     }
   }
 
-  // Count total for pagination
-  const totalItems = await prisma.software.count({ where: whereClause });
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const [categories, totalItems, tools] = await Promise.all([
+    // 1. Get Categories
+    prisma.softwareCategory.findMany({
+      where: {
+        tools: {
+          some: { isAi: false }
+        }
+      },
+      orderBy: { name: 'asc' }
+    }),
+    
+    // 2. Count total for pagination
+    prisma.software.count({ where: whereClause }),
+    
+    // 3. Get software list
+    prisma.software.findMany({
+      where: whereClause,
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
+      skip: (currentPage - 1) * ITEMS_PER_PAGE,
+      take: ITEMS_PER_PAGE,
+    })
+  ]);
 
-  const tools = await prisma.software.findMany({
-    where: whereClause,
-    include: { category: true },
-    orderBy: { createdAt: 'desc' },
-    skip: (currentPage - 1) * ITEMS_PER_PAGE,
-    take: ITEMS_PER_PAGE,
-  });
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">

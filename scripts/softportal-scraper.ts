@@ -198,15 +198,34 @@ ${rawDescription}
 3. В тегах укажи категорию (например, "Видеомонтаж", "Антивирус"), тип лицензии, особенности.
 4. Убедись, что JSON валидный.`;
           
-          const completion = await openai.chat.completions.create({
-            model: "google/gemma-4-31b-it:free",
-            messages: [
-              {
-                "role": "system",
-                "content": prompt
-              }
-            ]
-          });
+          let completion;
+          try {
+            completion = await openai.chat.completions.create({
+              model: "google/gemma-4-31b-it:free",
+              messages: [
+                {
+                  "role": "system",
+                  "content": prompt
+                }
+              ]
+            });
+          } catch (apiError: any) {
+            if (apiError?.status === 429 || apiError?.code === 429) {
+              console.log('  ⚠️ Лимит запросов (429)! Ждем 15 секунд и пробуем запасную модель...');
+              await new Promise(r => setTimeout(r, 15000));
+              completion = await openai.chat.completions.create({
+                model: "meta-llama/llama-3.1-8b-instruct:free",
+                messages: [
+                  {
+                    "role": "system",
+                    "content": prompt
+                  }
+                ]
+              });
+            } else {
+              throw apiError;
+            }
+          }
           
           const content = completion.choices[0].message.content || '{}';
           try {
@@ -277,14 +296,18 @@ ${rawDescription}
       console.log(`  ✅ Успешно добавлено в базу данных: ${name}`);
       
       // Wait a bit to not spam the server
-      await new Promise(r => setTimeout(r, 1000));
+      processedCount++;
       
     } catch (e) {
       console.error(`  ❌ Ошибка при парсинге ${link}:`, e);
     }
+    
+    // Задержка 5 секунд между запросами для обхода лимитов (429 Too Many Requests) бесплатного API OpenRouter
+    console.log('  ⏳ Ожидание 5 секунд перед следующим запросом...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
   
-  console.log('\n🎉 Робот-Скрапер успешно завершил работу!');
+  console.log(`\n🎉 Готово! Успешно обработано: ${processedCount} программ.`);
 }
 
 main()

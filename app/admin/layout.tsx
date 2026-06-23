@@ -21,7 +21,7 @@ export default function AdminLayout({
               <a href="/admin" className="px-4 py-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors">
                 База программ
               </a>
-              <a href="/admin/automation" className="px-4 py-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors font-medium text-purple-500">
+              <a href="/dashboard/automation" className="px-4 py-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors font-medium text-purple-500">
                 Автоматизация
               </a>
               <a href="#" className="px-4 py-2 rounded-lg hover:bg-secondary text-muted-foreground transition-colors cursor-not-allowed opacity-50">

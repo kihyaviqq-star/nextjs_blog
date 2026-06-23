@@ -19,10 +19,12 @@ export default function AutomationAdminPage() {
   // Run states
   const [isSoftwareRunning, setIsSoftwareRunning] = useState(false);
   const [isBlogRunning, setIsBlogRunning] = useState(false);
+  const [isAiRunning, setIsAiRunning] = useState(false);
   
   // Override limits for manual run
   const [manualSoftwareLimit, setManualSoftwareLimit] = useState(3);
   const [manualBlogLimit, setManualBlogLimit] = useState(1);
+  const [manualAiLimit, setManualAiLimit] = useState(5);
 
   // Progress tracking
   const [progress, setProgress] = useState<{
@@ -69,9 +71,10 @@ export default function AutomationAdminPage() {
     }
   };
 
-  const runTask = async (type: "SOFTWARE" | "BLOG", limit: number) => {
+  const runTask = async (type: "SOFTWARE" | "BLOG" | "AI_SERVICE", limit: number) => {
     if (type === "SOFTWARE") setIsSoftwareRunning(true);
     if (type === "BLOG") setIsBlogRunning(true);
+    if (type === "AI_SERVICE") setIsAiRunning(true);
     
     setProgress({ visible: true, current: 0, total: limit, message: "Инициализация..." });
 
@@ -131,6 +134,7 @@ export default function AutomationAdminPage() {
     } finally {
       if (type === "SOFTWARE") setIsSoftwareRunning(false);
       if (type === "BLOG") setIsBlogRunning(false);
+      if (type === "AI_SERVICE") setIsAiRunning(false);
     }
   };
 
@@ -173,7 +177,7 @@ export default function AutomationAdminPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         
         {/* Software Scraper Card */}
         <div className="bg-card rounded-2xl border border-border/50 p-6 flex flex-col">
@@ -232,6 +236,50 @@ export default function AutomationAdminPage() {
               >
                 {isSoftwareRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
                 Собрать сейчас
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Generator Card */}
+        <div className="bg-card rounded-2xl border border-border/50 p-6 flex flex-col">
+          <div className="flex items-center gap-3 mb-6 border-b border-border/50 pb-4">
+            <div className="p-3 bg-teal-500/10 text-teal-500 rounded-xl">
+              <Bot className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Сбор ИИ-Моделей</h2>
+              <p className="text-sm text-muted-foreground">Парсинг базы с ai-stat.ru</p>
+            </div>
+          </div>
+
+          <div className="space-y-6 flex-1">
+            <div className="flex items-center justify-between opacity-50 pointer-events-none">
+              <label className="font-medium">Ежедневный авто-запуск</label>
+              <Switch checked={false} />
+            </div>
+            
+            <p className="text-sm text-muted-foreground italic">Авто-запуск пока недоступен для сбора ИИ.</p>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-border/50 bg-secondary/20 -mx-6 -mb-6 p-6 rounded-b-2xl">
+            <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Ручной запуск</h3>
+            <div className="flex items-center gap-4">
+              <Input 
+                type="number" 
+                min={1} 
+                max={50} 
+                value={manualAiLimit || ""} 
+                onChange={(e) => setManualAiLimit(parseInt(e.target.value) || 1)} 
+                className="w-24 bg-background"
+              />
+              <Button 
+                onClick={() => runTask("AI_SERVICE", manualAiLimit)} 
+                disabled={isSoftwareRunning || isBlogRunning || isAiRunning}
+                className="flex-1 gap-2 bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                {isAiRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                Собрать ИИ
               </Button>
             </div>
           </div>

@@ -7,9 +7,6 @@ export function FeaturedPost({ post }: { post: any }) {
 
   return (
     <div className="relative group overflow-hidden rounded-[2.5rem] border border-border/20 bg-background/50 shadow-xl hover:shadow-2xl hover:border-primary/20 transition-all duration-500 backdrop-blur-xl">
-      <Link href={`/${post.slug}`} className="absolute inset-0 z-10">
-        <span className="sr-only">Читать главную статью</span>
-      </Link>
       <div className="grid md:grid-cols-[1.2fr_1fr] gap-0 h-full">
         <div className="h-72 md:h-auto min-h-[450px] w-full relative overflow-hidden bg-secondary/30 order-first">
           {post.coverImage ? (
@@ -43,7 +40,9 @@ export function FeaturedPost({ post }: { post: any }) {
             ))}
           </div>
           <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 line-clamp-3 group-hover:text-primary transition-colors leading-[1.1] tracking-tight">
-            {post.title}
+            <Link href={`/${post.slug}`} className="before:absolute before:inset-0 before:z-0">
+              {post.title}
+            </Link>
           </h3>
           <p className="text-muted-foreground text-lg md:text-xl mb-10 line-clamp-3 leading-relaxed font-light">
             {post.excerpt}

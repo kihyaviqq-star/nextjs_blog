@@ -12,6 +12,7 @@ import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { ExpandableText } from "@/components/expandable-text";
 import { CommentSection } from "@/components/comments/comment-section";
 import { RatingWidget } from "@/components/reviews/rating-widget";
+import { AiModelLayout } from "@/components/ai/ai-model-layout";
 import { auth } from "@/lib/auth";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -88,6 +89,22 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
       "reviewCount": tool.reviews.length
     } : undefined
   };
+
+  // Update views in background
+  prisma.software.update({
+    where: { id: tool.id },
+    data: { views: { increment: 1 } },
+  }).catch(console.error);
+
+  if (tool.isAi) {
+    return (
+      <>
+        <Header />
+        <AiModelLayout tool={tool} />
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">

@@ -43,39 +43,53 @@ export default async function Home({ searchParams }: HomeProps) {
       }
     : {};
 
-  // Get total count with search filter
-  const totalPosts = await prisma.post.count({
-    where: whereClause,
-  });
-  
   // Determine if we show featured post
   const showFeatured = currentPage === 1 && !searchQuery && sortBy === "newest";
   const postsToTake = showFeatured ? POSTS_PER_PAGE + 1 : POSTS_PER_PAGE;
-  
-  const totalPages = Math.ceil((totalPosts - (showFeatured ? 1 : 0)) / POSTS_PER_PAGE);
 
   // Determine sort order
   const orderBy = sortBy === 'popular' 
     ? { views: 'desc' as const }
     : { publishedAt: 'desc' as const };
 
-  // Fetch posts from database
-  const posts = await prisma.post.findMany({
-    where: whereClause,
-    take: postsToTake,
-    skip: (currentPage - 1) * POSTS_PER_PAGE,
-    orderBy,
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          username: true,
-          avatarUrl: true,
+  // Fetch all required data in parallel to significantly reduce load time
+  const [
+    totalPosts,
+    posts,
+    allPostsForTags,
+    siteSettings
+  ] = await Promise.all([
+    // 1. Get total count
+    prisma.post.count({ where: whereClause }),
+    
+    // 2. Fetch posts
+    prisma.post.findMany({
+      where: whereClause,
+      take: postsToTake,
+      skip: (currentPage - 1) * POSTS_PER_PAGE,
+      orderBy,
+      include: {
+        author: {
+          select: { id: true, name: true, username: true, avatarUrl: true },
         },
       },
-    },
-  });
+    }),
+
+    // 3. Fetch global tag stats quickly
+    prisma.post.findMany({
+      select: { tags: true },
+      take: 50,
+      orderBy: { publishedAt: 'desc' }
+    }),
+
+    // 4. Get site settings
+    prisma.siteSettings.findUnique({
+      where: { id: "default" },
+      select: { homeSubtitle: true, siteName: true },
+    })
+  ]);
+  
+  const totalPages = Math.ceil((totalPosts - (showFeatured ? 1 : 0)) / POSTS_PER_PAGE);
 
   // Parse tags
   const postsWithParsedTags = posts.map((post) => {
@@ -90,15 +104,6 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const featuredPost = showFeatured && postsWithParsedTags.length > 0 ? postsWithParsedTags[0] : null;
   const gridPosts = showFeatured ? postsWithParsedTags.slice(1) : postsWithParsedTags;
-
-  // Extract popular tags for quick navigation from all posts
-  // In a real app we might want to cache this or fetch globally, but for now we extract from the loaded page
-  // Actually, let's fetch global tag stats quickly
-  const allPostsForTags = await prisma.post.findMany({
-    select: { tags: true },
-    take: 50,
-    orderBy: { publishedAt: 'desc' }
-  });
   
   const tagCounts = allPostsForTags.reduce((acc, post) => {
     try {
@@ -133,14 +138,6 @@ export default async function Home({ searchParams }: HomeProps) {
       }))
     }
   };
-
-  const siteSettings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
-    select: {
-      homeSubtitle: true,
-      siteName: true
-    },
-  });
 
   const homeSubtitle = siteSettings?.homeSubtitle || "Будьте в курсе последних новостей, аналитики и разработок в области искусственного интеллекта.";
   const siteName = siteSettings?.siteName || "AI Aggregator";

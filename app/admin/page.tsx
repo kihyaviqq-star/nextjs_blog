@@ -1,12 +1,26 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { ExternalLink, Edit } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AdminSoftwareTable } from "./components/admin-software-table";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
+interface AdminPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
+  const currentType = typeof params.type === 'string' ? params.type : 'all';
+
+  const whereClause: any = {};
+  if (currentType === 'software') {
+    whereClause.isAi = false;
+  } else if (currentType === 'ai') {
+    whereClause.isAi = true;
+  }
+
   const software = await prisma.software.findMany({
+    where: whereClause,
     orderBy: { createdAt: "desc" },
     include: { category: true }
   });
@@ -20,54 +34,28 @@ export default async function AdminPage() {
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-border/40 text-muted-foreground">
-              <th className="py-3 px-4 font-medium">Название</th>
-              <th className="py-3 px-4 font-medium">Категория</th>
-              <th className="py-3 px-4 font-medium">Ссылки</th>
-              <th className="py-3 px-4 font-medium text-right">Действия</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/20">
-            {software.map((item) => (
-              <tr key={item.id} className="hover:bg-muted/50 transition-colors">
-                <td className="py-3 px-4">
-                  <div className="font-semibold">{item.name}</div>
-                  <div className="text-xs text-muted-foreground">{item.isAi ? "Нейросеть" : "ПО"}</div>
-                </td>
-                <td className="py-3 px-4 text-muted-foreground">
-                  {item.category.name}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex flex-col gap-1">
-                    {item.websiteUrl ? (
-                      <a href={item.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center text-xs">
-                        Оф. сайт <ExternalLink className="w-3 h-3 ml-1" />
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">Нет сайта</span>
-                    )}
-                    {item.localDownloadUrl ? (
-                      <span className="text-green-500 font-medium text-xs">Есть локальный файл</span>
-                    ) : (
-                      <span className="text-destructive font-medium text-xs">Нет локального файла</span>
-                    )}
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <Button asChild size="sm" variant="outline" className="rounded-full shadow-sm">
-                    <Link href={`/admin/edit/${item.id}`}>
-                      <Edit className="w-4 h-4 mr-1" /> Изменить
-                    </Link>
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex items-center gap-2 mb-6 border-b border-border/40 pb-4">
+        <Link 
+          href="/admin?type=all" 
+          className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${currentType === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'}`}
+        >
+          Все записи
+        </Link>
+        <Link 
+          href="/admin?type=ai" 
+          className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${currentType === 'ai' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'}`}
+        >
+          Нейросети
+        </Link>
+        <Link 
+          href="/admin?type=software" 
+          className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${currentType === 'software' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'}`}
+        >
+          Программы
+        </Link>
       </div>
+
+      <AdminSoftwareTable software={software} />
     </div>
   );
 }

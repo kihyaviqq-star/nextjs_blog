@@ -12,6 +12,8 @@ import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { ExpandableText } from "@/components/expandable-text";
 import { CommentSection } from "@/components/comments/comment-section";
 import { RatingWidget } from "@/components/reviews/rating-widget";
+import { AiModelLayout } from "@/components/ai/ai-model-layout";
+import { AiSpecsSection } from "@/components/ai-specs";
 import { auth } from "@/lib/auth";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -89,6 +91,23 @@ export default async function SoftwareDetailsPage({ params }: { params: Promise<
     } : undefined
   };
 
+  // Update views in background
+  prisma.software.update({
+    where: { id: tool.id },
+    data: { views: { increment: 1 } },
+  }).catch(console.error);
+
+  // If this is an AI model, use the dedicated AI layout instead of the Software layout
+  if (tool.isAi) {
+    return (
+      <>
+        <Header />
+        <AiModelLayout tool={tool} />
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       {/* JSON-LD Microdata */}
@@ -140,16 +159,16 @@ export default async function SoftwareDetailsPage({ params }: { params: Promise<
                 {tool.shortDesc}
               </p>
               
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap gap-4 pt-4">
                 {tool.websiteUrl && (
-                  <Button asChild size="lg" className="rounded-full shadow-md font-medium px-8">
+                  <Button asChild size="lg" className="rounded-full shadow-md font-medium px-8 hover:scale-105 transition-transform duration-300">
                     <a href={tool.websiteUrl} target="_blank" rel="noopener noreferrer">
-                      Официальный сайт <ExternalLink className="w-4 h-4 ml-2" />
+                      {tool.isAi ? "Перейти к модели" : "Официальный сайт"} <ExternalLink className="w-4 h-4 ml-2" />
                     </a>
                   </Button>
                 )}
                 
-                {tool.localDownloadUrl && (
+                {!tool.isAi && tool.localDownloadUrl && (
                   <Button asChild size="lg" variant="secondary" className="rounded-full shadow-md font-medium px-8 bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">
                     <a href={tool.localDownloadUrl}>
                       Скачать с сервера <DownloadCloud className="w-4 h-4 ml-2" />

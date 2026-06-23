@@ -23,15 +23,6 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
   const search = typeof params.search === 'string' ? params.search : '';
   const category = typeof params.category === 'string' ? params.category : '';
 
-  const categories = await prisma.softwareCategory.findMany({
-    where: {
-      tools: {
-        some: { isAi: true }
-      }
-    },
-    orderBy: { name: 'asc' }
-  });
-
   const whereClause: any = {
     isAi: true
   };
@@ -47,11 +38,30 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
     whereClause.category = { slug: category };
   }
 
-  const tools = await prisma.software.findMany({
-    where: whereClause,
-    include: { category: true },
-    orderBy: { createdAt: 'desc' },
-  });
+  const ITEMS_PER_PAGE = 24;
+  const pageParam = typeof params.page === 'string' ? params.page : '1';
+  const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
+
+  const [categories, totalItems, tools] = await Promise.all([
+    prisma.softwareCategory.findMany({
+      where: {
+        tools: {
+          some: { isAi: true }
+        }
+      },
+      orderBy: { name: 'asc' }
+    }),
+    prisma.software.count({ where: whereClause }),
+    prisma.software.findMany({
+      where: whereClause,
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
+      skip: (currentPage - 1) * ITEMS_PER_PAGE,
+      take: ITEMS_PER_PAGE,
+    })
+  ]);
+
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
@@ -124,6 +134,31 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
             </Link>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-16 mb-8">
+            {currentPage > 1 && (
+              <Button asChild variant="outline" className="rounded-full shadow-sm">
+                <Link href={`/tools?${new URLSearchParams({ ...params as any, page: (currentPage - 1).toString() }).toString()}`}>
+                  Назад
+                </Link>
+              </Button>
+            )}
+            
+            <div className="flex items-center gap-1 mx-4">
+              <span className="text-sm font-medium">Страница {currentPage}</span>
+              <span className="text-sm text-muted-foreground">из {totalPages}</span>
+            </div>
+
+            {currentPage < totalPages && (
+              <Button asChild variant="outline" className="rounded-full shadow-sm">
+                <Link href={`/tools?${new URLSearchParams({ ...params as any, page: (currentPage + 1).toString() }).toString()}`}>
+                  Вперед
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
       </main>
       <Footer />
     </div>

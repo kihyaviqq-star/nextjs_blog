@@ -190,7 +190,8 @@ export async function runBlogGenerator(
 3. Разбей текст на абзацы и добавь подзаголовки (##).
 4. Обязательно в конце сделай вывод или заключение.
 5. Первая строка (с одним #) должна быть Заголовком статьи. Заголовок должен быть цепляющим.
-6. В самом конце, на новой строке, напиши ТЕГИ через запятую, вот так: "TAGS: ИИ, Нейросети, GPT" (максимум 4 тега).`;
+6. В самом конце, на новой строке, напиши PROMPT для генерации обложки на английском языке (1-2 предложения, детальное визуальное описание без текста), вот так: "IMAGE_PROMPT: A futuristic cyberpunk city with neon lights..."
+7. На самой последней строке напиши ТЕГИ через запятую, вот так: "TAGS: ИИ, Нейросети, GPT" (максимум 4 тега).`;
       } else {
         // Topic Mode: Generate generic article
         const topic = topics.length > 0 ? topics[Math.floor(Math.random() * topics.length)] : "Будущее IT";
@@ -208,16 +209,32 @@ export async function runBlogGenerator(
 2. Статья должна быть подробной, интересной, с фактами и рассуждениями (объем от 2000 символов).
 3. Используй подзаголовки (##) и маркированные списки для читабельности.
 4. Первая строка (с одним #) должна быть Заголовком статьи.
-5. В самом конце, на новой строке, напиши ТЕГИ через запятую, вот так: "TAGS: ${topic}, Аналитика" (максимум 4 тега).`;
+5. В самом конце, на новой строке, напиши PROMPT для генерации обложки на английском языке (1-2 предложения, детальное визуальное описание без текста), вот так: "IMAGE_PROMPT: A glowing quantum computer core..."
+6. На самой последней строке напиши ТЕГИ через запятую, вот так: "TAGS: ${topic}, Аналитика" (максимум 4 тега).`;
       }
 
       console.log('  ⏳ Генерация текста...');
       onProgress?.('Нейросеть генерирует контент...', i + 1, limit);
       
-      const completion = await openai.chat.completions.create({
-        model: "google/gemma-4-31b-it:free",
-        messages: [{ "role": "system", "content": prompt }],
-      });
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
+          model: "anthropic/claude-3.5-haiku",
+          messages: [{ "role": "system", "content": prompt }],
+        });
+      } catch (apiError: any) {
+        if (apiError?.status === 429 || apiError?.code === 429) {
+          console.log('  ⚠️ Лимит запросов (429)! Ждем 15 секунд и пробуем запасную модель...');
+          onProgress?.('Таймаут API. Ожидание и переключение на запасную нейросеть...', i + 1, limit);
+          await new Promise(r => setTimeout(r, 15000));
+          completion = await openai.chat.completions.create({
+            model: "qwen/qwen-2.5-72b-instruct",
+            messages: [{ "role": "system", "content": prompt }],
+          });
+        } else {
+          throw apiError;
+        }
+      }
       
       const responseText = completion.choices[0].message.content || '';
       
@@ -241,6 +258,14 @@ export async function runBlogGenerator(
         markdownContent = markdownContent.replace(/TAGS:\s+(.+)$/im, '').trim();
       }
       
+      // Extract image prompt
+      let imagePrompt = `Tech cyberpunk concept art for ${title}`;
+      const imagePromptMatch = markdownContent.match(/IMAGE_PROMPT:\s+(.+)$/im);
+      if (imagePromptMatch) {
+        imagePrompt = imagePromptMatch[1].trim();
+        markdownContent = markdownContent.replace(/IMAGE_PROMPT:\s+(.+)$/im, '').trim();
+      }
+      
       // Generate excerpt
       let excerpt = markdownContent.substring(0, 200).replace(/#/g, '').trim() + '...';
       
@@ -249,20 +274,10 @@ export async function runBlogGenerator(
       const baseSlug = cleanTitle.replace(/[^a-z0-9\-]+/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 50);
       const slug = `${baseSlug}-${Math.floor(Math.random() * 10000)}`;
       
-      // Image generation via Unsplash
-      const techImageIds = [
-        '1677442136019-21780ecad995', '1676277791608-ac68e4e3f97c', '1576091160399-112ba8d25d1d',
-        '1507146426996-ef05306b995a', '1591488320449-011701bb6704', '1555066931-4365d14bab8c',
-        '1503676260728-1c00da094a0b', '1547826039-bfc35e0f1ea8', '1635070041078-e363dbe005cb',
-        '1518770660439-4636190af475', '1526374965328-7f61d4dc18c5', '1451187580459-43490279c0fa',
-        '1519389953810-195a98bd8f48', '1550751827-4bd374c3f58b', '1531297172864-07186ddfb6ed',
-        '1517433622941-afb229ebfc1c', '1519389953810-195a98bd8f48', '1504384308090-c894fdcc538d',
-        '1525547719571-a2d4ac8945e2', '1488590528505-98d2b5aba04b', '1515879218367-8466d910aaa4',
-        '1498050108023-c5249f4df085', '1558494949-ef010cbdcc31', '1581091226825-a6a2a5aee158',
-        '1484417894907-623262ce5141', '1504868584819-450d9824bf25', '1550751827-4bd374c3f58b'
-      ];
-      const randomImageId = techImageIds[Math.floor(Math.random() * techImageIds.length)];
-      const dynamicCoverImage = `https://images.unsplash.com/photo-${randomImageId}?q=80&w=2070&auto=format&fit=crop`;
+      // Image generation via free AI (Pollinations.ai)
+      const seed = Math.floor(Math.random() * 1000000);
+      const encodedPrompt = encodeURIComponent(imagePrompt);
+      const dynamicCoverImage = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true&seed=${seed}`;
       
       // Convert Markdown to EditorJS JSON
       const editorJson = convertMarkdownToEditorJs(markdownContent);
@@ -301,6 +316,12 @@ export async function runBlogGenerator(
       
     } catch (e) {
       console.error(`  ❌ Ошибка генерации статьи:`, e);
+    }
+    
+    // Задержка 5 секунд между запросами для обхода лимитов (429 Too Many Requests) бесплатного API OpenRouter
+    if (i < limit - 1) {
+      console.log('  ⏳ Ожидание 5 секунд перед следующим запросом...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
   

@@ -133,6 +133,7 @@ model Comment {
   replies   Comment[] @relation("CommentReplies")
 
   @@index([postId])
+  @@index([softwareId])
   @@index([authorId])
   @@index([parentId])
 }
@@ -217,6 +218,7 @@ model Software {
   
   // Separation of AI Tools and General Software
   isAi            Boolean  @default(false)
+  aiSpecs         String?  // JSON with ai-stat.ru metrics (benchmarks, pricing, etc)
   
   // Custom server download link
   localDownloadUrl String?
@@ -232,6 +234,10 @@ model Software {
   updatedAt   DateTime @updatedAt
 
   @@index([categoryId])
+  @@index([isAi])
+  @@index([slug])
+  @@index([name])
+  @@index([createdAt])
 }
 
 model Review {

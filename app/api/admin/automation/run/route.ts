@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { runSoftwareScraper } from "@/lib/services/scraper";
 import { runBlogGenerator } from "@/lib/services/blog-generator";
+import { runAiStatScraper } from "@/lib/services/ai-stat-scraper";
 
 export const maxDuration = 300; // 5 minutes max duration for serverless functions
 export const dynamic = 'force-dynamic'; // Prevent Next.js from caching the streaming response
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
           const settings = await prisma.automationSettings.findUnique({ where: { id: "default" } });
           const topics = settings?.blogTopics || "Искусственный интеллект, Нейросети";
           result = await runBlogGenerator(limit, topics, onProgress);
+        } else if (type === "AI_SERVICE") {
+          result = await runAiStatScraper(limit, onProgress);
         } else {
           throw new Error("Invalid type");
         }

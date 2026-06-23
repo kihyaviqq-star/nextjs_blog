@@ -190,10 +190,25 @@ ${rawDescription}
 5. В category_slug напиши slug для этой категории на английском (маленькими буквами, через дефис).
 6. Убедись, что JSON валидный.`;
           
-          const completion = await openai.chat.completions.create({
-            model: "google/gemma-4-31b-it:free",
-            messages: [{ "role": "system", "content": prompt }]
-          });
+          let completion;
+          try {
+            completion = await openai.chat.completions.create({
+              model: "google/gemini-2.5-flash",
+              messages: [{ "role": "system", "content": prompt }]
+            });
+          } catch (apiError: any) {
+            if (apiError?.status === 429 || apiError?.code === 429) {
+              console.log('  ⚠️ Лимит запросов (429)! Ждем 15 секунд и пробуем запасную модель...');
+              onProgress?.('Таймаут API. Ожидание и переключение на запасную нейросеть...', processedCount + 1, limit);
+              await new Promise(r => setTimeout(r, 15000));
+              completion = await openai.chat.completions.create({
+                model: "meta-llama/llama-3.1-8b-instruct",
+                messages: [{ "role": "system", "content": prompt }]
+              });
+            } else {
+              throw apiError;
+            }
+          }
           
           const content = completion.choices[0].message.content || '{}';
           try {
@@ -273,6 +288,10 @@ ${rawDescription}
     } catch (e) {
       console.error(`  ❌ Ошибка при парсинге ${link}:`, e);
     }
+    
+    // Задержка 5 секунд между запросами для обхода лимитов (429 Too Many Requests) бесплатного API OpenRouter
+    console.log('  ⏳ Ожидание 5 секунд перед следующим запросом...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
   
   return { added: processedCount, names: addedNames };

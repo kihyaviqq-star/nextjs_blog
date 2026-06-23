@@ -28,3 +28,22 @@ export async function updateSoftwareLinks(
     return { success: false, error: "Database update failed" };
   }
 }
+
+export async function deleteBulkSoftware(ids: string[]) {
+  try {
+    await prisma.software.deleteMany({
+      where: {
+        id: { in: ids }
+      }
+    });
+    
+    revalidatePath("/admin");
+    revalidatePath("/software");
+    revalidatePath("/tools");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete software:", error);
+    return { success: false, error: "Database delete failed" };
+  }
+}
