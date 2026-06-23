@@ -38,27 +38,14 @@ export async function findOfficialSite(appName: string): Promise<string> {
   }
 }
 
-const DEFAULT_CATEGORY_SLUG = 'system';
-
 export async function runSoftwareScraper(
   limit: number = 3,
   onProgress?: (msg: string, current: number, total: number) => void
 ): Promise<{ added: number, names: string[] }> {
   console.log(`🤖 Запуск Робота-Скрапера (Лимит: ${limit}) 🤖`);
   
-  let category = await prisma.softwareCategory.findUnique({
-    where: { slug: DEFAULT_CATEGORY_SLUG }
-  });
-  
-  if (!category) {
-    category = await prisma.softwareCategory.create({
-      data: {
-        name: 'Системные',
-        slug: DEFAULT_CATEGORY_SLUG,
-        icon: 'Monitor',
-      }
-    });
-  }
+  // We will no longer force a default category for everything.
+  // The category will be generated dynamically by AI for each software.
 
   const BASE_URL = 'https://www.softportal.com/';
   
@@ -151,8 +138,26 @@ export async function runSoftwareScraper(
           licenseType = $p(el).next('span').text().trim().includes('Бесплат') ? 'Free' : 'Trial';
         }
       });
+
+      let size = '';
+      $p('.software-info-block span').each((i, el) => {
+        if ($p(el).text().includes('Размер:')) {
+          size = $p(el).next('span').text().trim() || '';
+        }
+      });
+
+      let developer = '';
+      $p('.software-info-block span').each((i, el) => {
+        if ($p(el).text().includes('Разработчик:')) {
+          developer = $p(el).next().text().trim() || '';
+        }
+      });
       
       let aiRewrittenDescription = '';
+      let extractedTags: string[] = [];
+      let extractedCategoryName = 'Системные';
+      let extractedCategorySlug = 'system';
+      
       onProgress?.(`Поиск официального сайта для ${name}...`, processedCount + 1, limit);
       const officialSite = await findOfficialSite(name);
       
@@ -165,26 +170,44 @@ export async function runSoftwareScraper(
             apiKey: process.env.OPENROUTER_API_KEY,
           });
 
-          const prompt = `Ты - профессиональный IT-копирайтер. Твоя задача написать SEO-оптимизированный обзор программы ${name}.
+          const prompt = `Ты - профессиональный IT-копирайтер. Твоя задача написать SEO-оптимизированный обзор программы ${name}, выделить для нее теги и определить категорию.
 Используй следующий исходный текст с SoftPortal в качестве базы фактов (но не копируй его дословно):
 ${rawDescription}
 
 Официальный сайт для справки: ${officialSite}
 
 ВАЖНЫЕ ПРАВИЛА:
-1. ВЫДАЙ ТОЛЬКО ГОТОВЫЙ MARKDOWN ТЕКСТ. 
-2. НИКАКИХ ВСТУПИТЕЛЬНЫХ СЛОВ (например: "Вот ваш текст").
-3. Начни сразу с заголовка (например, # ${name} - лучший инструмент для...).
-4. Разбей текст на логические блоки с подзаголовками (##).
-5. Обязательно выдели ключевые функции маркированным списком (- или *).
-6. Объем: 2000-3000 символов.`;
+1. Выдай ответ СТРОГО в формате JSON без markdown-блоков (без \`\`\`json).
+2. Формат JSON:
+{
+  "markdown_description": "Твой написанный текст в Markdown (с заголовком # ${name}, подзаголовками ## и списками - ). Объем 2000-3000 символов.",
+  "tags": ["Тег1", "Тег2", "Тег3", "Тег4", "Тег5"],
+  "category_name": "Мультимедиа",
+  "category_slug": "multimedia"
+}
+3. В тегах укажи особенности, тип лицензии и т.д.
+4. В category_name выбери одну самую подходящую широкую категорию (например: Мультимедиа, Интернет, Система, Офис, Безопасность, Разработка).
+5. В category_slug напиши slug для этой категории на английском (маленькими буквами, через дефис).
+6. Убедись, что JSON валидный.`;
           
           const completion = await openai.chat.completions.create({
             model: "google/gemma-4-31b-it:free",
-            messages: [{ "role": "system", "content": prompt }],
+            messages: [{ "role": "system", "content": prompt }]
           });
           
-          aiRewrittenDescription = completion.choices[0].message.content || '';
+          const content = completion.choices[0].message.content || '{}';
+          try {
+            const parsed = JSON.parse(content.replace(/```json\n?/, '').replace(/```/, ''));
+            aiRewrittenDescription = parsed.markdown_description || rawDescription;
+            if (Array.isArray(parsed.tags)) {
+              extractedTags = parsed.tags;
+            }
+            if (parsed.category_name) extractedCategoryName = parsed.category_name;
+            if (parsed.category_slug) extractedCategorySlug = parsed.category_slug;
+          } catch (jsonErr) {
+            console.error('  ⚠️ Ошибка парсинга JSON от AI:', jsonErr);
+            aiRewrittenDescription = rawDescription;
+          }
         } catch (apiError) {
           console.error('  ⚠️ Ошибка API OpenRouter:', apiError);
           aiRewrittenDescription = rawDescription;
@@ -194,6 +217,21 @@ ${rawDescription}
       }
       
       const finalUrl = officialSite || link;
+      
+      // Автоматическое создание или получение категории
+      let softwareCategory = await prisma.softwareCategory.findUnique({
+        where: { slug: extractedCategorySlug }
+      });
+      
+      if (!softwareCategory) {
+        softwareCategory = await prisma.softwareCategory.create({
+          data: {
+            name: extractedCategoryName,
+            slug: extractedCategorySlug,
+            icon: 'Folder', // Иконка по умолчанию
+          }
+        });
+      }
       
       await prisma.software.create({
         data: {
@@ -207,11 +245,24 @@ ${rawDescription}
           platforms: platforms,
           licenseType: licenseType,
           screenshots: finalScreenshots.length > 0 ? JSON.stringify(finalScreenshots) : null,
+          size: size || null,
+          developer: developer || null,
+          tags: extractedTags.length > 0 ? JSON.stringify(extractedTags) : null,
           isAutoGenerated: true,
           sourceUrl: link,
           lastCrawledAt: new Date(),
           isAi: false,
-          categoryId: category.id,
+          categoryId: softwareCategory.id,
+        }
+      });
+      
+      // Сразу создаем запись в логе для каждой программы
+      await prisma.automationLog.create({
+        data: {
+          type: "SOFTWARE",
+          status: "SUCCESS",
+          itemsAdded: 1,
+          message: `Программа успешно опубликована: ${name}`
         }
       });
       

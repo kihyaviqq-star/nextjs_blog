@@ -22,6 +22,8 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
   const params = await searchParams;
   const search = typeof params.search === 'string' ? params.search : '';
   const category = typeof params.category === 'string' ? params.category : '';
+  const platform = typeof params.platform === 'string' ? params.platform : '';
+  const license = typeof params.license === 'string' ? params.license : '';
   const view = typeof params.view === 'string' ? params.view : 'list';
   const page = typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
   const currentPage = isNaN(page) || page < 1 ? 1 : page;
@@ -43,11 +45,26 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
     whereClause.OR = [
       { name: { contains: search.toLowerCase() } },
       { shortDesc: { contains: search.toLowerCase() } },
+      { tags: { contains: search.toLowerCase() } }, // Also search within tags
     ];
   }
 
   if (category && category !== 'all') {
     whereClause.category = { slug: category };
+  }
+
+  if (platform && platform !== 'all') {
+    whereClause.platforms = { contains: platform };
+  }
+
+  if (license && license !== 'all') {
+    if (license === 'Free') {
+      whereClause.pricing = { contains: 'Free' };
+    } else if (license === 'Paid') {
+      whereClause.pricing = { contains: 'Paid' };
+    } else if (license === 'Trial') {
+      whereClause.pricing = { contains: 'Trial' };
+    }
   }
 
   // Count total for pagination
@@ -150,6 +167,11 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
                       <span className="px-2.5 py-0.5 rounded-full bg-secondary text-xs font-medium text-muted-foreground border border-border/50">
                         {tool.platforms || "Windows"}
                       </span>
+                      {tool.size && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-secondary text-xs font-medium text-muted-foreground border border-border/50">
+                          {tool.size}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </Link>

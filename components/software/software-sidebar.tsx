@@ -21,6 +21,8 @@ export function SoftwareSidebar({ categories }: { categories: Category[] }) {
 
   const currentCategory = searchParams.get("category") || "all";
   const currentSearch = searchParams.get("search") || "";
+  const currentPlatform = searchParams.get("platform") || "all";
+  const currentLicense = searchParams.get("license") || "all";
   const currentView = searchParams.get("view") || "list";
   
   const [searchValue, setSearchValue] = useState(currentSearch);
@@ -93,6 +95,42 @@ export function SoftwareSidebar({ categories }: { categories: Category[] }) {
           >
             <GridIcon className="w-4 h-4 mr-2" /> Плитка
           </Button>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h3 className="font-bold text-lg mb-4">Фильтры</h3>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground font-medium mb-1.5 block">ОС / Платформа</label>
+            <select 
+              className="w-full bg-secondary/50 border border-border/50 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+              value={currentPlatform}
+              onChange={(e) => updateFilters({ platform: e.target.value })}
+            >
+              <option value="all">Любая</option>
+              <option value="Windows">Windows</option>
+              <option value="macOS">macOS</option>
+              <option value="Linux">Linux</option>
+              <option value="Android">Android</option>
+              <option value="iOS">iOS</option>
+              <option value="Web">Web-сервис</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="text-xs text-muted-foreground font-medium mb-1.5 block">Тип лицензии</label>
+            <select 
+              className="w-full bg-secondary/50 border border-border/50 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+              value={currentLicense}
+              onChange={(e) => updateFilters({ license: e.target.value })}
+            >
+              <option value="all">Любая</option>
+              <option value="Free">Бесплатная (Free)</option>
+              <option value="Trial">Условно-бесплатная (Trial)</option>
+              <option value="Paid">Платная (Paid)</option>
+            </select>
+          </div>
         </div>
       </div>
 

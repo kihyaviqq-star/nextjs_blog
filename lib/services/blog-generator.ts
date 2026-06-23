@@ -284,6 +284,17 @@ export async function runBlogGenerator(
       });
       
       console.log(`  ✅ Статья опубликована: ${title}`);
+      
+      // Сразу создаем запись в логе
+      await prisma.automationLog.create({
+        data: {
+          type: "BLOG",
+          status: "SUCCESS",
+          itemsAdded: 1,
+          message: `Статья успешно опубликована: ${title}`
+        }
+      });
+      
       onProgress?.(`Опубликовано: ${title}`, i + 1, limit);
       addedTitles.push(title);
       processedCount++;

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Play, AlertCircle, CheckCircle2, Server, Bot, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function AutomationAdminPage() {
   const [settings, setSettings] = useState<any>(null);
@@ -60,9 +61,9 @@ export default function AutomationAdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings)
       });
-      alert("Настройки успешно сохранены!");
+      toast.success("Настройки успешно сохранены!");
     } catch (e) {
-      alert("Ошибка при сохранении настроек.");
+      toast.error("Ошибка при сохранении настроек.");
     } finally {
       setIsSaving(false);
     }
@@ -110,10 +111,10 @@ export default function AutomationAdminPage() {
                   message: data.message
                 });
               } else if (data.status === 'done') {
-                alert(`Готово! ${data.message}`);
+                toast.success(`Готово! ${data.message}`);
                 setProgress(prev => ({ ...prev, visible: false }));
               } else if (data.status === 'error') {
-                alert(`Ошибка: ${data.message}`);
+                toast.error(`Ошибка: ${data.message}`);
                 setProgress(prev => ({ ...prev, visible: false }));
               }
             } catch (e) {
@@ -125,7 +126,7 @@ export default function AutomationAdminPage() {
 
       fetchData(); // refresh logs
     } catch (e) {
-      alert("Произошла ошибка при запуске.");
+      toast.error("Произошла ошибка при запуске.");
       setProgress(prev => ({ ...prev, visible: false }));
     } finally {
       if (type === "SOFTWARE") setIsSoftwareRunning(false);
