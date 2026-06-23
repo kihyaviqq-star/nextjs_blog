@@ -1,31 +1,33 @@
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Необходимые системные пакеты
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
-
-# Копируем манифесты зависимостей
+WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-
-# Устанавливаем все зависимости
 RUN npm ci
 
-# Копируем весь исходный код проекта
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Генерируем клиент базы данных (это не требует активного подключения)
+# Получаем DATABASE_URL из аргументов docker-compose
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 RUN npx prisma generate
+RUN npm run build
 
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+FROM node:20-alpine AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN apk add --no-cache openssl
 
-# При запуске контейнера:
-# 1. Сначала делаем сборку (теперь БД будет доступна)
-# 2. Затем запускаем сервер
-CMD ["sh", "-c", "npm run build && npm start"]
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
