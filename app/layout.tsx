@@ -45,21 +45,26 @@ function toAbsoluteUrl(baseUrl: string, value?: string | null): string | undefin
 // Generate metadata with site settings
 export async function generateMetadata(): Promise<Metadata> {
   // Create default if not exists using atomic upsert to prevent race conditions during build
-  const settings = await prisma.siteSettings.upsert({
-    where: { id: "default" },
-    update: {},
-    create: {
-      id: "default",
-      siteName: "Blog",
-      metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
-    },
-    select: {
-      siteName: true,
-      metaDescription: true,
-      faviconUrl: true,
-      logoUrl: true,
-    },
-  });
+  let settings: any = { siteName: "Blog", metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта", faviconUrl: null, logoUrl: null };
+  try {
+    settings = await prisma.siteSettings.upsert({
+      where: { id: "default" },
+      update: {},
+      create: {
+        id: "default",
+        siteName: "Blog",
+        metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
+      },
+      select: {
+        siteName: true,
+        metaDescription: true,
+        faviconUrl: true,
+        logoUrl: true,
+      },
+    });
+  } catch (e) {
+    console.warn("Database unavailable during build. Using default metadata settings.");
+  }
 
   const siteName = settings.siteName || "";
   const siteDescription = settings.metaDescription || "";
@@ -138,14 +143,19 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Fetch settings for Schema.org
-  const settings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
-    select: {
-      siteName: true,
-      metaDescription: true,
-      logoUrl: true,
-    },
-  });
+  let settings: any = null;
+  try {
+    settings = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+      select: {
+        siteName: true,
+        metaDescription: true,
+        logoUrl: true,
+      },
+    });
+  } catch (e) {
+    console.warn("Database unavailable during build. Using default Schema.org settings.");
+  }
 
   const siteName = settings?.siteName || "Blog";
   const siteUrl = await getBaseUrlFromRequest();
