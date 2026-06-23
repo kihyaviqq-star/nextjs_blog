@@ -6,10 +6,13 @@ import { z } from "zod";
 import rateLimit from "@/lib/rate-limit";
 
 const commentSchema = z.object({
-  postId: z.string(),
+  postId: z.string().optional(),
+  softwareId: z.string().optional(),
   content: z.string().min(1, "Comment cannot be empty").max(1000, "Comment is too long"),
   parentId: z.string().optional(),
   imageUrl: z.string().nullable().optional(),
+}).refine(data => data.postId || data.softwareId, {
+  message: "Either postId or softwareId must be provided",
 });
 
 const limiter = rateLimit({
@@ -66,14 +69,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const postId = searchParams.get("postId");
+    const softwareId = searchParams.get("softwareId");
     const pageRaw = parseInt(searchParams.get("page") || "1", 10);
     const limitRaw = parseInt(searchParams.get("limit") || "15", 10);
     const page = Number.isNaN(pageRaw) ? 1 : Math.max(pageRaw, 1);
     const limit = Number.isNaN(limitRaw) ? 15 : Math.min(Math.max(limitRaw, 1), 50);
 
-    if (!postId) {
-      return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
+    if (!postId && !softwareId) {
+      return NextResponse.json({ error: "Post ID or Software ID is required" }, { status: 400 });
     }
+    
+    const targetFilter = postId ? { postId } : { softwareId };
 
     // Check if prisma is properly initialized
     if (!prisma || !prisma.comment) {
@@ -88,7 +94,7 @@ export async function GET(request: NextRequest) {
     // 1) Загружаем только верхнеуровневые комментарии текущей страницы
     const rootComments = await prisma.comment.findMany({
       where: {
-        postId,
+        ...targetFilter,
         parentId: null,
       },
       include: {
@@ -119,7 +125,7 @@ export async function GET(request: NextRequest) {
     // Total count including replies
     const totalAll = await prisma.comment.count({
       where: {
-        postId,
+        ...targetFilter,
       },
     });
 
@@ -142,7 +148,7 @@ export async function GET(request: NextRequest) {
     while (frontier.length > 0 && descendants.length < maxDescendants) {
       const batch = await prisma.comment.findMany({
         where: {
-          postId,
+          ...targetFilter,
           parentId: {
             in: frontier,
           },
@@ -232,7 +238,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { postId, content, parentId, imageUrl } = result.data;
+    const { postId, softwareId, content, parentId, imageUrl } = result.data;
 
     // Rate limiting: Check last comment by this user (max 1 per 5 seconds)
     const fiveSecondsAgo = new Date(Date.now() - 5000);
@@ -264,14 +270,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if post exists
-    const post = await prisma.post.findUnique({
-      where: { id: postId },
-    });
+    if (postId) {
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+      });
 
-    if (!post) {
-      console.error(`POST /api/comments: Post not found: ${postId}`);
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      if (!post) {
+        return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      }
+    } else if (softwareId) {
+      const software = await prisma.software.findUnique({
+        where: { id: softwareId },
+      });
+
+      if (!software) {
+        return NextResponse.json({ error: "Software not found" }, { status: 404 });
+      }
     }
 
     // Check if parent comment exists (if parentId provided)
@@ -297,7 +311,8 @@ export async function POST(request: NextRequest) {
       data: {
         content,
         imageUrl: imageUrl || null,
-        postId,
+        postId: postId || null,
+        softwareId: softwareId || null,
         authorId: session.user.id as string,
         parentId: parentId || null,
       },

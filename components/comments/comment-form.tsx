@@ -13,16 +13,18 @@ import { cn } from "@/lib/utils";
 import { EmojiPicker } from "@/components/emoji-picker";
 
 interface CommentFormProps {
-  postId: string;
+  postId?: string;
+  softwareId?: string;
   parentId?: string;
   onSuccess: (comment: any) => void;
   onCancel?: () => void;
   autoFocus?: boolean;
+  placeholder?: string;
 }
 
 const MAX_COMMENT_LENGTH = 1000;
 
-export function CommentForm({ postId, parentId, onSuccess, onCancel, autoFocus }: CommentFormProps) {
+export function CommentForm({ postId, softwareId, parentId, onSuccess, onCancel, autoFocus, placeholder = "Напишите комментарий..." }: CommentFormProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [image, setImage] = useState<File | null>(null);

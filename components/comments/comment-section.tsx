@@ -8,10 +8,13 @@ import { CommentItem } from "./comment-item";
 import { CommentForm } from "./comment-form";
 
 interface CommentSectionProps {
-  postId: string;
+  postId?: string;
+  softwareId?: string;
 }
 
-export function CommentSection({ postId }: CommentSectionProps) {
+export function CommentSection({ postId, softwareId }: CommentSectionProps) {
+  const targetId = postId || softwareId;
+  const idQueryParam = postId ? `postId=${postId}` : `softwareId=${softwareId}`;
   const [comments, setComments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -23,11 +26,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
   const fetchComments = async (pageNum: number) => {
     try {
-      if (!postId) {
-        console.error("postId is missing in fetchComments");
+      if (!targetId) {
+        console.error("Target ID is missing in fetchComments");
         return;
       }
-      const res = await fetch(`/api/comments?postId=${postId}&page=${pageNum}&limit=15`);
+      const res = await fetch(`/api/comments?${idQueryParam}&page=${pageNum}&limit=15`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(`Failed to fetch comments: ${res.status} ${res.statusText}`, errorText);
@@ -55,7 +58,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
   useEffect(() => {
     fetchComments(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId]);
+  }, [targetId]);
 
   const loadMore = () => {
     const nextPage = page + 1;
@@ -171,7 +174,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
       </div>
 
       <div className="mb-10">
-        <CommentForm postId={postId} onSuccess={handleNewComment} />
+        <CommentForm postId={postId} softwareId={softwareId} onSuccess={handleNewComment} />
       </div>
 
       <div className="space-y-8">
@@ -180,6 +183,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
             key={comment.id} 
             comment={comment} 
             postId={postId}
+            softwareId={softwareId}
             onReplyAdded={handleReplyAdded}
             onCommentDeleted={(deletedId) => {
               // Remove deleted comment from the list + корректно уменьшаем счётчики

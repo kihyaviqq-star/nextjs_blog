@@ -23,13 +23,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   if (!tool) return { title: "Не найдено" };
   
-  const title = `${tool.name} — Обзор нейросети и AI сервиса`;
-  const description = tool.shortDesc || `Узнайте больше об искусственном интеллекте ${tool.name}. Подробное описание, функционал, скриншоты и ссылки.`;
+  const title = `${tool.name} — Скачать и обзор программы`;
+  const description = tool.shortDesc || `Узнайте больше о программе ${tool.name}. Описание, скриншоты, отзывы и загрузка.`;
   
   return {
     title,
     description,
-    keywords: [tool.name, tool.category.name, "нейросеть", "искусственный интеллект", "AI сервис", "AI"],
+    keywords: [tool.name, tool.category.name, "скачать программу", "обзор ПО", "Windows"],
     openGraph: {
       title,
       description,
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function ToolDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SoftwareDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const tool = await prisma.software.findUnique({
     where: { slug: resolvedParams.slug },
@@ -73,7 +73,7 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": tool.name,
-    "operatingSystem": tool.platforms || "Web",
+    "operatingSystem": tool.platforms || "Windows",
     "applicationCategory": tool.category.name,
     "description": tool.shortDesc,
     "image": tool.logoUrl || "",
@@ -99,8 +99,8 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
       
       <Header />
       <main className="flex-1 container mx-auto max-w-4xl py-12 px-4 md:px-6">
-        <Link href="/tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-8 transition-colors group">
-          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Каталог нейросетей
+        <Link href="/software" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-8 transition-colors group">
+          <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Глобальный каталог ПО
         </Link>
 
         <div className="bg-card rounded-3xl border border-border/40 p-8 md:p-10 shadow-sm hover:shadow-md transition-shadow mb-12">
@@ -126,10 +126,7 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
                 </div>
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 flex items-center gap-4">
-                {tool.name}
-                <span className="text-sm px-3 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-full font-semibold">AI</span>
-              </h1>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">{tool.name}</h1>
               
               <div className="mb-6">
                 <RatingWidget 
@@ -147,7 +144,7 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
                 {tool.websiteUrl && (
                   <Button asChild size="lg" className="rounded-full shadow-md font-medium px-8">
                     <a href={tool.websiteUrl} target="_blank" rel="noopener noreferrer">
-                      Открыть сервис <ExternalLink className="w-4 h-4 ml-2" />
+                      Официальный сайт <ExternalLink className="w-4 h-4 ml-2" />
                     </a>
                   </Button>
                 )}
@@ -176,7 +173,7 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
         })()}
 
         <div className="mb-16">
-          <h2 className="text-2xl font-bold mb-6">Обзор нейросети</h2>
+          <h2 className="text-2xl font-bold mb-6">О программе</h2>
           <div className="prose prose-lg dark:prose-invert max-w-none bg-card rounded-3xl border border-border/40 p-8 md:p-10 shadow-sm">
             <ExpandableText maxHeight={400}>
               <div className="text-foreground leading-loose">

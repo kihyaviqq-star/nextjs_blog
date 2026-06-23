@@ -7,17 +7,48 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 
+import { ToolsFilters } from "@/components/tools/tools-filters";
+
 export const metadata: Metadata = {
   title: "Каталог нейросетей и ПО",
   description: "Огромная база нейросетей, AI сервисов и программ для работы с искусственным интеллектом.",
 };
 
-export default async function ToolsDirectoryPage() {
+interface ToolsPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProps) {
+  const params = await searchParams;
+  const search = typeof params.search === 'string' ? params.search : '';
+  const category = typeof params.category === 'string' ? params.category : '';
+
   const categories = await prisma.softwareCategory.findMany({
+    where: {
+      tools: {
+        some: { isAi: true }
+      }
+    },
     orderBy: { name: 'asc' }
   });
 
+  const whereClause: any = {
+    isAi: true
+  };
+  
+  if (search) {
+    whereClause.OR = [
+      { name: { contains: search.toLowerCase() } },
+      { shortDesc: { contains: search.toLowerCase() } },
+    ];
+  }
+
+  if (category && category !== 'all') {
+    whereClause.category = { slug: category };
+  }
+
   const tools = await prisma.software.findMany({
+    where: whereClause,
     include: { category: true },
     orderBy: { createdAt: 'desc' },
   });
@@ -26,7 +57,7 @@ export default async function ToolsDirectoryPage() {
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <Header />
       <main className="flex-1 container mx-auto max-w-6xl py-16 px-4 md:px-6">
-        <div className="flex flex-col items-center text-center space-y-4 mb-16">
+        <div className="flex flex-col items-center text-center space-y-4 mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary mb-4 text-sm font-medium">
             <Sparkles className="w-4 h-4" />
             <span>Каталог AI сервисов</span>
@@ -34,41 +65,27 @@ export default async function ToolsDirectoryPage() {
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight">
             Все нейросети в одном месте
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mt-4 leading-relaxed font-light">
+          <p className="text-xl text-muted-foreground max-w-2xl mt-4 leading-relaxed font-light mb-8">
             Найдите лучший инструмент для своих задач. Сравнивайте, читайте отзывы и выбирайте подходящий ИИ.
           </p>
-          
-          <div className="w-full max-w-xl mt-8 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input 
-              placeholder="Поиск нейросети... (например: ChatGPT)" 
-              className="w-full pl-12 pr-4 py-6 text-lg rounded-full bg-secondary/50 border-border/50 focus-visible:ring-primary shadow-sm"
-            />
-          </div>
         </div>
 
-        {categories.length === 0 && tools.length === 0 && (
+        <div className="mb-16">
+          <ToolsFilters categories={categories} />
+        </div>
+
+        {categories.length === 0 && tools.length === 0 && !search && !category && (
           <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-border/50">
             <h3 className="text-2xl font-semibold mb-2">Каталог пока пуст</h3>
             <p className="text-muted-foreground">Мы уже работаем над заполнением базы лучшими нейросетями.</p>
           </div>
         )}
 
-        {/* Categories / Tabs placeholder */}
-        {categories.length > 0 && (
-          <div className="flex flex-wrap gap-3 mb-12 justify-center items-center">
-            <Button variant="default" className="rounded-full px-6 shadow-sm font-medium text-sm">
-              Все категории
-            </Button>
-            {categories.map(cat => (
-              <Button 
-                key={cat.id} 
-                variant="outline" 
-                className="rounded-full px-5 border-border/40 bg-secondary/30 hover:bg-secondary/60 text-foreground/80 hover:text-foreground shadow-sm transition-all"
-              >
-                <span className="mr-2 text-lg">{cat.icon}</span> {cat.name}
-              </Button>
-            ))}
+        {(search || category) && tools.length === 0 && (
+          <div className="text-center py-20">
+            <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+            <h3 className="text-2xl font-semibold mb-2">Ничего не найдено</h3>
+            <p className="text-muted-foreground">По вашему запросу не нашлось подходящих программ. Попробуйте изменить фильтры.</p>
           </div>
         )}
 

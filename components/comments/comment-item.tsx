@@ -34,14 +34,22 @@ interface Comment {
 }
 
 interface CommentItemProps {
-  comment: Comment;
-  postId: string;
-  onReplyAdded: (newComment: Comment) => void;
+  comment: any;
+  postId?: string;
+  softwareId?: string;
+  onReplyAdded: (reply: any) => void;
   onCommentDeleted?: (commentId: string) => void;
   level?: number;
 }
 
-export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, level = 0 }: CommentItemProps) {
+export function CommentItem({ 
+  comment, 
+  postId, 
+  softwareId,
+  onReplyAdded,
+  onCommentDeleted, 
+  level = 0 
+}: CommentItemProps) {
   const { data: session } = useSession();
   const [isReplying, setIsReplying] = useState(false);
   const [replies, setReplies] = useState<Comment[]>(comment.replies || []);
@@ -271,15 +279,16 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
           </div>
 
           {isReplying && (
-            <div className="mt-4 pl-4 border-l-2 border-border/50">
-               <CommentForm 
-                 postId={postId} 
-                 parentId={comment.id} 
-                 onSuccess={handleReplySuccess}
-                 onCancel={() => setIsReplying(false)}
-                 autoFocus
-               />
-            </div>
+            <div className="mt-4 animate-in slide-in-from-top-2">
+            <CommentForm 
+              postId={postId}
+              softwareId={softwareId}
+              parentId={comment.id}
+              onSuccess={handleReplySuccess}
+              onCancel={() => setIsReplying(false)}
+              placeholder={`Ответить ${comment.author.name || "пользователю"}...`}
+            />
+          </div>
           )}
         </div>
       </div>
@@ -291,6 +300,7 @@ export function CommentItem({ comment, postId, onReplyAdded, onCommentDeleted, l
               key={reply.id} 
               comment={reply} 
               postId={postId}
+              softwareId={softwareId}
               onReplyAdded={(newReply) => {
                 // Update the specific reply's replies in the parent state immediately
                 // newReply.parentId должен быть равен reply.id, если это ответ на reply
