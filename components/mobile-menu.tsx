@@ -26,7 +26,8 @@ import {
   X,
   Moon,
   Sun,
-  Sparkles
+  Sparkles,
+  Download
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
@@ -101,13 +102,21 @@ export function MobileMenu({ session, status, canWrite }: MobileMenuProps) {
               <FileText className="w-5 h-5" />
               <span className="text-base font-medium">Блог</span>
             </Link>
-            <Link
-              href="/tools"
+            <Link 
+              href="/tools" 
               onClick={handleLinkClick}
               className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-primary"
             >
               <Sparkles className="w-5 h-5" />
               <span className="text-base font-medium">Каталог ИИ</span>
+            </Link>
+            <Link 
+              href="/software" 
+              onClick={handleLinkClick}
+              className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-foreground"
+            >
+              <Download className="w-5 h-5" />
+              <span className="text-base font-medium">Программы</span>
             </Link>
           </div>
           <Separator />

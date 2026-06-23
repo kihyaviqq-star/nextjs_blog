@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { LogOut, User, Settings, ChevronDown, FileText, Users, LayoutDashboard } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, FileText, Users, LayoutDashboard, TrendingUp } from "lucide-react";
 
 export function UserMenu() {
   const { data: session } = useSession();
@@ -113,6 +113,18 @@ export function UserMenu() {
               <Link href="/dashboard/users" className="cursor-pointer">
                 <Users className="mr-2 h-4 w-4" />
                 <span>Пользователи</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin" className="cursor-pointer">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <span>База программ</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/automation" className="cursor-pointer">
+                <TrendingUp className="mr-2 h-4 w-4 text-purple-500" />
+                <span className="text-purple-500 font-medium">Автоматизация</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

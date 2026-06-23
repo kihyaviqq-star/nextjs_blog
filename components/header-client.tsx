@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { MobileMenu } from "@/components/mobile-menu";
 import { Button } from "@/components/ui/button";
-import { PenSquare, LogIn, Sparkles } from "lucide-react";
+import { PenSquare, LogIn, Sparkles, Download } from "lucide-react";
 import { SignInModal } from "@/components/signin-modal";
 
 interface HeaderClientProps {
@@ -78,6 +78,9 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
             <Link href="/" className="transition-colors hover:text-primary text-foreground/80">Блог</Link>
             <Link href="/tools" className="transition-colors text-primary flex items-center gap-1">
               <Sparkles className="w-4 h-4" /> Каталог ИИ
+            </Link>
+            <Link href="/software" className="transition-colors hover:text-primary flex items-center gap-1 text-foreground/80">
+              <Download className="w-4 h-4" /> Программы
             </Link>
           </nav>
 

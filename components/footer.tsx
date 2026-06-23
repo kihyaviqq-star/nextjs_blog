@@ -1,14 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { cache } from "react";
+import { FooterLayout } from "./footer-layout";
 
 // Cache the settings fetch to avoid duplicate queries
-const getFooterText = cache(async () => {
+const getFooterSettings = cache(async () => {
   try {
     const settings = await prisma.siteSettings.findUnique({
       where: { id: "default" },
-      select: { footerText: true },
+      select: { siteName: true, footerText: true, homeSubtitle: true },
     });
-    return settings?.footerText || null;
+    return settings || null;
   } catch (error) {
     console.error("Failed to fetch footer settings:", error);
     return null;
@@ -17,24 +18,18 @@ const getFooterText = cache(async () => {
 
 // Server component for server pages
 export async function Footer() {
-  const footerText = await getFooterText();
+  const settings = await getFooterSettings();
   const currentYear = new Date().getFullYear();
 
+  const siteName = settings?.siteName || "Synaptix";
+  const description = settings?.footerText || settings?.homeSubtitle || "Пульс нейросетей: технологии, которые меняют будущее.";
+
   return (
-    <footer className="border-t border-zinc-800 dark:border-zinc-800 mt-auto">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 text-sm text-zinc-500 dark:text-gray-400">
-          <div className="text-center sm:text-left">
-            © {currentYear} — Все права защищены
-          </div>
-          {footerText && (
-            <div className="text-center sm:text-right">
-              {footerText}
-            </div>
-          )}
-        </div>
-      </div>
-    </footer>
+    <FooterLayout 
+      siteName={siteName} 
+      description={description} 
+      currentYear={currentYear} 
+    />
   );
 }
 
