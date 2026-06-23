@@ -10,7 +10,7 @@ export async function RelatedModels({ categoryId, currentSoftwareId }: { categor
       id: { not: currentSoftwareId }
     },
     take: 3,
-    orderBy: { views: 'desc' }
+    orderBy: { createdAt: 'desc' }
   });
 
   if (related.length === 0) return null;
