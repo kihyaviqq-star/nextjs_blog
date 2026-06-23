@@ -177,6 +177,11 @@ export async function runAiStatScraper(
           });
         }
 
+        let finalLogoUrl = data.logoUrl || null;
+        if (finalLogoUrl && finalLogoUrl.startsWith('/')) {
+          finalLogoUrl = `https://ai-stat.ru${finalLogoUrl}`;
+        }
+
         await prisma.software.create({
           data: {
             slug: `${link.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
@@ -184,7 +189,7 @@ export async function runAiStatScraper(
             description: data.description || '',
             shortDesc: data.shortDesc || '',
             websiteUrl: data.websiteUrl || link.url,
-            logoUrl: data.logoUrl || null,
+            logoUrl: finalLogoUrl,
             pricing: data.pricing || 'Free',
             platforms: data.platforms || 'Web',
             licenseType: data.licenseType || 'Proprietary',
