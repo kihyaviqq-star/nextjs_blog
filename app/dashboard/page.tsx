@@ -5,7 +5,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileText, Eye, TrendingUp, Calendar } from "lucide-react";
+import { Users, FileText, Eye, TrendingUp, Calendar, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 

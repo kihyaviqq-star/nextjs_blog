@@ -1,0 +1,11 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+README.md
+.next
+.git
+.env*.local
+scratch/
+SERVER-TIMEOUT-CONFIG.md
+TECH_AUDIT_TASKLIST.md
