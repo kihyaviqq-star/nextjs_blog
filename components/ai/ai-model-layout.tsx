@@ -16,7 +16,7 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip
 } from "recharts";
-import { RelatedModels } from "./related-models";
+import { FallbackImage } from "@/components/ui/fallback-image";
 
 interface AiSpecs {
   contextWindow?: string | number;
@@ -37,7 +37,7 @@ interface AiSpecs {
   throughput?: string | number;
 }
 
-export function AiModelLayout({ tool }: { tool: any }) {
+export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModels?: React.ReactNode }) {
   let specs: AiSpecs = {};
   try {
     if (tool.aiSpecs) {
@@ -72,11 +72,12 @@ export function AiModelLayout({ tool }: { tool: any }) {
           
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
-              {tool.logoUrl ? (
-                <img src={tool.logoUrl} alt={tool.name} className="w-16 h-16 object-contain" />
-              ) : (
-                <Bot className="w-12 h-12 text-primary" />
-              )}
+              <FallbackImage 
+                src={tool.logoUrl} 
+                alt={tool.name} 
+                className="w-16 h-16 object-contain" 
+                fallback={<Bot className="w-12 h-12 text-primary" />} 
+              />
             </div>
             
             <div className="flex-1">
@@ -282,7 +283,7 @@ export function AiModelLayout({ tool }: { tool: any }) {
           </div>
         </div>
 
-        <RelatedModels categoryId={tool.categoryId} currentSoftwareId={tool.id} />
+        {relatedModels}
 
         <CommentSection softwareId={tool.id} />
       </main>

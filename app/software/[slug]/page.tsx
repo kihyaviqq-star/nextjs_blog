@@ -14,6 +14,8 @@ import { CommentSection } from "@/components/comments/comment-section";
 import { RatingWidget } from "@/components/reviews/rating-widget";
 import { AiModelLayout } from "@/components/ai/ai-model-layout";
 import { AiSpecsSection } from "@/components/ai-specs";
+import { RelatedModels } from "@/components/ai/related-models";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import { auth } from "@/lib/auth";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -102,7 +104,10 @@ export default async function SoftwareDetailsPage({ params }: { params: Promise<
     return (
       <>
         <Header />
-        <AiModelLayout tool={tool} />
+        <AiModelLayout 
+          tool={tool} 
+          relatedModels={<RelatedModels categoryId={tool.categoryId} currentSoftwareId={tool.id} />} 
+        />
         <Footer />
       </>
     );
@@ -125,11 +130,12 @@ export default async function SoftwareDetailsPage({ params }: { params: Promise<
         <div className="bg-card rounded-3xl border border-border/40 p-8 md:p-10 shadow-sm hover:shadow-md transition-shadow mb-12">
           <div className="flex flex-col md:flex-row items-start gap-8">
             <div className="w-32 h-32 rounded-3xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50">
-              {tool.logoUrl ? (
-                <img src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-4xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>
-              )}
+              <FallbackImage 
+                src={tool.logoUrl} 
+                alt={tool.name} 
+                className="w-full h-full object-cover" 
+                fallback={<span className="text-4xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>} 
+              />
             </div>
             
             <div className="flex-1">

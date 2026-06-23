@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { FallbackImage } from "@/components/ui/fallback-image";
 
 export async function RelatedModels({ categoryId, currentSoftwareId }: { categoryId: string, currentSoftwareId: string }) {
   const related = await prisma.software.findMany({
@@ -25,11 +26,12 @@ export async function RelatedModels({ categoryId, currentSoftwareId }: { categor
           <Link href={`/tools/${model.slug}`} key={model.id} className="group p-5 rounded-3xl bg-card border border-border/40 hover:border-primary/30 transition-all flex flex-col h-full shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0 border border-border/50">
-                {model.logoUrl ? (
-                  <img src={model.logoUrl} alt={model.name} className="w-full h-full object-cover rounded-xl" />
-                ) : (
-                  <Sparkles className="w-6 h-6 text-muted-foreground" />
-                )}
+                <FallbackImage 
+                  src={model.logoUrl} 
+                  alt={model.name} 
+                  className="w-full h-full object-cover rounded-xl" 
+                  fallback={<Sparkles className="w-6 h-6 text-muted-foreground" />} 
+                />
               </div>
               <div>
                 <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1">{model.name}</h3>
