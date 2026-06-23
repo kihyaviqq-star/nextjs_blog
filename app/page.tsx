@@ -25,20 +25,20 @@ export default async function Home({ searchParams }: HomeProps) {
   const searchQuery = typeof params.search === 'string' ? params.search : '';
   const sortBy = typeof params.sort === 'string' ? params.sort : 'newest';
 
-  // Build where clause for search (case-insensitive for SQLite)
+  const searchQueryLower = searchQuery.toLowerCase();
+  const searchQueryCapitalized = searchQuery.charAt(0).toUpperCase() + searchQuery.slice(1).toLowerCase();
+
+  // Build where clause for search
+  // SQLite LIKE is case-sensitive for Unicode (Cyrillic), so we check multiple variations
   const whereClause = searchQuery
     ? {
         OR: [
-          {
-            title: {
-              contains: searchQuery.toLowerCase(),
-            },
-          },
-          {
-            excerpt: {
-              contains: searchQuery.toLowerCase(),
-            },
-          },
+          { title: { contains: searchQuery } },
+          { title: { contains: searchQueryLower } },
+          { title: { contains: searchQueryCapitalized } },
+          { excerpt: { contains: searchQuery } },
+          { excerpt: { contains: searchQueryLower } },
+          { excerpt: { contains: searchQueryCapitalized } },
         ],
       }
     : {};
@@ -156,18 +156,29 @@ export default async function Home({ searchParams }: HomeProps) {
 
       <main className="flex-1 flex flex-col">
         {/* Hero Section - Apple Style */}
-        <section className="relative pt-24 pb-28 md:pt-36 md:pb-40 px-4 md:px-6 flex flex-col items-center justify-center border-b border-border/10">
+        <section className={`relative transition-all duration-500 ease-in-out px-4 md:px-6 flex flex-col items-center justify-center border-b border-border/10 ${
+          searchQuery ? "pt-12 pb-12 md:pt-16 md:pb-16" : "pt-24 pb-28 md:pt-36 md:pb-40"
+        }`}>
           <div className="relative z-10 w-full max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-background/60 backdrop-blur-xl border border-border/50 text-primary mb-6 text-sm font-medium shadow-sm transition-all hover:bg-background/80">
-              <Sparkles className="w-4 h-4" />
-              <span>Добро пожаловать в будущее</span>
+            
+            <div 
+              className={`grid transition-all duration-500 ease-in-out ${
+                searchQuery ? "grid-rows-[0fr] opacity-0 mb-0 pointer-events-none" : "grid-rows-[1fr] opacity-100 mb-12"
+              }`}
+            >
+              <div className="min-h-0 flex flex-col items-center">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-background/60 backdrop-blur-xl border border-border/50 text-primary mb-6 text-sm font-medium shadow-sm transition-all hover:bg-background/80">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Добро пожаловать в будущее</span>
+                </div>
+                
+                <AnimatedTitle text={siteName} />
+                
+                <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-light mt-4">
+                  {homeSubtitle}
+                </p>
+              </div>
             </div>
-            
-            <AnimatedTitle text={siteName} />
-            
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light mt-4">
-              {homeSubtitle}
-            </p>
             
             <SearchFilterBar />
             

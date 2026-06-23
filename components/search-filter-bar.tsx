@@ -21,23 +21,19 @@ export function SearchFilterBar() {
   const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
   const [isPending, startTransition] = useTransition();
 
-  // Initialize from URL only once on mount
-  const [initialized, setInitialized] = useState(false);
-  
+  // Sync state with URL changes (e.g. when clicking a tag or using browser back button)
   useEffect(() => {
-    if (!initialized) {
-      const search = searchParams.get("search");
-      const sort = searchParams.get("sort");
-      
-      if (search) {
-        setSearchValue(search);
-      }
-      if (sort === "popular") {
-        setSortBy("popular");
-      }
-      setInitialized(true);
+    const search = searchParams.get("search") || "";
+    const sort = searchParams.get("sort");
+    
+    setSearchValue(search);
+    
+    if (sort === "popular") {
+      setSortBy("popular");
+    } else {
+      setSortBy("newest");
     }
-  }, [searchParams, initialized]);
+  }, [searchParams]);
 
   const updateURL = (search: string, sort: "newest" | "popular") => {
     startTransition(() => {
