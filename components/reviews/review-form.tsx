@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { StarRating } from "@/components/star-rating";
 
 interface ReviewFormProps {
@@ -64,7 +65,7 @@ export function ReviewForm({ softwareId, onSuccess }: ReviewFormProps) {
       <div className="bg-secondary/30 p-6 rounded-2xl border border-border/40 text-center">
         <p className="text-muted-foreground mb-4">Авторизуйтесь, чтобы оставить отзыв и поставить оценку.</p>
         <Button asChild variant="default">
-          <a href="/login">Войти</a>
+          <Link href="/login">Войти</Link>
         </Button>
       </div>
     );
