@@ -207,6 +207,7 @@ export function AiModelLayout({ tool }: { tool: any }) {
               </div>
             )}
           </div>
+        </div>
 
         {/* Compact Benchmarks Layout */}
         <div className="mb-16">
