@@ -34,7 +34,7 @@ export default function BlockRenderer({ blocks, className }: BlockRendererProps)
   }
 
   return (
-    <article className={cn("prose prose-invert dark:prose-invert max-w-none", className)}>
+    <article className={cn("prose prose-lg dark:prose-invert max-w-none mx-auto", className)}>
       {validBlocks.map((block, index) => {
         return <Block key={block.id || `block-${index}`} block={block} />;
       })}
@@ -94,17 +94,9 @@ function HeaderBlock({ data }: { data: any }) {
   
   const { text, level = 2 } = data;
   const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
-  
-  const styles = {
-    1: "text-4xl font-bold tracking-tight mt-8 mb-4",
-    2: "text-3xl font-semibold tracking-tight mt-8 mb-4",
-    3: "text-2xl font-semibold tracking-tight mt-6 mb-3",
-    4: "text-xl font-semibold tracking-tight mt-6 mb-3",
-  };
 
   return (
     <Tag 
-      className={styles[level as keyof typeof styles] || styles[2]}
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
     />
   );
@@ -114,10 +106,7 @@ function ParagraphBlock({ data }: { data: any }) {
   if (!data || !data.text) return null;
   
   return (
-    <p 
-      className="text-base leading-7 text-foreground mb-4"
-      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.text) }}
-    />
+    <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.text) }} />
   );
 }
 
@@ -128,11 +117,10 @@ function ListBlock({ data }: { data: any }) {
   
   if (style === "ordered") {
     return (
-      <ol className="list-decimal list-inside space-y-2 mb-4 text-foreground">
+      <ol>
         {items.map((item: string, index: number) => (
           <li 
             key={index} 
-            className="leading-7"
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item) }}
           />
         ))}
@@ -141,11 +129,10 @@ function ListBlock({ data }: { data: any }) {
   }
   
   return (
-    <ul className="list-disc list-inside space-y-2 mb-4 text-foreground">
+    <ul>
       {items.map((item: string, index: number) => (
         <li 
           key={index} 
-          className="leading-7"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item) }}
         />
       ))}
@@ -157,8 +144,8 @@ function CodeBlock({ data }: { data: any }) {
   if (!data || !data.code) return null;
   
   return (
-    <pre className="bg-secondary border border-border rounded-lg p-4 overflow-x-auto mb-4">
-      <code className="text-sm font-mono text-foreground">
+    <pre>
+      <code>
         {data.code}
       </code>
     </pre>
@@ -171,16 +158,9 @@ function QuoteBlock({ data }: { data: any }) {
   const { text, caption } = data;
   
   return (
-    <blockquote className="border-l-4 border-primary pl-4 py-2 my-6 italic">
-      <p 
-        className="text-lg text-foreground mb-2"
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
-      />
-      {caption && (
-        <footer className="text-sm text-muted-foreground">
-          — {caption}
-        </footer>
-      )}
+    <blockquote>
+      <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }} />
+      {caption && <footer>— {caption}</footer>}
     </blockquote>
   );
 }
