@@ -10,7 +10,9 @@ async function downloadImage(url: string, subfolder: string): Promise<string | n
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': new URL(url).origin + '/',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
       }
     });
     
@@ -24,6 +26,13 @@ async function downloadImage(url: string, subfolder: string): Promise<string | n
 
     // Определение расширения
     const contentType = response.headers.get('content-type');
+    
+    // СТРОГАЯ ПРОВЕРКА: если это не картинка (например, HTML-страница заглушки Cloudflare), отменяем!
+    if (!contentType || !contentType.startsWith('image/')) {
+      console.warn(`⚠️ Попытка скачать не-картинку (${contentType}) по ссылке ${url}. Оставляем оригинальный URL.`);
+      return null;
+    }
+
     let ext = '.png'; // default
     if (contentType) {
       if (contentType.includes('jpeg') || contentType.includes('jpg')) ext = '.jpg';
