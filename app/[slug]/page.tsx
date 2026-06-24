@@ -89,8 +89,22 @@ async function ArticlePage({ post }: { post: any }) {
     sources = [];
   }
   
-  // Extract blocks from EditorJS format
   const blocks = contentData?.blocks || (Array.isArray(contentData) ? contentData : []);
+
+  // Check if excerpt is duplicated in the first paragraph (for old AI-generated posts)
+  const firstBlock = blocks.find((b: any) => b.type === 'paragraph');
+  let isExcerptDuplicated = false;
+  if (firstBlock && post.excerpt) {
+    const firstParagraphText = firstBlock.data.text.replace(/<[^>]+>/g, '').trim();
+    // Check if excerpt starts with first paragraph or vice versa (allowing for the "..." at the end)
+    const cleanExcerpt = post.excerpt.replace(/\.{3}$/, '').trim();
+    if (
+      firstParagraphText.startsWith(cleanExcerpt) || 
+      cleanExcerpt.startsWith(firstParagraphText.substring(0, 50))
+    ) {
+      isExcerptDuplicated = true;
+    }
+  }
 
   // Get site settings for Schema.org
   const siteSettings = await prisma.siteSettings.findUnique({
@@ -285,9 +299,11 @@ async function ArticlePage({ post }: { post: any }) {
             <h1 className="text-5xl font-bold tracking-tight mb-6">
               {post.title}
             </h1>
-            <p className="text-xl text-muted-foreground mb-8">
-              {post.excerpt}
-            </p>
+            {!isExcerptDuplicated && (
+              <p className="text-xl text-muted-foreground mb-8">
+                {post.excerpt}
+              </p>
+            )}
 
             {/* Meta */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pb-6 border-b border-border">

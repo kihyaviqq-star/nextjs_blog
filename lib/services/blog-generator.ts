@@ -195,8 +195,9 @@ export async function runBlogGenerator(
 3. Разбей текст на абзацы и добавь подзаголовки (##).
 4. Обязательно в конце сделай вывод или заключение.
 5. Первая строка (с одним #) должна быть Заголовком статьи. Заголовок должен быть цепляющим.
-6. В самом конце, на новой строке, напиши PROMPT для генерации обложки на английском языке (1-2 предложения, детальное визуальное описание без текста), вот так: "IMAGE_PROMPT: A futuristic cyberpunk city with neon lights..."
-7. На самой последней строке напиши ТЕГИ через запятую, вот так: "TAGS: ИИ, Нейросети, GPT" (максимум 4 тега).`;
+6. В самом конце, с новой строки, напиши уникальный краткий анонс статьи (лид-абзац, не дублирующий первый абзац текста), вот так: "EXCERPT: В этой статье мы рассмотрим, почему новые законы об ИИ..."
+7. На следующей строке напиши PROMPT для генерации обложки на английском языке (1-2 предложения, детальное визуальное описание без текста), вот так: "IMAGE_PROMPT: A futuristic cyberpunk city with neon lights..."
+8. На самой последней строке напиши ТЕГИ через запятую, вот так: "TAGS: ИИ, Нейросети, GPT" (максимум 4 тега).`;
       } else {
         // Topic Mode: Generate generic article
         const topic = topics.length > 0 ? topics[Math.floor(Math.random() * topics.length)] : "Будущее IT";
@@ -214,8 +215,9 @@ export async function runBlogGenerator(
 2. Статья должна быть подробной, интересной, с фактами и рассуждениями (объем от 2000 символов).
 3. Используй подзаголовки (##) и маркированные списки для читабельности.
 4. Первая строка (с одним #) должна быть Заголовком статьи.
-5. В самом конце, на новой строке, напиши PROMPT для генерации обложки на английском языке (1-2 предложения, детальное визуальное описание без текста), вот так: "IMAGE_PROMPT: A glowing quantum computer core..."
-6. На самой последней строке напиши ТЕГИ через запятую, вот так: "TAGS: ${topic}, Аналитика" (максимум 4 тега).`;
+5. В самом конце, с новой строки, напиши уникальный краткий анонс статьи (лид-абзац, не дублирующий первый абзац текста), вот так: "EXCERPT: Новое исследование показывает, что квантовые вычисления..."
+6. На следующей строке напиши PROMPT для генерации обложки на английском языке, вот так: "IMAGE_PROMPT: A glowing quantum computer core..."
+7. На самой последней строке напиши ТЕГИ через запятую, вот так: "TAGS: ${topic}, Аналитика" (максимум 4 тега).`;
       }
 
       console.log('  ⏳ Генерация текста...');
@@ -271,8 +273,16 @@ export async function runBlogGenerator(
         markdownContent = markdownContent.replace(/IMAGE_PROMPT:\s+(.+)$/im, '').trim();
       }
       
-      // Generate excerpt
-      let excerpt = markdownContent.substring(0, 200).replace(/#/g, '').trim() + '...';
+      // Extract unique excerpt
+      let excerpt = '';
+      const excerptMatch = markdownContent.match(/EXCERPT:\s+(.+)$/im);
+      if (excerptMatch) {
+        excerpt = excerptMatch[1].trim();
+        markdownContent = markdownContent.replace(/EXCERPT:\s+(.+)$/im, '').trim();
+      } else {
+        // Fallback
+        excerpt = markdownContent.substring(0, 200).replace(/#/g, '').trim() + '...';
+      }
       
       // Generate unique slug
       const slug = await generateUniqueSlug(generateSlug(title), async (s) => {
