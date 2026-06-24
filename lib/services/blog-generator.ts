@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import * as cheerio from 'cheerio';
+import { generateSlug, generateUniqueSlug } from '@/lib/slug';
+import Parser from 'rss-parser';
+
+const parser = new Parser();
 
 // Helper to fetch RSS feed and get the latest items
 async function fetchRssFeed(url: string) {
@@ -270,10 +274,11 @@ export async function runBlogGenerator(
       // Generate excerpt
       let excerpt = markdownContent.substring(0, 200).replace(/#/g, '').trim() + '...';
       
-      // Generate unique slug using Transliteration
-      const cleanTitle = transliterate(title);
-      const baseSlug = cleanTitle.replace(/[^a-z0-9\-]+/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 50);
-      const slug = `${baseSlug}-${Math.floor(Math.random() * 10000)}`;
+      // Generate unique slug
+      const slug = await generateUniqueSlug(generateSlug(title), async (s) => {
+        const existing = await prisma.post.findUnique({ where: { slug: s } });
+        return !!existing;
+      });
       
       // Image generation via free AI (Pollinations.ai)
       const seed = Math.floor(Math.random() * 1000000);

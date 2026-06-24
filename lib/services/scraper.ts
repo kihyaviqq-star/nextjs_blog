@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import * as cheerio from 'cheerio';
 import { prisma } from '@/lib/prisma';
+import https from 'https';
+import { generateSlug, generateUniqueSlug } from '@/lib/slug';
 
 export async function findOfficialSite(appName: string): Promise<string> {
   try {
@@ -80,7 +82,11 @@ export async function runSoftwareScraper(
       
       const rawName = $p('h1').text().trim();
       const name = rawName.split(' для ')[0].split(' - ')[0].trim() || 'Unknown App';
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const baseName = name.trim();
+      const slug = await generateUniqueSlug(generateSlug(baseName), async (s) => {
+        const existing = await prisma.software.findUnique({ where: { slug: s } });
+        return !!existing;
+      });
       
       // Check if it already exists
       const existing = await prisma.software.findUnique({ where: { slug } });

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import * as cheerio from 'cheerio';
 import { prisma } from '@/lib/prisma';
 import OpenAI from "openai";
+import { generateSlug, generateUniqueSlug } from '@/lib/slug';
 
 export async function runAiStatScraper(
   limit: number = 5,
@@ -182,9 +183,14 @@ export async function runAiStatScraper(
           finalLogoUrl = `https://ai-stat.ru${finalLogoUrl}`;
         }
 
+        const uniqueSlug = await generateUniqueSlug(generateSlug(data.name), async (s) => {
+          const existing = await prisma.software.findUnique({ where: { slug: s } });
+          return !!existing;
+        });
+
         await prisma.software.create({
           data: {
-            slug: `${link.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+            slug: uniqueSlug,
             name: data.name,
             description: data.description || '',
             shortDesc: data.shortDesc || '',
