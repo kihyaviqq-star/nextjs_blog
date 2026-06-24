@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, List as ListIcon, Grid as GridIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface Category {
   id: string;
@@ -103,33 +104,33 @@ export function SoftwareSidebar({ categories }: { categories: Category[] }) {
         <div className="flex flex-col gap-3">
           <div>
             <label className="text-xs text-muted-foreground font-medium mb-1.5 block">ОС / Платформа</label>
-            <select 
-              className="w-full bg-secondary/50 border border-border/50 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+            <CustomSelect
               value={currentPlatform}
-              onChange={(e) => updateFilters({ platform: e.target.value })}
-            >
-              <option value="all">Любая</option>
-              <option value="Windows">Windows</option>
-              <option value="macOS">macOS</option>
-              <option value="Linux">Linux</option>
-              <option value="Android">Android</option>
-              <option value="iOS">iOS</option>
-              <option value="Web">Web-сервис</option>
-            </select>
+              onChange={(value) => updateFilters({ platform: value })}
+              options={[
+                { value: "all", label: "Любая" },
+                { value: "Windows", label: "Windows" },
+                { value: "macOS", label: "macOS" },
+                { value: "Linux", label: "Linux" },
+                { value: "Android", label: "Android" },
+                { value: "iOS", label: "iOS" },
+                { value: "Web", label: "Web-сервис" }
+              ]}
+            />
           </div>
           
           <div>
             <label className="text-xs text-muted-foreground font-medium mb-1.5 block">Тип лицензии</label>
-            <select 
-              className="w-full bg-secondary/50 border border-border/50 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+            <CustomSelect
               value={currentLicense}
-              onChange={(e) => updateFilters({ license: e.target.value })}
-            >
-              <option value="all">Любая</option>
-              <option value="Free">Бесплатная (Free)</option>
-              <option value="Trial">Условно-бесплатная (Trial)</option>
-              <option value="Paid">Платная (Paid)</option>
-            </select>
+              onChange={(value) => updateFilters({ license: value })}
+              options={[
+                { value: "all", label: "Любая" },
+                { value: "Free", label: "Бесплатная (Free)" },
+                { value: "Trial", label: "Условно-бесплатная (Trial)" },
+                { value: "Paid", label: "Платная (Paid)" }
+              ]}
+            />
           </div>
         </div>
       </div>
