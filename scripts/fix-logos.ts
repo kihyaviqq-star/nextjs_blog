@@ -42,7 +42,12 @@ async function main() {
       updated++;
       console.log(`✅ Успешно: ${localPath}`);
     } else {
-      console.log(`❌ Ошибка скачивания для ${model.name}`);
+      await prisma.software.update({
+        where: { id: model.id },
+        data: { logoUrl: null }
+      });
+      updated++;
+      console.log(`❌ Ошибка скачивания для ${model.name}. Ссылка очищена.`);
     }
     
     // Небольшая задержка, чтобы не спамить чужой сервер

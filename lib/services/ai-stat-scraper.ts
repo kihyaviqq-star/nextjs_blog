@@ -188,6 +188,8 @@ export async function runAiStatScraper(
           const localPath = await downloadImage(finalLogoUrl, 'icons');
           if (localPath) {
             finalLogoUrl = localPath;
+          } else {
+            finalLogoUrl = null;
           }
         }
 
