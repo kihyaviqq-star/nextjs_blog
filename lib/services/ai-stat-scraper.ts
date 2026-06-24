@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import { prisma } from '@/lib/prisma';
 import OpenAI from "openai";
 import { generateSlug, generateUniqueSlug } from '@/lib/slug';
+import { downloadImage } from '@/lib/utils/download-image';
 
 export async function runAiStatScraper(
   limit: number = 5,
@@ -179,8 +180,15 @@ export async function runAiStatScraper(
         }
 
         let finalLogoUrl = data.logoUrl || null;
-        if (finalLogoUrl && finalLogoUrl.startsWith('/')) {
-          finalLogoUrl = `https://ai-stat.ru${finalLogoUrl}`;
+        if (finalLogoUrl) {
+          if (finalLogoUrl.startsWith('/')) {
+            finalLogoUrl = `https://ai-stat.ru${finalLogoUrl}`;
+          }
+          // Физически скачиваем картинку на сервер
+          const localPath = await downloadImage(finalLogoUrl, 'icons');
+          if (localPath) {
+            finalLogoUrl = localPath;
+          }
         }
 
         const uniqueSlug = await generateUniqueSlug(generateSlug(data.name), async (s) => {

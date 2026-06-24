@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as cheerio from 'cheerio';
+import { downloadImage } from '../lib/utils/download-image';
 
 const prisma = new PrismaClient();
 
@@ -115,8 +116,15 @@ async function main() {
                     $p('.program-logo img').attr('src') || 
                     $p('img[itemprop="image"]').attr('src');
                     
-      if (logoUrl && !logoUrl.startsWith('http')) {
-        logoUrl = 'https://www.softportal.com' + logoUrl;
+      if (logoUrl) {
+        if (!logoUrl.startsWith('http')) {
+          logoUrl = 'https://www.softportal.com' + logoUrl;
+        }
+        // Физическое скачивание иконки программы
+        const localPath = await downloadImage(logoUrl, 'icons');
+        if (localPath) {
+          logoUrl = localPath;
+        }
       }
       
       // Extract Screenshots

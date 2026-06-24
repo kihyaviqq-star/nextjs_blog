@@ -33,6 +33,8 @@ services:
       # Add other environment variables as needed or use an env_file
     depends_on:
       - db
+    volumes:
+      - ./public/uploads:/app/public/uploads
     # If you want to use a separate .env file for the container
     # env_file:
     #   - .env.production

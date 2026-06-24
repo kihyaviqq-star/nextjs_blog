@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-interface FallbackImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface FallbackImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> {
+  src?: string | null;
   fallback: React.ReactNode;
 }
 
@@ -15,7 +16,7 @@ export function FallbackImage({ src, alt, fallback, className, ...props }: Fallb
 
   return (
     <img
-      src={src}
+      src={src || undefined}
       alt={alt || ""}
       className={className}
       onError={() => setError(true)}
