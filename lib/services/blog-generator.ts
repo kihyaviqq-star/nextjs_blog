@@ -280,6 +280,18 @@ export async function runBlogGenerator(
       const encodedPrompt = encodeURIComponent(imagePrompt);
       const dynamicCoverImage = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=630&nologo=true&seed=${seed}`;
       
+      console.log('  🎨 Генерация обложки...');
+      onProgress?.('Нейросеть рисует уникальную обложку...', i + 1, limit);
+      
+      try {
+        // Предварительно скачиваем картинку в фоне, чтобы заставить Pollinations 
+        // сгенерировать её ДО того, как статья появится на сайте.
+        // Таким образом картинка будет отдаваться мгновенно из кэша, когда читатель зайдет на сайт.
+        await fetch(dynamicCoverImage);
+      } catch (imgError) {
+        console.error("Ошибка при генерации картинки:", imgError);
+      }
+      
       // Convert Markdown to EditorJS JSON
       const editorJson = convertMarkdownToEditorJs(markdownContent);
       
