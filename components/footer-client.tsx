@@ -8,7 +8,7 @@ interface FooterClientProps {
 }
 
 export function FooterClient({ footerText: initialFooterText }: FooterClientProps = {}) {
-  const [siteName, setSiteName] = useState<string>("Synaptix");
+  const [siteName, setSiteName] = useState<string>("Softo.ru");
   const [description, setDescription] = useState<string>("Пульс нейросетей: технологии, которые меняют будущее.");
   const currentYear = new Date().getFullYear();
 

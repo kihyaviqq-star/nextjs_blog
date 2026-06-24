@@ -55,7 +55,23 @@ export function AnimatedTitle({ text }: { text: string }) {
         initial="hidden"
         animate="visible"
       >
-        {letters.map((letter, index) => (
+        {letters.map((letter, index) => {
+          const isDot = letter === ".";
+          // If we have "Softo.ru", the indices for ".ru" are 5, 6, 7.
+          // Let's generalize: find the last dot index
+          const lastDotIndex = text.lastIndexOf(".");
+          const isTld = lastDotIndex !== -1 && index > lastDotIndex;
+          
+          let letterClass = "inline-block text-foreground transition-colors hover:text-primary cursor-default";
+          
+          if (isDot) {
+            letterClass = "inline-block text-primary transition-colors cursor-default";
+          } else if (isTld) {
+            // Outline effect for TLD (.ru)
+            letterClass = "inline-block text-transparent bg-clip-text bg-gradient-to-br from-foreground/80 to-foreground/40 transition-colors cursor-default font-light tracking-normal";
+          }
+
+          return (
           <motion.span
             key={index}
             variants={child}
@@ -76,11 +92,12 @@ export function AnimatedTitle({ text }: { text: string }) {
               ease: "easeInOut",
               delay: index * 0.15, // Wave effect delay
             }}
-            className="inline-block text-foreground transition-colors hover:text-primary cursor-default"
+            className={letterClass}
           >
             {letter === " " ? "\u00A0" : letter}
           </motion.span>
-        ))}
+          );
+        })}
       </motion.h1>
     </div>
   );

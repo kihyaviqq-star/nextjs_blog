@@ -140,7 +140,7 @@ export default async function Home({ searchParams }: HomeProps) {
   };
 
   const homeSubtitle = siteSettings?.homeSubtitle || "Будьте в курсе последних новостей, аналитики и разработок в области искусственного интеллекта.";
-  const siteName = siteSettings?.siteName || "AI Aggregator";
+  const siteName = siteSettings?.siteName || "Softo.ru";
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col font-sans selection:bg-primary/20 relative">

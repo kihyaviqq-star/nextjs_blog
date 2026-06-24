@@ -21,7 +21,7 @@ export async function Footer() {
   const settings = await getFooterSettings();
   const currentYear = new Date().getFullYear();
 
-  const siteName = settings?.siteName || "Synaptix";
+  const siteName = settings?.siteName || "Softo.ru";
   const description = settings?.footerText || settings?.homeSubtitle || "Пульс нейросетей: технологии, которые меняют будущее.";
 
   return (
