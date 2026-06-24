@@ -134,9 +134,10 @@ async function getOrCreateAiAuthor() {
 export async function runBlogGenerator(
   limit: number = 1, 
   topicsString: string = "Искусственный интеллект, Нейросети",
+  llmModel: string = "openai/gpt-4o-mini",
   onProgress?: (msg: string, current: number, total: number) => void
 ): Promise<{ added: number, titles: string[] }> {
-  console.log(`🧠 Запуск AI Авто-Блогера (Лимит: ${limit}) 🧠`);
+  console.log(`🧠 Запуск AI Авто-Блогера (Лимит: ${limit}, Модель: ${llmModel}) 🧠`);
   
   const addedTitles: string[] = [];
   const author = await getOrCreateAiAuthor();
@@ -219,7 +220,7 @@ export async function runBlogGenerator(
       let completion;
       try {
         completion = await openai.chat.completions.create({
-          model: "anthropic/claude-3.5-haiku",
+          model: llmModel || "openai/gpt-4o-mini",
           messages: [{ "role": "system", "content": prompt }],
         });
       } catch (apiError: any) {

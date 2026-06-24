@@ -277,6 +277,8 @@ model AutomationSettings {
   blogPostsPerRun       Int      @default(1)
   blogLastRun           DateTime?
   blogTopics            String   @default("Искусственный интеллект, Нейросети, Программирование, IT-индустрия") // JSON or string
+  blogLlmModel          String   @default("openai/gpt-4o-mini")
+  blogLlmCost           Float    @default(0.00) // optional reference for cost per 1M tokens
   
   updatedAt             DateTime @updatedAt
 }

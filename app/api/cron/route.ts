@@ -59,7 +59,8 @@ export async function GET(request: NextRequest) {
       // If never run, or last run was > 24 hours ago
       if (!lastRun || (now.getTime() - lastRun.getTime()) > 24 * 60 * 60 * 1000) {
         try {
-          const res = await runBlogGenerator(settings.blogPostsPerRun, settings.blogTopics);
+          const llmModel = settings.blogLlmModel || "openai/gpt-4o-mini";
+          const res = await runBlogGenerator(settings.blogPostsPerRun, settings.blogTopics, llmModel);
           await prisma.automationLog.create({
             data: {
               type: "BLOG_CRON",

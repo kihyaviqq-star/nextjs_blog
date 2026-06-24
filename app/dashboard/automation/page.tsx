@@ -328,6 +328,31 @@ export default function AutomationAdminPage() {
                 ИИ будет выбирать одну случайную тему из этого списка для каждой статьи, либо использовать ваши RSS ленты.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground block">ID Модели OpenRouter:</label>
+              <Input 
+                value={settings?.blogLlmModel || ""} 
+                onChange={(e) => setSettings({...settings, blogLlmModel: e.target.value})}
+                placeholder="например: openai/gpt-4o-mini"
+              />
+              <p className="text-xs text-muted-foreground">Какая нейросеть будет писать статьи. Оставьте пустым, чтобы использовать модель по умолчанию.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground block">Стоимость модели (за 1М токенов):</label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">$</span>
+                <Input 
+                  type="number" 
+                  step="0.01"
+                  min="0"
+                  value={settings?.blogLlmCost || 0} 
+                  onChange={(e) => setSettings({...settings, blogLlmCost: parseFloat(e.target.value) || 0})}
+                  className="w-32"
+                />
+              </div>
+            </div>
             
             {settings?.blogLastRun && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">

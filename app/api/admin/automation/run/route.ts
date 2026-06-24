@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
         } else if (type === "BLOG") {
           const settings = await prisma.automationSettings.findUnique({ where: { id: "default" } });
           const topics = settings?.blogTopics || "Искусственный интеллект, Нейросети";
-          result = await runBlogGenerator(limit, topics, onProgress);
+          const llmModel = settings?.blogLlmModel || "openai/gpt-4o-mini";
+          result = await runBlogGenerator(limit, topics, llmModel, onProgress);
         } else if (type === "AI_SERVICE") {
           result = await runAiStatScraper(limit, onProgress);
         } else {

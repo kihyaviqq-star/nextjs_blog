@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
       blogAutoEnabled: body.blogAutoEnabled,
       blogPostsPerRun: body.blogPostsPerRun,
       blogTopics: body.blogTopics,
+      blogLlmModel: body.blogLlmModel,
+      blogLlmCost: body.blogLlmCost,
     },
     create: {
       id: "default",
@@ -49,6 +51,8 @@ export async function POST(request: NextRequest) {
       blogAutoEnabled: body.blogAutoEnabled,
       blogPostsPerRun: body.blogPostsPerRun,
       blogTopics: body.blogTopics,
+      blogLlmModel: body.blogLlmModel,
+      blogLlmCost: body.blogLlmCost,
     }
   });
 
