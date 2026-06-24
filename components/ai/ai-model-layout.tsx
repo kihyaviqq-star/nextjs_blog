@@ -234,10 +234,10 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
               <div className="h-[250px] w-full md:w-1/2 relative mx-auto">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                    <PolarGrid stroke="currentColor" className="text-border/40" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 11 }} />
+                    <PolarGrid stroke="hsl(var(--muted-foreground))" opacity={0.3} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                    <Radar name="Оценка" dataKey="A" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.4} />
+                    <Radar name="Оценка" dataKey="A" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.4} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
