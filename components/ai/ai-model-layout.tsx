@@ -77,17 +77,17 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
       {/* Header Banner */}
       <div className="bg-primary/5 py-8 border-b border-border/40">
         <div className="container mx-auto max-w-7xl px-4 md:px-6">
-          <Link href="/software" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-6 transition-colors">
+          <Link href="/tools" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Все модели
           </Link>
           
           <div className="flex flex-col md:flex-row items-start gap-6">
-            <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
+            <div className="w-24 h-24 rounded-3xl bg-white dark:bg-zinc-100 flex items-center justify-center shrink-0 border border-border/50 shadow-sm p-3">
               <FallbackImage 
                 src={tool.logoUrl || undefined} 
                 alt={tool.name} 
-                className="w-16 h-16 object-contain" 
+                className="w-full h-full object-contain" 
                 fallback={<Bot className="w-12 h-12 text-primary" />} 
               />
             </div>
