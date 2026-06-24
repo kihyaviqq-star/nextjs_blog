@@ -6,6 +6,7 @@ import { ArrowLeft, ExternalLink, Star, DownloadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ScreenshotGallery } from "@/components/screenshot-gallery";
@@ -126,12 +127,13 @@ export default async function ToolDetailsPage({ params }: { params: Promise<{ sl
 
         <div className="bg-card rounded-3xl border border-border/40 p-8 md:p-10 shadow-sm hover:shadow-md transition-shadow mb-12">
           <div className="flex flex-col md:flex-row items-start gap-8">
-            <div className="w-32 h-32 rounded-3xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50">
-              {tool.logoUrl ? (
-                <img src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-4xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>
-              )}
+            <div className="w-32 h-32 rounded-3xl bg-white dark:bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden shadow-sm border border-border/50 p-4">
+              <FallbackImage 
+                src={tool.logoUrl} 
+                alt={tool.name} 
+                className="w-full h-full object-contain" 
+                fallback={<span className="text-4xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>} 
+              />
             </div>
             
             <div className="flex-1">
