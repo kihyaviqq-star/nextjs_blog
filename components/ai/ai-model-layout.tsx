@@ -51,12 +51,24 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
   const isGroupedBenchmarks = specs.benchmarks && typeof Object.values(specs.benchmarks)[0] === 'object';
   
   let radarData: any[] = [];
-  if (specs.benchmarks && !isGroupedBenchmarks) {
-    radarData = Object.entries(specs.benchmarks).map(([subject, A]) => ({
-      subject,
-      A: Number(A) || 0,
-      fullMark: 100,
-    }));
+  if (specs.benchmarks) {
+    if (isGroupedBenchmarks) {
+      radarData = Object.entries(specs.benchmarks).map(([category, items]: [string, any]) => {
+        const scores = Object.values(items).map(v => Number(v) || 0).filter(v => v > 0);
+        const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+        return {
+          subject: category,
+          A: Math.round(avg),
+          fullMark: 100,
+        };
+      });
+    } else {
+      radarData = Object.entries(specs.benchmarks).map(([subject, A]) => ({
+        subject,
+        A: Number(A) || 0,
+        fullMark: 100,
+      }));
+    }
   }
 
   return (
@@ -217,6 +229,29 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
             Результаты бенчмарков
           </h2>
           
+          {radarData.length > 0 && (
+            <div className="bg-card rounded-2xl border border-border/40 p-6 shadow-sm flex flex-col md:flex-row gap-8 mb-6">
+              <div className="h-[250px] w-full md:w-1/2 relative mx-auto">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                    <PolarGrid stroke="currentColor" className="text-border/40" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 11 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar name="Оценка" dataKey="A" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.4} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex-1 space-y-3 flex flex-col justify-center">
+                {radarData.map(item => (
+                   <div key={item.subject} className="bg-secondary/30 rounded-xl p-3 flex items-center justify-between">
+                     <span className="font-medium text-sm">{item.subject}</span>
+                     <span className="font-bold text-primary">{item.A}%</span>
+                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isGroupedBenchmarks ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(specs.benchmarks).map(([category, items]: [string, any]) => (
@@ -233,32 +268,11 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
                 </div>
               ))}
             </div>
-          ) : radarData.length > 0 ? (
-            <div className="bg-card rounded-2xl border border-border/40 p-6 shadow-sm flex flex-col md:flex-row gap-8">
-              <div className="h-[250px] w-full md:w-1/2 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                    <PolarGrid stroke="currentColor" className="text-border/40" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 11 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                    <Radar name="Оценка" dataKey="A" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.4} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-3">
-                {radarData.map(item => (
-                   <div key={item.subject} className="bg-secondary/30 rounded-xl p-3 flex items-center justify-between">
-                     <span className="text-sm font-medium">{item.subject}</span>
-                     <span className="text-sm font-bold bg-primary/10 text-primary px-2 py-1 rounded-md">{item.A}%</span>
-                   </div>
-                 ))}
-              </div>
-            </div>
-          ) : (
+          ) : radarData.length === 0 ? (
             <div className="text-muted-foreground bg-secondary/20 p-6 rounded-2xl border border-border/40 text-center">
               Данные бенчмарков отсутствуют
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Detailed Description */}
