@@ -73,7 +73,7 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner">
               <FallbackImage 
-                src={tool.logoUrl} 
+                src={tool.logoUrl || undefined} 
                 alt={tool.name} 
                 className="w-16 h-16 object-contain" 
                 fallback={<Bot className="w-12 h-12 text-primary" />} 

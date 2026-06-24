@@ -27,7 +27,7 @@ export async function RelatedModels({ categoryId, currentSoftwareId }: { categor
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0 border border-border/50">
                 <FallbackImage 
-                  src={model.logoUrl} 
+                  src={model.logoUrl || undefined} 
                   alt={model.name} 
                   className="w-full h-full object-cover rounded-xl" 
                   fallback={<Sparkles className="w-6 h-6 text-muted-foreground" />} 
