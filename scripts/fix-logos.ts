@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -108,7 +108,64 @@ async function main() {
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  console.log(`\n🎉 Готово! Физически скачано и обновлено иконок: ${updated}`);
+  console.log(`\n🎉 Готово! Физически скачано и обновлено логотипов: ${updated}`);
+
+  // ТЕПЕРЬ ПРОВЕРЯЕМ СКРИНШОТЫ
+  console.log('\nПоиск скриншотов, которые нужно скачать локально...');
+  
+  const modelsWithScreenshots = await prisma.software.findMany({
+    where: {
+      NOT: { screenshots: null }
+    }
+  });
+
+  let screenshotsUpdated = 0;
+  for (const model of modelsWithScreenshots) {
+    if (!model.screenshots) continue;
+    
+    let needsUpdate = false;
+    const finalScreenshots: string[] = [];
+    
+    let parsedScreenshots: string[] = [];
+    try {
+      parsedScreenshots = JSON.parse(model.screenshots);
+    } catch (e) {
+      continue;
+    }
+
+    for (const scrUrl of parsedScreenshots) {
+      // Если скриншот уже локальный, просто оставляем его
+      if (scrUrl.startsWith('/uploads/')) {
+        finalScreenshots.push(scrUrl);
+        continue;
+      }
+
+      // Иначе пытаемся скачать
+      console.log(`Скачиваем скриншот для ${model.name}: ${scrUrl}...`);
+      const localPath = await downloadImage(scrUrl, 'screenshots');
+      
+      if (localPath) {
+        finalScreenshots.push(localPath);
+        needsUpdate = true;
+        screenshotsUpdated++;
+        console.log(`✅ Успешно скачан скриншот: ${localPath}`);
+      } else {
+        finalScreenshots.push(scrUrl);
+        console.log(`❌ Ошибка скачивания скриншота для ${model.name}`);
+      }
+      
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    if (needsUpdate) {
+      await prisma.software.update({
+        where: { id: model.id },
+        data: { screenshots: JSON.stringify(finalScreenshots) }
+      });
+    }
+  }
+
+  console.log(`\n🎉 Готово! Физически скачано скриншотов: ${screenshotsUpdated}`);
 }
 
 main()

@@ -194,7 +194,18 @@ async function main() {
       }
       
       // Limit to max 5 screenshots
-      const finalScreenshots = screenshots.slice(0, 5);
+      const initialScreenshots = screenshots.slice(0, 5);
+      const finalScreenshots: string[] = [];
+      
+      // Физическое скачивание скриншотов
+      for (const scrUrl of initialScreenshots) {
+        const localPath = await downloadImage(scrUrl, 'screenshots');
+        if (localPath) {
+          finalScreenshots.push(localPath);
+        } else {
+          finalScreenshots.push(scrUrl); // Оставляем оригинальный урл, если не удалось скачать
+        }
+      }
       
       let platforms = 'Windows';
       $p('.software-info-block span').each((i, el) => {
