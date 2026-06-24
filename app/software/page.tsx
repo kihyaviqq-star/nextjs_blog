@@ -151,11 +151,12 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
               {tools.map((tool) => (
                 <Link href={`/software/${tool.slug}`} key={tool.id} className="group flex flex-col sm:flex-row items-center sm:items-start gap-6 p-5 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50 group-hover:scale-105 transition-transform duration-500">
-                    {tool.logoUrl ? (
-                      <FallbackImage src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl sm:text-3xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>
-                    )}
+                    <FallbackImage 
+                      src={tool.logoUrl} 
+                      alt={tool.name} 
+                      className="w-full h-full object-cover" 
+                      fallback={<span className="text-2xl sm:text-3xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>} 
+                    />
                   </div>
                   
                   <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start text-center sm:text-left">
@@ -192,11 +193,12 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
                 <Link href={`/software/${tool.slug}`} key={tool.id} className="group flex flex-col p-6 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
                   <div className="relative z-10 flex items-start gap-4 mb-4">
                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50 group-hover:scale-105 transition-transform duration-500">
-                      {tool.logoUrl ? (
-                        <FallbackImage src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-2xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>
-                      )}
+                      <FallbackImage 
+                        src={tool.logoUrl} 
+                        alt={tool.name} 
+                        className="w-full h-full object-cover" 
+                        fallback={<span className="text-2xl font-bold text-muted-foreground">{tool.name.charAt(0)}</span>} 
+                      />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">{tool.name}</h3>

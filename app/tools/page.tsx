@@ -178,11 +178,12 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
               {tools.map((tool) => (
                 <Link href={`/tools/${tool.slug}`} key={tool.id} className="group flex flex-col sm:flex-row items-center sm:items-start gap-6 p-5 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50 group-hover:scale-105 transition-transform duration-500">
-                    {tool.logoUrl ? (
-                      <FallbackImage src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
-                    )}
+                    <FallbackImage 
+                      src={tool.logoUrl} 
+                      alt={tool.name} 
+                      className="w-full h-full object-cover" 
+                      fallback={<Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />} 
+                    />
                   </div>
                   
                   <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start text-center sm:text-left">
@@ -215,11 +216,12 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
                   <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative z-10 flex items-start gap-4 mb-4">
                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50 group-hover:scale-105 transition-transform duration-500">
-                      {tool.logoUrl ? (
-                        <FallbackImage src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Sparkles className="w-8 h-8 text-muted-foreground" />
-                      )}
+                      <FallbackImage 
+                        src={tool.logoUrl} 
+                        alt={tool.name} 
+                        className="w-full h-full object-cover" 
+                        fallback={<Sparkles className="w-8 h-8 text-muted-foreground" />} 
+                      />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">{tool.name}</h3>
