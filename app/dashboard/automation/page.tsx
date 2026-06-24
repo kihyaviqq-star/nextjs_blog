@@ -10,6 +10,15 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
 
+const PRESET_MODELS = [
+  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini (Отличное качество, дешевая)", cost: 0.15 },
+  { id: "google/gemini-flash-1.5", name: "Gemini Flash 1.5 (Быстрая, очень дешевая)", cost: 0.08 },
+  { id: "anthropic/claude-3-haiku", name: "Claude 3 Haiku (Умная, недорогая)", cost: 0.25 },
+  { id: "meta-llama/llama-3.1-8b-instruct:free", name: "Llama 3.1 8B (Полностью бесплатная)", cost: 0.00 },
+  { id: "anthropic/claude-3.5-haiku", name: "Claude 3.5 Haiku (Самая новая, дороже)", cost: 1.00 },
+  { id: "qwen/qwen-2.5-72b-instruct", name: "Qwen 2.5 72B (Топ open-source)", cost: 0.35 },
+];
+
 export default function AutomationAdminPage() {
   const [settings, setSettings] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
@@ -329,14 +338,35 @@ export default function AutomationAdminPage() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground block">ID Модели OpenRouter:</label>
-              <Input 
-                value={settings?.blogLlmModel || ""} 
-                onChange={(e) => setSettings({...settings, blogLlmModel: e.target.value})}
-                placeholder="например: openai/gpt-4o-mini"
-              />
-              <p className="text-xs text-muted-foreground">Какая нейросеть будет писать статьи. Оставьте пустым, чтобы использовать модель по умолчанию.</p>
+            <div className="space-y-4 border rounded-xl p-4 bg-background/50">
+              <div className="space-y-2">
+                <label className="text-sm font-medium block">Готовые пресеты лучших моделей:</label>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) => {
+                    const selected = PRESET_MODELS.find(m => m.id === e.target.value);
+                    if (selected) {
+                      setSettings({...settings, blogLlmModel: selected.id, blogLlmCost: selected.cost});
+                    }
+                  }}
+                  value={PRESET_MODELS.some(m => m.id === settings?.blogLlmModel) ? settings?.blogLlmModel : ""}
+                >
+                  <option value="" disabled>-- Выберите из списка или введите вручную ниже --</option>
+                  {PRESET_MODELS.map(m => (
+                    <option key={m.id} value={m.id}>{m.name} (~${m.cost})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border/50">
+                <label className="text-sm text-muted-foreground block">ID Модели OpenRouter (Ручной ввод):</label>
+                <Input 
+                  value={settings?.blogLlmModel || ""} 
+                  onChange={(e) => setSettings({...settings, blogLlmModel: e.target.value})}
+                  placeholder="например: openai/gpt-4o-mini"
+                />
+                <p className="text-xs text-muted-foreground">Какая нейросеть будет писать статьи. Оставьте пустым, чтобы использовать модель по умолчанию.</p>
+              </div>
             </div>
 
             <div className="space-y-2">
