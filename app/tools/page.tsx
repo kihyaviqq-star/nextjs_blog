@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Search, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import { Button } from "@/components/ui/button";
 
 import { ToolsSidebar } from "@/components/tools/tools-sidebar";
@@ -178,7 +179,7 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
                 <Link href={`/tools/${tool.slug}`} key={tool.id} className="group flex flex-col sm:flex-row items-center sm:items-start gap-6 p-5 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50 group-hover:scale-105 transition-transform duration-500">
                     {tool.logoUrl ? (
-                      <img src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
+                      <FallbackImage src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
                     ) : (
                       <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
                     )}
@@ -215,7 +216,7 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
                   <div className="relative z-10 flex items-start gap-4 mb-4">
                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center shrink-0 overflow-hidden shadow-inner border border-border/50 group-hover:scale-105 transition-transform duration-500">
                       {tool.logoUrl ? (
-                        <img src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
+                        <FallbackImage src={tool.logoUrl} alt={tool.name} className="w-full h-full object-cover" />
                       ) : (
                         <Sparkles className="w-8 h-8 text-muted-foreground" />
                       )}
