@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const response = await openai.chat.completions.create({
       model: openRouterId,
       messages: [
-        { role: "system", content: \`You are \${toolName || "a helpful AI assistant"}. Please answer concisely.\` },
+        { role: "system", content: `You are ${toolName || "a helpful AI assistant"}. Please answer concisely.` },
         ...messages
       ],
       max_tokens: 1000,
