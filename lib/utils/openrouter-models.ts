@@ -13,68 +13,83 @@ export async function fetchOpenRouterModels() {
 }
 
 export function findBestModelMatch(models: any[], slug: string, name: string): string | null {
+  if (!models || models.length === 0) return null;
+
   const normSlug = (slug || "").toLowerCase();
   const normName = (name || "").toLowerCase();
 
-  // Try exact ID match first if it somehow happens
+  // 1. Попытка точного совпадения по ID
   if (models.some(m => m.id.toLowerCase() === normSlug)) return normSlug;
-  
-  // Fuzzy rules by family (prioritize most popular/reliable models)
+
+  // Функция для поиска модели в массиве по ключевым словам
+  const findByKeywords = (keywords: string[]) => {
+    return models.find(m => {
+      const mId = m.id.toLowerCase();
+      const mName = m.name.toLowerCase();
+      return keywords.every(k => mId.includes(k) || mName.includes(k));
+    });
+  };
+
+  // 2. Умный поиск по семействам моделей (возвращаем только если реально есть в списке OpenRouter)
+  let match = null;
+
   if (normSlug.includes('deepseek')) {
-    if (normSlug.includes('r1') || normSlug.includes('reasoner')) return 'deepseek/deepseek-r1';
-    if (normSlug.includes('v3') || normSlug.includes('chat')) return 'deepseek/deepseek-chat';
-    return 'deepseek/deepseek-chat';
+    if (normSlug.includes('r1') || normSlug.includes('reasoner')) match = findByKeywords(['deepseek', 'r1']);
+    if (!match) match = findByKeywords(['deepseek', 'chat']);
+    if (!match) match = findByKeywords(['deepseek']);
   }
-
-  if (normSlug.includes('claude')) {
-    if (normSlug.includes('opus')) return 'anthropic/claude-3-opus';
-    if (normSlug.includes('sonnet')) {
-       if (normSlug.includes('3.7')) return 'anthropic/claude-3.7-sonnet';
-       return 'anthropic/claude-3.5-sonnet';
+  else if (normSlug.includes('claude')) {
+    if (normSlug.includes('opus')) {
+      match = findByKeywords(['claude', 'opus', '3.5']) || findByKeywords(['claude', 'opus']);
+    } else if (normSlug.includes('sonnet')) {
+      if (normSlug.includes('4.6')) match = findByKeywords(['claude', 'sonnet', '4.6']);
+      if (!match && normSlug.includes('4.5')) match = findByKeywords(['claude', 'sonnet', '4.5']);
+      if (!match && normSlug.includes('4')) match = findByKeywords(['claude', 'sonnet', '4']);
+      if (!match) match = findByKeywords(['claude', 'sonnet', '3.5']);
+      if (!match) match = findByKeywords(['claude', 'sonnet', 'latest']);
+      if (!match) match = findByKeywords(['claude', 'sonnet']);
+    } else if (normSlug.includes('haiku')) {
+      match = findByKeywords(['claude', 'haiku', '3.5']) || findByKeywords(['claude', 'haiku']);
     }
-    if (normSlug.includes('haiku')) return 'anthropic/claude-3-haiku';
-    return 'anthropic/claude-3.5-sonnet';
+    if (!match) match = findByKeywords(['claude', 'latest']);
+  }
+  else if (normSlug.includes('gpt') || normSlug.includes('chatgpt') || normSlug.includes('o1') || normSlug.includes('o3')) {
+    if (normSlug.includes('o3')) match = findByKeywords(['o3', 'mini']);
+    if (!match && normSlug.includes('o1')) match = findByKeywords(['o1']);
+    if (!match && normSlug.includes('4o-mini')) match = findByKeywords(['gpt', '4o', 'mini']);
+    if (!match && normSlug.includes('4o')) match = findByKeywords(['gpt', '4o']);
+    if (!match) match = findByKeywords(['gpt', '3.5', 'turbo']);
+  }
+  else if (normSlug.includes('gemini')) {
+    if (normSlug.includes('flash') || normSlug.includes('2.0') || normSlug.includes('1.5')) {
+      match = findByKeywords(['gemini', '2.5', 'flash']) || findByKeywords(['gemini', '2.0', 'flash']) || findByKeywords(['gemini', '1.5', 'flash']);
+    }
+    if (!match && normSlug.includes('pro')) match = findByKeywords(['gemini', 'pro']);
+    if (!match) match = findByKeywords(['gemini']);
+  }
+  else if (normSlug.includes('llama')) {
+    if (normSlug.includes('3.3')) match = findByKeywords(['llama', '3.3']);
+    if (!match && normSlug.includes('3.1')) match = findByKeywords(['llama', '3.1']);
+    if (!match) match = findByKeywords(['llama', '3']);
+  }
+  else if (normSlug.includes('qwen')) {
+    match = findByKeywords(['qwen', '2.5', '72b']) || findByKeywords(['qwen']);
+  }
+  else if (normSlug.includes('mistral') || normSlug.includes('mixtral')) {
+    match = findByKeywords(['mistral', 'large']) || findByKeywords(['mixtral']) || findByKeywords(['mistral']);
+  }
+  else if (normSlug.includes('cohere') || normSlug.includes('command')) {
+    match = findByKeywords(['command', 'r', 'plus']) || findByKeywords(['cohere']);
   }
 
-  if (normSlug.includes('gpt') || normSlug.includes('chatgpt') || normSlug.includes('o1') || normSlug.includes('o3')) {
-    if (normSlug.includes('o1')) return 'openai/o1';
-    if (normSlug.includes('o3')) return 'openai/o3-mini';
-    if (normSlug.includes('4o-mini')) return 'openai/gpt-4o-mini';
-    if (normSlug.includes('4o')) return 'openai/gpt-4o';
-    return 'openai/gpt-3.5-turbo';
-  }
+  if (match) return match.id;
 
-  if (normSlug.includes('gemini')) {
-    if (normSlug.includes('flash') || normSlug.includes('2.0') || normSlug.includes('1.5')) return 'google/gemini-2.5-flash';
-    if (normSlug.includes('pro')) return 'google/gemini-pro-1.5';
-    return 'google/gemini-2.5-flash';
-  }
-
-  if (normSlug.includes('llama')) {
-    if (normSlug.includes('3.3')) return 'meta-llama/llama-3.3-70b-instruct';
-    if (normSlug.includes('3.1')) return 'meta-llama/llama-3.1-8b-instruct';
-    return 'meta-llama/llama-3-8b-instruct';
-  }
-  
-  if (normSlug.includes('qwen')) {
-    return 'qwen/qwen-2.5-72b-instruct';
-  }
-  
-  if (normSlug.includes('mistral') || normSlug.includes('mixtral')) {
-    return 'mistralai/mistral-large-2411';
-  }
-
-  if (normSlug.includes('cohere') || normSlug.includes('command')) {
-    return 'cohere/command-r-plus-08-2024';
-  }
-
-  // General fuzzy search on OpenRouter models as last resort
+  // 3. Общий fuzzy search по ключевым словам из имени
   const terms = normName.split(/[\s-]+/).filter(t => t.length > 2);
-  if (terms.length > 0 && models.length > 0) {
+  if (terms.length > 0) {
     for (const m of models) {
       const mName = m.name.toLowerCase();
       const mId = m.id.toLowerCase();
-      // If it contains all the main words of the model
       if (terms.every(t => mName.includes(t) || mId.includes(t))) {
          return m.id;
       }
