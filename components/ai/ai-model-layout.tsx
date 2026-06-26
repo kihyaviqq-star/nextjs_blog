@@ -17,6 +17,7 @@ import {
   Tooltip as RechartsTooltip
 } from "recharts";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import { AiChatModal } from "@/components/ai/ai-chat-modal";
 
 interface AiSpecs {
   contextWindow?: string | number;
@@ -117,15 +118,16 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
                 {tool.shortDesc}
               </p>
               
-              {tool.websiteUrl && (
-                <div className="mt-6">
+              <div className="mt-6 flex flex-wrap gap-4">
+                {tool.websiteUrl && (
                   <Button asChild size="lg" className="rounded-full shadow-md font-medium px-8 hover:scale-105 transition-transform duration-300">
                     <a href={tool.websiteUrl} target="_blank" rel="noopener noreferrer">
                       API / Официальный сайт <ExternalLink className="w-4 h-4 ml-2" />
                     </a>
                   </Button>
-                </div>
-              )}
+                )}
+                <AiChatModal tool={tool} />
+              </div>
             </div>
           </div>
         </div>
