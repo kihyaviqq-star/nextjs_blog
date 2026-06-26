@@ -26,7 +26,28 @@ export function AiChatModal({ tool }: { tool: any }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [remainingRequests, setRemainingRequests] = useState(5);
+  const [openRouterId, setOpenRouterId] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function checkModel() {
+      try {
+        const res = await fetch(`/api/ai/chat/check?slug=${encodeURIComponent(tool.slug || '')}&name=${encodeURIComponent(tool.name || '')}`);
+        const data = await res.json();
+        if (data.isAvailable) {
+           setOpenRouterId(data.openRouterId);
+        } else {
+           setOpenRouterId(null);
+        }
+      } catch (e) {
+        setOpenRouterId(null);
+      } finally {
+        setIsChecking(false);
+      }
+    }
+    checkModel();
+  }, [tool.slug, tool.name]);
 
   const STORAGE_KEY = `ai_chat_requests_${tool.id}`;
 
@@ -81,13 +102,18 @@ export function AiChatModal({ tool }: { tool: any }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          modelId: tool.slug,
-          toolName: tool.name
+          toolName: tool.name,
+          openRouterId: openRouterId
         }),
       });
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        let errorMsg = await response.text();
+        try {
+          const errorData = JSON.parse(errorMsg);
+          if (errorData.error) errorMsg = errorData.error;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
@@ -102,9 +128,9 @@ export function AiChatModal({ tool }: { tool: any }) {
       localStorage.setItem(STORAGE_KEY, newRemaining.toString());
       localStorage.setItem(`${STORAGE_KEY}_messages`, JSON.stringify(updatedMessages));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setMessages([...newMessages, { role: "assistant", content: "Произошла ошибка при обращении к модели. Возможно, API недоступен или модель не найдена." }]);
+      setMessages([...newMessages, { role: "assistant", content: `Произошла ошибка: ${error.message || "API недоступен или модель не найдена."}` }]);
     } finally {
       setIsLoading(false);
     }
@@ -113,9 +139,23 @@ export function AiChatModal({ tool }: { tool: any }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="lg" className="rounded-full shadow-md font-medium px-8 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20 hover:scale-105 transition-transform duration-300">
-          <Sparkles className="w-4 h-4 mr-2" />
-          Попробовать
+        <Button 
+          variant="secondary" 
+          size="lg" 
+          disabled={isChecking || !openRouterId}
+          className={`rounded-full shadow-md font-medium px-8 ${
+            !openRouterId && !isChecking 
+              ? 'bg-muted text-muted-foreground opacity-60 cursor-not-allowed' 
+              : 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20 hover:scale-105 transition-transform duration-300'
+          }`}
+        >
+          {isChecking ? (
+            <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Проверка...</span>
+          ) : !openRouterId ? (
+            <span className="flex items-center gap-2">Недоступно для чата</span>
+          ) : (
+            <span className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Попробовать</span>
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">

@@ -6,46 +6,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY || "dummy",
 });
 
-function getOpenRouterModelId(slug: string, name: string): string {
-  const normalizedSlug = (slug || "").toLowerCase();
-  
-  if (normalizedSlug.includes("deepseek")) {
-    if (normalizedSlug.includes("v3") || normalizedSlug.includes("chat")) return "deepseek/deepseek-chat";
-    if (normalizedSlug.includes("r1") || normalizedSlug.includes("reasoner")) return "deepseek/deepseek-r1";
-    return "deepseek/deepseek-chat";
-  }
-  
-  if (normalizedSlug.includes("chatgpt") || normalizedSlug.includes("gpt")) {
-    if (normalizedSlug.includes("4o-mini")) return "openai/gpt-4o-mini";
-    if (normalizedSlug.includes("4o")) return "openai/gpt-4o";
-    return "openai/gpt-3.5-turbo";
-  }
-  
-  if (normalizedSlug.includes("claude")) {
-    if (normalizedSlug.includes("opus")) return "anthropic/claude-3-opus";
-    if (normalizedSlug.includes("sonnet")) return "anthropic/claude-3.5-sonnet";
-    if (normalizedSlug.includes("haiku")) return "anthropic/claude-3-haiku";
-    return "anthropic/claude-3.5-sonnet";
-  }
-
-  if (normalizedSlug.includes("gemini")) {
-    if (normalizedSlug.includes("pro")) return "google/gemini-pro-1.5";
-    if (normalizedSlug.includes("flash")) return "google/gemini-flash-1.5";
-    return "google/gemini-pro-1.5";
-  }
-
-  if (normalizedSlug.includes("llama")) {
-    if (normalizedSlug.includes("3.1")) return "meta-llama/llama-3.1-8b-instruct";
-    return "meta-llama/llama-3-8b-instruct";
-  }
-
-  return "openai/gpt-4o-mini"; 
-}
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, modelId, toolName } = body;
+    const { messages, modelId, toolName, openRouterId } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return new NextResponse("Messages are required", { status: 400 });
@@ -55,7 +19,9 @@ export async function POST(req: Request) {
       return new NextResponse("API key is not configured", { status: 500 });
     }
 
-    const openRouterId = getOpenRouterModelId(modelId, toolName);
+    if (!openRouterId) {
+      return new NextResponse("openRouterId is required", { status: 400 });
+    }
 
     const response = await openai.chat.completions.create({
       model: openRouterId,
@@ -73,6 +39,10 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("[AI_CHAT_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    
+    // Попытка извлечь понятную ошибку от OpenRouter
+    const errorMessage = error.error?.message || error.message || "Unknown OpenRouter Error";
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
