@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { AdminSoftwareTable } from "./components/admin-software-table";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,26 @@ interface AdminPageProps {
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/auth/signin");
+  }
+
+  const email = session.user.email;
+  const dbUser = email
+    ? await prisma.user.findUnique({
+        where: { email },
+        select: { role: true },
+      })
+    : null;
+
+  const userRole = dbUser?.role ?? ((session.user as any).role as string | undefined);
+  
+  if (userRole !== "ADMIN") {
+    redirect("/");
+  }
+
   const params = await searchParams;
   const currentType = typeof params.type === 'string' ? params.type : 'all';
 

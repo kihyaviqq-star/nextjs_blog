@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
   if (!type || !limit) {
     return NextResponse.json({ error: "Missing type or limit" }, { status: 400 });
   }
+  
+  // Защита от OOM: жесткое ограничение лимита (макс 50)
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 1, 1), 50);
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -36,17 +39,17 @@ export async function POST(request: NextRequest) {
           sendEvent({ status: 'progress', message, current, total });
         };
 
-        sendEvent({ status: 'progress', message: 'Запуск процесса...', current: 0, total: limit });
+        sendEvent({ status: 'progress', message: 'Запуск процесса...', current: 0, total: safeLimit });
 
         if (type === "SOFTWARE") {
-          result = await runSoftwareScraper(limit, onProgress);
+          result = await runSoftwareScraper(safeLimit, onProgress);
         } else if (type === "BLOG") {
           const settings = await prisma.automationSettings.findUnique({ where: { id: "default" } });
           const topics = settings?.blogTopics || "Искусственный интеллект, Нейросети";
           const llmModel = settings?.blogLlmModel || "openai/gpt-4o-mini";
-          result = await runBlogGenerator(limit, topics, llmModel, onProgress);
+          result = await runBlogGenerator(safeLimit, topics, llmModel, onProgress);
         } else if (type === "AI_SERVICE") {
-          result = await runAiStatScraper(limit, onProgress);
+          result = await runAiStatScraper(safeLimit, onProgress);
         } else {
           throw new Error("Invalid type");
         }

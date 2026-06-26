@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  interval: 24 * 60 * 60 * 1000, // 24 часа
+  uniqueTokenPerInterval: 500,
+});
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
@@ -8,6 +14,18 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+    
+    // Лимит: 5 запросов в сутки с одного IP
+    try {
+      await limiter.check(5, `ai-chat-${ip}`);
+    } catch {
+      return NextResponse.json(
+        { error: "Превышен лимит запросов к чату на сегодня. Попробуйте завтра." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { messages, modelId, toolName, openRouterId } = body;
 

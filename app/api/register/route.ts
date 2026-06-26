@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Валидация пароля (минимум 6 символов)
-    if (password.length < 6) {
+    // Валидация пароля (минимум 8 символов)
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Пароль должен содержать минимум 6 символов" },
+        { error: "Пароль должен содержать минимум 8 символов" },
         { status: 400 }
       );
     }

@@ -1,16 +1,39 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
 export const metadata = {
   title: "Панель Управления",
 };
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/auth/signin");
+  }
+
+  const email = session.user.email;
+  const dbUser = email
+    ? await prisma.user.findUnique({
+        where: { email },
+        select: { role: true },
+      })
+    : null;
+
+  const userRole = dbUser?.role ?? ((session.user as any).role as string | undefined);
+  
+  if (userRole !== "ADMIN") {
+    redirect("/");
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
       <Header />

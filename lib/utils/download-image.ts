@@ -3,14 +3,39 @@ import path from 'path';
 
 export async function downloadImage(url: string, subfolder: string): Promise<string | null> {
   try {
-    if (!url || !url.startsWith('http')) return null;
+    if (!url || !(url.startsWith('http://') || url.startsWith('https://'))) return null;
+
+    // Защита от SSRF: базовая проверка, чтобы не качали с локалхоста
+    try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname;
+      if (
+        hostname === 'localhost' || 
+        hostname === '127.0.0.1' || 
+        hostname === '::1' || 
+        hostname.startsWith('192.168.') || 
+        hostname.startsWith('10.')
+      ) {
+        console.warn(`SSRF attempt blocked: ${url}`);
+        return null;
+      }
+    } catch {
+      return null;
+    }
+
+    // Защита от DoS: Таймаут 10 секунд
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(url, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
     
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       console.warn(`Не удалось скачать картинку: ${url} (Status: ${response.status})`);
       return null;

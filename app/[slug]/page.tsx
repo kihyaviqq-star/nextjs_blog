@@ -233,7 +233,7 @@ async function ArticlePage({ post }: { post: any }) {
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') }}
       />
       <Header />
       
@@ -514,7 +514,7 @@ async function UserProfilePage({ user }: { user: any }) {
     <div className="min-h-screen bg-background flex flex-col">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <Header />
 
