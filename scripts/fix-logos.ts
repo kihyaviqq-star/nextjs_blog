@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 const prisma = new PrismaClient();
+import { getFallbackLogoUrl } from '../lib/utils/vendor-logos';
 
 async function downloadImage(url: string, subfolder: string): Promise<string | null> {
   try {
@@ -95,8 +96,16 @@ async function main() {
     }
 
     console.log(`Скачиваем для ${model.name}: ${externalUrl}...`);
-    const localPath = await downloadImage(externalUrl, 'icons');
+    let localPath = await downloadImage(externalUrl, 'icons');
     
+    if (!localPath && model.isAi) {
+      console.log(`❌ Ошибка скачивания для ${model.name}. Ищем фоллбэк логотип...`);
+      const fallbackUrl = getFallbackLogoUrl(model.name, model.developer || '');
+      if (fallbackUrl) {
+        localPath = await downloadImage(fallbackUrl, 'icons');
+      }
+    }
+
     if (localPath) {
       await prisma.software.update({
         where: { id: model.id },
@@ -118,6 +127,38 @@ async function main() {
   }
 
   console.log(`\n🎉 Готово! Физически скачано и обновлено логотипов: ${updated}`);
+
+  // ПОЧИНКА ИИ МОДЕЛЕЙ БЕЗ ЛОГОТИПОВ
+  console.log('\nПоиск ИИ-моделей без логотипов...');
+  const aiModelsWithoutLogos = await prisma.software.findMany({
+    where: {
+      isAi: true,
+      OR: [
+        { logoUrl: null },
+        { logoUrl: '' }
+      ]
+    }
+  });
+
+  console.log(`Найдено ИИ-моделей без логотипов: ${aiModelsWithoutLogos.length}`);
+  let aiLogosUpdated = 0;
+  for (const model of aiModelsWithoutLogos) {
+    const fallbackUrl = getFallbackLogoUrl(model.name, model.developer || '');
+    if (fallbackUrl) {
+      console.log(`Скачиваем фоллбэк логотип для ${model.name}: ${fallbackUrl}...`);
+      const localPath = await downloadImage(fallbackUrl, 'icons');
+      if (localPath) {
+        await prisma.software.update({
+          where: { id: model.id },
+          data: { logoUrl: localPath }
+        });
+        aiLogosUpdated++;
+        console.log(`✅ Успешно установлен фоллбэк: ${localPath}`);
+      }
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  console.log(`🎉 Восстановлено фоллбэк логотипов: ${aiLogosUpdated}`);
 
   // ТЕПЕРЬ ПРОВЕРЯЕМ СКРИНШОТЫ
   console.log('\nПоиск скриншотов, которые нужно скачать локально...');

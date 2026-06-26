@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import OpenAI from "openai";
 import { generateSlug, generateUniqueSlug } from '@/lib/slug';
 import { downloadImage } from '@/lib/utils/download-image';
+import { getFallbackLogoUrl } from '@/lib/utils/vendor-logos';
 
 export async function runAiStatScraper(
   limit: number = 5,
@@ -180,16 +181,29 @@ export async function runAiStatScraper(
         }
 
         let finalLogoUrl = data.logoUrl || null;
+        
+        // Попытка использовать распарсенный логотип
         if (finalLogoUrl) {
           if (finalLogoUrl.startsWith('/')) {
             finalLogoUrl = `https://ai-stat.ru${finalLogoUrl}`;
           }
-          // Физически скачиваем картинку на сервер
           const localPath = await downloadImage(finalLogoUrl, 'icons');
           if (localPath) {
             finalLogoUrl = localPath;
           } else {
             finalLogoUrl = null;
+          }
+        }
+
+        // Если не нашли или не смогли скачать — ищем фоллбэк логотип по вендору
+        if (!finalLogoUrl) {
+          const fallbackUrl = getFallbackLogoUrl(data.name, data.developer || link.developer);
+          if (fallbackUrl) {
+            console.log(`  Используем фоллбэк логотип для ${data.developer}: ${fallbackUrl}`);
+            const localPath = await downloadImage(fallbackUrl, 'icons');
+            if (localPath) {
+              finalLogoUrl = localPath;
+            }
           }
         }
 

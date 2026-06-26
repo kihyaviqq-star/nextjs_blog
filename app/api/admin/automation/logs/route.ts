@@ -8,10 +8,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const logs = await prisma.automationLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50
-  });
+  const searchParams = request.nextUrl.searchParams;
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = parseInt(searchParams.get("limit") || "10", 10);
+  const skip = (page - 1) * limit;
 
-  return NextResponse.json(logs);
+  const [logs, total] = await Promise.all([
+    prisma.automationLog.findMany({
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.automationLog.count(),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return NextResponse.json({
+    logs,
+    pagination: {
+      total,
+      totalPages,
+      currentPage: page,
+      limit,
+    }
+  });
 }

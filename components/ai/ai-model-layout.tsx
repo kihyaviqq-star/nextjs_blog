@@ -185,11 +185,11 @@ export function AiModelLayout({ tool, relatedModels }: { tool: any, relatedModel
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Вход (за 1М токенов)</div>
-                    <div className="text-xl font-bold text-foreground">{specs.pricing.input ? `$${specs.pricing.input}` : "-"}</div>
+                    <div className="text-xl font-bold text-foreground">{specs.pricing.input ? (String(specs.pricing.input).startsWith('$') ? specs.pricing.input : `$${specs.pricing.input}`) : "-"}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Выход (за 1М токенов)</div>
-                    <div className="text-xl font-bold text-foreground">{specs.pricing.output ? `$${specs.pricing.output}` : "-"}</div>
+                    <div className="text-xl font-bold text-foreground">{specs.pricing.output ? (String(specs.pricing.output).startsWith('$') ? specs.pricing.output : `$${specs.pricing.output}`) : "-"}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Макс. входящих токенов</div>

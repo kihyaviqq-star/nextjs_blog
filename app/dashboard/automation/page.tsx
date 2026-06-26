@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Play, AlertCircle, CheckCircle2, Server, Bot, Clock } from "lucide-react";
+import { Loader2, Play, AlertCircle, CheckCircle2, Server, Bot, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { toast } from "sonner";
@@ -22,6 +22,8 @@ const PRESET_MODELS = [
 export default function AutomationAdminPage() {
   const [settings, setSettings] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -47,12 +49,18 @@ export default function AutomationAdminPage() {
     try {
       const [setRes, logsRes] = await Promise.all([
         fetch("/api/admin/automation/settings"),
-        fetch("/api/admin/automation/logs")
+        fetch(`/api/admin/automation/logs?page=${currentPage}&limit=10`)
       ]);
       const setData = await setRes.json();
       const logsData = await logsRes.json();
       setSettings(setData);
-      setLogs(logsData);
+      if (logsData.logs) {
+        setLogs(logsData.logs);
+        setTotalPages(logsData.pagination.totalPages);
+      } else {
+        setLogs(logsData); // fallback
+        setTotalPages(1);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -62,7 +70,7 @@ export default function AutomationAdminPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage]);
 
   const saveSettings = async () => {
     setIsSaving(true);
@@ -461,6 +469,32 @@ export default function AutomationAdminPage() {
                 ))}
               </tbody>
             </table>
+            
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-4 border-t border-border/30">
+                <span className="text-sm text-muted-foreground">
+                  Страница {currentPage} из {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Пред.
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    След. <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
