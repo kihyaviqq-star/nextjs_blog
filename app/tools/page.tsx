@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Search, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/header";
@@ -10,6 +9,7 @@ import { CompareButton } from "@/components/tools/compare-button";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { SubmitToolModal } from "@/components/tools/submit-tool-modal";
 import { ToolsSidebar } from "@/components/tools/tools-sidebar";
+import { getCachedToolsDirectory } from "@/lib/cache/cached-queries";
 
 export const metadata: Metadata = {
   title: "Каталог нейросетей и ПО",
@@ -31,76 +31,27 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
   const featuresParam = typeof params.features === 'string' ? params.features : '';
   const features = featuresParam ? featuresParam.split(',') : [];
 
-  const whereClause: any = {
-    isAi: true
-  };
-  
-  if (search) {
-    whereClause.OR = [
-      { name: { contains: search.toLowerCase() } },
-      { shortDesc: { contains: search.toLowerCase() } },
-    ];
-  }
-
-  if (category && category !== 'all') {
-    whereClause.category = { slug: category };
-  }
-
-  if (developer && developer !== 'all') {
-    whereClause.developer = developer;
-  }
-
-  if (pricing && pricing !== 'all') {
-    whereClause.pricing = pricing;
-  }
-
-  if (licenseType && licenseType !== 'all') {
-    whereClause.licenseType = licenseType;
-  }
-
-  if (features.length > 0) {
-    whereClause.AND = features.map(feat => ({
-      aiSpecs: { contains: feat }
-    }));
-  }
-
   const ITEMS_PER_PAGE = 24;
   const pageParam = typeof params.page === 'string' ? params.page : '1';
   const currentPage = Math.max(1, parseInt(pageParam, 10) || 1);
 
-  const [categories, totalItems, tools, distinctDevelopers, distinctPricing, distinctLicenses] = await Promise.all([
-    prisma.softwareCategory.findMany({
-      where: {
-        tools: {
-          some: { isAi: true }
-        }
-      },
-      orderBy: { name: 'asc' }
-    }),
-    prisma.software.count({ where: whereClause }),
-    prisma.software.findMany({
-      where: whereClause,
-      include: { category: true },
-      orderBy: { createdAt: 'desc' },
-      skip: (currentPage - 1) * ITEMS_PER_PAGE,
-      take: ITEMS_PER_PAGE,
-    }),
-    prisma.software.findMany({
-      where: { isAi: true, developer: { not: null } },
-      select: { developer: true },
-      distinct: ['developer']
-    }),
-    prisma.software.findMany({
-      where: { isAi: true, pricing: { not: "" } },
-      select: { pricing: true },
-      distinct: ['pricing']
-    }),
-    prisma.software.findMany({
-      where: { isAi: true, licenseType: { not: null } },
-      select: { licenseType: true },
-      distinct: ['licenseType']
-    })
-  ]);
+  const {
+    categories,
+    totalItems,
+    tools,
+    distinctDevelopers,
+    distinctPricing,
+    distinctLicenses,
+  } = await getCachedToolsDirectory({
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+    search,
+    category,
+    pricing,
+    developer,
+    license: licenseType,
+    features,
+  });
 
   const developers = distinctDevelopers.map(d => d.developer).filter(Boolean) as string[];
   const pricings = distinctPricing.map(p => p.pricing).filter(Boolean) as string[];

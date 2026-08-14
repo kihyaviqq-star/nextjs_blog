@@ -10,9 +10,14 @@ import { MetadataUpdater } from "@/components/metadata-updater";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { prisma } from "@/lib/prisma";
+import { getCachedSiteSettings } from "@/lib/cache/cached-queries";
 import { headers } from "next/headers";
 
-const inter = Inter({ subsets: ["latin", "cyrillic"] });
+const inter = Inter({ 
+  subsets: ["latin", "cyrillic"],
+  display: "swap",
+  preload: true,
+});
 
 async function getBaseUrlFromRequest(): Promise<string> {
   const envBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL;
@@ -46,27 +51,7 @@ function toAbsoluteUrl(baseUrl: string, value?: string | null): string | undefin
 
 // Generate metadata with site settings
 export async function generateMetadata(): Promise<Metadata> {
-  // Create default if not exists using atomic upsert to prevent race conditions during build
-  let settings: any = { siteName: "Blog", metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта", faviconUrl: null, logoUrl: null };
-  try {
-    settings = await prisma.siteSettings.upsert({
-      where: { id: "default" },
-      update: {},
-      create: {
-        id: "default",
-        siteName: "Blog",
-        metaDescription: "Информационный портал о последних новостях и разработках в области искусственного интеллекта",
-      },
-      select: {
-        siteName: true,
-        metaDescription: true,
-        faviconUrl: true,
-        logoUrl: true,
-      },
-    });
-  } catch (e) {
-    console.warn("Database unavailable during build. Using default metadata settings.");
-  }
+  const settings = await getCachedSiteSettings();
 
   const siteName = settings.siteName || "";
   const siteDescription = settings.metaDescription || "";

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -26,30 +27,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "toolId and action are required" }, { status: 400 });
     }
 
+    let updatedTool = null;
+
     if (action === "APPROVE") {
-      const updated = await prisma.software.update({
+      updatedTool = await prisma.software.update({
         where: { id: toolId },
         data: { status: "APPROVED" },
       });
-      return NextResponse.json({ success: true, tool: updated });
-    }
-
-    if (action === "REJECT") {
-      const updated = await prisma.software.update({
+    } else if (action === "REJECT") {
+      updatedTool = await prisma.software.update({
         where: { id: toolId },
         data: { status: "REJECTED" },
       });
-      return NextResponse.json({ success: true, tool: updated });
-    }
-
-    if (action === "DELETE") {
+    } else if (action === "DELETE") {
       await prisma.software.delete({
         where: { id: toolId },
       });
-      return NextResponse.json({ success: true, deleted: true });
+    } else {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    try {
+      revalidateTag("tools");
+      revalidateTag("software");
+      revalidatePath("/tools");
+      revalidatePath("/software");
+      revalidatePath("/dashboard/tools-moderation");
+    } catch {
+      // ignore
+    }
+
+    return NextResponse.json({ success: true, tool: updatedTool });
   } catch (error) {
     console.error("POST /api/admin/tools/moderate error:", error);
     return NextResponse.json({ error: "Failed to moderate tool" }, { status: 500 });

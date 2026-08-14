@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/header";
@@ -10,6 +9,7 @@ import { FallbackImage } from "@/components/ui/fallback-image";
 import { CompareButton } from "@/components/tools/compare-button";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { SubmitToolModal } from "@/components/tools/submit-tool-modal";
+import { getCachedSoftwareDirectory } from "@/lib/cache/cached-queries";
 
 export const metadata: Metadata = {
   title: "Каталог Программ и Софта",
@@ -32,61 +32,14 @@ export default async function SoftwareDirectoryPage({ searchParams }: SoftwarePa
   const page = typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
   const currentPage = isNaN(page) || page < 1 ? 1 : page;
 
-  const whereClause: any = {
-    isAi: false
-  };
-  
-  if (search) {
-    whereClause.OR = [
-      { name: { contains: search.toLowerCase() } },
-      { shortDesc: { contains: search.toLowerCase() } },
-      { tags: { contains: search.toLowerCase() } },
-    ];
-  }
-
-  if (category && category !== 'all') {
-    whereClause.category = { slug: category };
-  }
-
-  if (platform && platform !== 'all') {
-    whereClause.platforms = { contains: platform };
-  }
-
-  if (license && license !== 'all') {
-    if (license === 'Free') {
-      whereClause.pricing = { contains: 'Free' };
-    } else if (license === 'Paid') {
-      whereClause.pricing = { contains: 'Paid' };
-    } else if (license === 'Trial') {
-      whereClause.pricing = { contains: 'Trial' };
-    }
-  }
-
-  const [categories, totalItems, tools] = await Promise.all([
-    // 1. Get Categories
-    prisma.softwareCategory.findMany({
-      where: {
-        tools: {
-          some: { isAi: false }
-        }
-      },
-      orderBy: { name: 'asc' }
-    }),
-    
-    // 2. Count total for pagination
-    prisma.software.count({ where: whereClause }),
-    
-    // 3. Get software list
-    prisma.software.findMany({
-      where: whereClause,
-      include: { category: true },
-      orderBy: { createdAt: 'desc' },
-      skip: (currentPage - 1) * ITEMS_PER_PAGE,
-      take: ITEMS_PER_PAGE,
-    })
-  ]);
-
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const { categories, totalItems, tools, totalPages } = await getCachedSoftwareDirectory({
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+    search,
+    category,
+    platform,
+    license,
+  });
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">

@@ -9,7 +9,7 @@ import { scrapeUrl } from '@/lib/url-scraper';
 import { generateArticle, GeneratedArticle, ArticleStyle } from '@/lib/ai-client';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { generateSlug, generateUniqueSlug } from '@/lib/slug';
 import fs from 'fs/promises';
 import path from 'path';
@@ -443,6 +443,11 @@ export async function publishArticleAction(article: GeneratedArticle): Promise<{
     
     revalidatePath('/dashboard');
     revalidatePath('/');
+    try {
+      revalidateTag('posts');
+    } catch {
+      // ignore
+    }
     return { success: true };
   } catch (error: any) {
     console.error('Publish error:', error);

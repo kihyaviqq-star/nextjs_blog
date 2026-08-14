@@ -16,6 +16,7 @@ import { PostReactions } from "@/components/blog/post-reactions";
 import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github, Image as ImageIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getCachedPostBySlug, getCachedSiteSettings } from "@/lib/cache/cached-queries";
 import { ViewIncrementer } from "@/components/view-incrementer";
 import { isUsernameReserved } from "@/lib/constants";
 import { CommentSection } from "@/components/comments/comment-section";
@@ -112,10 +113,7 @@ async function ArticlePage({ post }: { post: any }) {
   }
 
   // Get site settings for Schema.org
-  const siteSettings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { siteName: true, logoUrl: true },
-  });
+  const siteSettings = await getCachedSiteSettings();
   const siteName = siteSettings?.siteName || "";
   const siteUrl = await getBaseUrlFromRequest();
   const postUrl = toPageUrl(siteUrl, `/${post.slug}`);
@@ -775,19 +773,7 @@ export default async function DynamicPage({ params }: PageProps) {
 
   // Try to find a post first (priority to articles)
   // Articles can use any slug, even if it's in reserved list
-  const post = await prisma.post.findUnique({
-    where: { slug: decodedSlug },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          username: true,
-          avatarUrl: true,
-        },
-      },
-    },
-  });
+  const post = await getCachedPostBySlug(decodedSlug);
 
   if (post) {
     return <ArticlePage post={post} />;
@@ -850,32 +836,17 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
 
-  // Get site settings for site name and metadata
-  let siteSettings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { 
-      siteName: true,
-      metaDescription: true,
-      logoUrl: true,
-    },
-  });
+  // Get cached site settings and post in parallel
+  const [siteSettings, post] = await Promise.all([
+    getCachedSiteSettings(),
+    getCachedPostBySlug(decodedSlug)
+  ]);
+
   const siteName = siteSettings?.siteName || "";
   const siteDescription = siteSettings?.metaDescription || "Информационный портал о последних новостях и разработках в области искусственного интеллекта";
   const siteUrl = await getBaseUrlFromRequest();
   const defaultImage =
     toAbsoluteUrl(siteUrl, siteSettings?.logoUrl) || toAbsoluteUrl(siteUrl, "/og-default.jpg")!;
-
-  // Try post first
-  const post = await prisma.post.findUnique({
-    where: { slug: decodedSlug },
-    include: {
-      author: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
 
   if (post) {
     const postUrl = toPageUrl(siteUrl, `/${decodedSlug}`);

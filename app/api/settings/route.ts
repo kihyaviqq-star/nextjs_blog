@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { handleApiError } from "@/lib/error-handler";
@@ -138,6 +138,11 @@ export async function PUT(request: NextRequest) {
     revalidatePath('/dashboard/settings');
     // Инвалидируем все страницы статей (динамические пути)
     revalidatePath('/[slug]', 'page');
+    try {
+      revalidateTag('settings');
+    } catch {
+      // ignore
+    }
 
     return NextResponse.json(settings);
   } catch (error) {

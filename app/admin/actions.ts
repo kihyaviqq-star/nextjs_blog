@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function updateSoftwareLinks(
   id: string, 
@@ -20,7 +20,13 @@ export async function updateSoftwareLinks(
     revalidatePath("/admin");
     revalidatePath("/software");
     revalidatePath("/tools");
-    revalidatePath(`/software/${id}`); // Note: ID is not slug, but it's fine for global cache flush
+    revalidatePath(`/software/${id}`);
+    try {
+      revalidateTag("tools");
+      revalidateTag("software");
+    } catch {
+      // ignore
+    }
     
     return { success: true };
   } catch (error) {
@@ -40,6 +46,12 @@ export async function deleteBulkSoftware(ids: string[]) {
     revalidatePath("/admin");
     revalidatePath("/software");
     revalidatePath("/tools");
+    try {
+      revalidateTag("tools");
+      revalidateTag("software");
+    } catch {
+      // ignore
+    }
     
     return { success: true };
   } catch (error) {

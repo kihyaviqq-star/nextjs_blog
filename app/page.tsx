@@ -7,7 +7,7 @@ import { SearchFilterBar } from "@/components/search-filter-bar";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, Tag, ChevronLeft, ChevronRight, ImageIcon, Sparkles, Search } from "lucide-react";
-import { prisma } from "@/lib/prisma";
+import { getCachedPosts, getCachedSiteSettings } from "@/lib/cache/cached-queries";
 import { HeroBackground } from "@/components/ui/hero-background";
 import { FeaturedPost } from "@/components/featured-post";
 import { AnimatedGrid } from "@/components/animated-grid";
@@ -25,71 +25,19 @@ export default async function Home({ searchParams }: HomeProps) {
   const searchQuery = typeof params.search === 'string' ? params.search : '';
   const sortBy = typeof params.sort === 'string' ? params.sort : 'newest';
 
-  const searchQueryLower = searchQuery.toLowerCase();
-  const searchQueryCapitalized = searchQuery.charAt(0).toUpperCase() + searchQuery.slice(1).toLowerCase();
-
-  // Build where clause for search
-  // SQLite LIKE is case-sensitive for Unicode (Cyrillic), so we check multiple variations
-  const whereClause = searchQuery
-    ? {
-        OR: [
-          { title: { contains: searchQuery } },
-          { title: { contains: searchQueryLower } },
-          { title: { contains: searchQueryCapitalized } },
-          { excerpt: { contains: searchQuery } },
-          { excerpt: { contains: searchQueryLower } },
-          { excerpt: { contains: searchQueryCapitalized } },
-        ],
-      }
-    : {};
-
-  // Determine if we show featured post
-  const showFeatured = currentPage === 1 && !searchQuery && sortBy === "newest";
-  const postsToTake = showFeatured ? POSTS_PER_PAGE + 1 : POSTS_PER_PAGE;
-
-  // Determine sort order
-  const orderBy = sortBy === 'popular' 
-    ? { views: 'desc' as const }
-    : { publishedAt: 'desc' as const };
-
-  // Fetch all required data in parallel to significantly reduce load time
+  // Fetch cached data in parallel
   const [
-    totalPosts,
-    posts,
-    allPostsForTags,
+    { totalPosts, posts, allPostsForTags, totalPages, showFeatured },
     siteSettings
   ] = await Promise.all([
-    // 1. Get total count
-    prisma.post.count({ where: whereClause }),
-    
-    // 2. Fetch posts
-    prisma.post.findMany({
-      where: whereClause,
-      take: postsToTake,
-      skip: (currentPage - 1) * POSTS_PER_PAGE,
-      orderBy,
-      include: {
-        author: {
-          select: { id: true, name: true, username: true, avatarUrl: true },
-        },
-      },
+    getCachedPosts({
+      page: currentPage,
+      limit: POSTS_PER_PAGE,
+      search: searchQuery,
+      sortBy,
     }),
-
-    // 3. Fetch global tag stats quickly
-    prisma.post.findMany({
-      select: { tags: true },
-      take: 50,
-      orderBy: { publishedAt: 'desc' }
-    }),
-
-    // 4. Get site settings
-    prisma.siteSettings.findUnique({
-      where: { id: "default" },
-      select: { homeSubtitle: true, siteName: true },
-    })
+    getCachedSiteSettings(),
   ]);
-  
-  const totalPages = Math.ceil((totalPosts - (showFeatured ? 1 : 0)) / POSTS_PER_PAGE);
 
   // Parse tags
   const postsWithParsedTags = posts.map((post) => {

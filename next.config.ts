@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400, // 24 hours image cache
     remotePatterns: [
       ...allowedImageHosts.map((hostname) => ({
         protocol: "https" as const,

@@ -5,6 +5,7 @@ import { createPostSchema, validateBodySize, formatZodError, MAX_JSON_BODY_SIZE 
 import { handleApiError } from "@/lib/error-handler";
 import { generateSlug, generateUniqueSlug } from "@/lib/slug";
 import rateLimit from "@/lib/rate-limit";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 const limiter = rateLimit({
   interval: 60 * 1000,
@@ -242,6 +243,13 @@ export async function POST(request: NextRequest) {
       tags: parsedTags,
       content: parsedContent,
     };
+
+    try {
+      revalidateTag('posts');
+      revalidatePath('/');
+    } catch {
+      // ignore in environments where revalidation is not available
+    }
 
     console.log("[API] Post created successfully:", newPost.slug);
     return NextResponse.json(response, { status: 201 });

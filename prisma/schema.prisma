@@ -112,7 +112,8 @@ model Post {
   @@index([authorId])
   @@index([slug])
   @@index([views]) // Index for sorting by popularity
-  @@index([publishedAt]) // Index for navigation
+  @@index([publishedAt(sort: Desc)]) // Index for navigation & feed
+  @@index([authorId, publishedAt(sort: Desc)])
 }
 
 // Comment model
@@ -140,6 +141,8 @@ model Comment {
   @@index([softwareId])
   @@index([authorId])
   @@index([parentId])
+  @@index([postId, parentId, createdAt(sort: Asc)])
+  @@index([softwareId, parentId, createdAt(sort: Asc)])
 }
 
 // Site Settings (Singleton)
@@ -247,6 +250,9 @@ model Software {
   @@index([slug])
   @@index([name])
   @@index([createdAt])
+  @@index([isAi, status, createdAt(sort: Desc)])
+  @@index([isAi, categoryId, status])
+  @@index([isAi, pricing, status])
 }
 
 model Review {
