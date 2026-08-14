@@ -6,7 +6,7 @@
 
 import { fetchNewsFromSources, NewsItem, getAllSources } from '@/lib/news-fetcher';
 import { scrapeUrl } from '@/lib/url-scraper';
-import { generateArticle, GeneratedArticle } from '@/lib/ai-client';
+import { generateArticle, GeneratedArticle, ArticleStyle } from '@/lib/ai-client';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
@@ -183,7 +183,11 @@ export async function parseUrlAction(url: string): Promise<{ success: boolean; d
   }
 }
 
-export async function generateArticleFromUrlAction(url: string): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
+export async function generateArticleFromUrlAction(
+  url: string,
+  model?: string,
+  style?: ArticleStyle
+): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
   try {
     const session = await auth();
     if (!session?.user || !session.user.email) {
@@ -207,7 +211,7 @@ export async function generateArticleFromUrlAction(url: string): Promise<{ succe
     }
 
     // Generate article from scraped content
-    const article = await generateArticle(scrapeResult.data.title, scrapeResult.data.content);
+    const article = await generateArticle(scrapeResult.data.title, scrapeResult.data.content, model, style);
     return { success: true, data: article };
   } catch (error: any) {
     return { success: false, error: error.message || 'Generation failed' };
@@ -220,7 +224,12 @@ const generateArticleSchema = z.object({
   context: z.string().min(1, 'Context is required').max(50000, 'Context must be at most 50000 characters'),
 });
 
-export async function generateArticleAction(topic: string, context: string): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
+export async function generateArticleAction(
+  topic: string,
+  context: string,
+  model?: string,
+  style?: ArticleStyle
+): Promise<{ success: boolean; data?: GeneratedArticle; error?: string }> {
   try {
     // 1. Проверка сессии
     const session = await auth();
@@ -267,7 +276,7 @@ export async function generateArticleAction(topic: string, context: string): Pro
     }
 
     // Генерация статьи
-    const article = await generateArticle(topic, context);
+    const article = await generateArticle(topic, context, model, style);
     return { success: true, data: article };
   } catch (error: any) {
     // 4. Обработка ошибок для production

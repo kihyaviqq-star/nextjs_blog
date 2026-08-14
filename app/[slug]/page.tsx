@@ -9,6 +9,11 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import BlockRenderer from "@/components/blog/block-renderer";
+import { ReadingProgress } from "@/components/blog/reading-progress";
+import { TableOfContents } from "@/components/blog/table-of-contents";
+import { ArticleTldr } from "@/components/blog/article-tldr";
+import { PostReactions } from "@/components/blog/post-reactions";
+import { BookmarkButton } from "@/components/blog/bookmark-button";
 import { Calendar, Clock, Tag, User, ArrowLeft, Mail, Twitter, Github, Image as ImageIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ViewIncrementer } from "@/components/view-incrementer";
@@ -235,19 +240,21 @@ async function ArticlePage({ post }: { post: any }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData).replace(/</g, '\\u003c') }}
       />
+      <ReadingProgress />
       <Header />
       
-      {/* Back Button */}
-      <div className="container mx-auto px-4 pt-6 pb-6 max-w-4xl">
+      {/* Back Button and Quick Actions */}
+      <div className="container mx-auto px-4 pt-6 pb-6 max-w-5xl flex items-center justify-between gap-4">
         <Link href="/">
           <Button variant="outline" className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Все новости
           </Button>
         </Link>
+        <BookmarkButton postId={post.id} />
       </div>
 
-      <main className="container mx-auto px-4 pb-16 max-w-4xl">
+      <main className="container mx-auto px-4 pb-16 max-w-5xl">
         <article>
           {/* Cover Image with Ambilight Effect */}
           {post.coverImage && (
@@ -296,60 +303,83 @@ async function ArticlePage({ post }: { post: any }) {
               ))}
             </div>
 
-            <h1 className="text-5xl font-bold tracking-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
               {post.title}
             </h1>
             {!isExcerptDuplicated && (
-              <p className="text-xl text-muted-foreground mb-8">
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8">
                 {post.excerpt}
               </p>
             )}
 
             {/* Meta */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pb-6 border-b border-border">
-              <Link
-                href={`/${post.author.username || post.author.id}`}
-                className="flex items-center gap-2 hover:text-foreground transition-colors group"
-              >
-                {post.author.avatarUrl ? (
-                  <Image
-                    src={post.author.avatarUrl}
-                    alt={post.author.name || "User"}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full object-cover"
-                    style={{ width: "2.5rem", height: "2.5rem" }}
-                    unoptimized={post.author.avatarUrl.startsWith('http') || post.author.avatarUrl.startsWith('/uploads/')}
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                )}
-                <span className="font-medium group-hover:text-primary transition-colors">
-                  {post.author.name}
-                </span>
-              </Link>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                <time dateTime={post.publishedAt.toISOString()}>
-                  {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </time>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
-                <span>{post.readTime}</span>
+            <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground pb-6 border-b border-border">
+              <div className="flex flex-wrap items-center gap-4">
+                <Link
+                  href={`/${post.author.username || post.author.id}`}
+                  className="flex items-center gap-2 hover:text-foreground transition-colors group"
+                >
+                  {post.author.avatarUrl ? (
+                    <Image
+                      src={post.author.avatarUrl}
+                      alt={post.author.name || "User"}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full object-cover"
+                      style={{ width: "2.5rem", height: "2.5rem" }}
+                      unoptimized={post.author.avatarUrl.startsWith('http') || post.author.avatarUrl.startsWith('/uploads/')}
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                  <span className="font-medium group-hover:text-primary transition-colors">
+                    {post.author.name}
+                  </span>
+                </Link>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <time dateTime={post.publishedAt.toISOString()}>
+                    {new Date(post.publishedAt).toLocaleDateString("ru-RU", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </time>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>{post.readTime}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="prose prose-lg max-w-none dark:prose-invert mb-16">
-            <BlockRenderer blocks={blocks} />
+          {/* Key Takeaways / TL;DR */}
+          <ArticleTldr excerpt={post.excerpt} />
+
+          {/* Article Main Grid: Content + Sticky TOC */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-8">
+            <div className="lg:col-span-8">
+              {/* Mobile Table of Contents */}
+              <div className="lg:hidden mb-8">
+                <TableOfContents blocks={blocks} />
+              </div>
+
+              {/* Content */}
+              <div className="prose prose-lg max-w-none dark:prose-invert mb-12">
+                <BlockRenderer blocks={blocks} />
+              </div>
+
+              {/* Reactions Bar */}
+              <PostReactions postId={post.id} />
+            </div>
+
+            {/* Desktop Sticky Sidebar */}
+            <aside className="hidden lg:block lg:col-span-4 sticky top-24 space-y-6">
+              <TableOfContents blocks={blocks} />
+            </aside>
           </div>
 
           {/* Sources */}

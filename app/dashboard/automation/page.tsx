@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,8 @@ export default function AutomationAdminPage() {
     message: string;
   }>({ visible: false, current: 0, total: 0, message: "" });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
       const [setRes, logsRes] = await Promise.all([
         fetch("/api/admin/automation/settings"),
@@ -66,11 +67,11 @@ export default function AutomationAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage]);
 
   useEffect(() => {
     fetchData();
-  }, [currentPage]);
+  }, [fetchData]);
 
   const saveSettings = async () => {
     setIsSaving(true);

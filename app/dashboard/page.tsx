@@ -5,7 +5,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileText, Eye, TrendingUp, Calendar, LayoutDashboard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, FileText, Eye, TrendingUp, Calendar, LayoutDashboard, ShieldCheck, Sparkles, Bot, Settings, PenSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -71,11 +72,46 @@ export default async function DashboardPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Аналитика</h1>
-          <p className="text-muted-foreground">
-            Обзор статистики и популярных материалов
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Панель управления</h1>
+            <p className="text-muted-foreground">
+              Обзор статистики, управление контентом и сервисами
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard/tools-moderation">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                <span>Модерация софта</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard/generator">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+                <span>Генератор ИИ</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard/automation">
+                <Bot className="w-4 h-4 text-blue-500" />
+                <span>Автопилот</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard/users">
+                <Users className="w-4 h-4 text-emerald-500" />
+                <span>Пользователи</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard/settings">
+                <Settings className="w-4 h-4 text-muted-foreground" />
+                <span>Настройки</span>
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

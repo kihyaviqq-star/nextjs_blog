@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
+import { CompareProvider } from "@/lib/compare-store";
+import { CompareBar } from "@/components/tools/compare-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { MetadataUpdater } from "@/components/metadata-updater";
 import { YandexMetrika } from "@/components/YandexMetrika";
@@ -202,9 +204,12 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <MetadataUpdater />
-            {children}
-            <Toaster richColors position="top-right" />
+            <CompareProvider>
+              <MetadataUpdater />
+              {children}
+              <CompareBar />
+              <Toaster richColors position="top-right" />
+            </CompareProvider>
           </ThemeProvider>
         </SessionProvider>
         {/* Analytics */}

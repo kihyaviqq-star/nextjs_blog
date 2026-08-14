@@ -1,1 +1,0 @@
-const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.software.findFirst({where: {slug: 'windows-notification-fixer'}}).then(s => console.log('Logo:', s?.logoUrl, 'Screenshots:', s?.screenshots)).finally(() => prisma.$disconnect());

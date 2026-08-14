@@ -42,10 +42,18 @@ export default function BlockRenderer({ blocks, className }: BlockRendererProps)
   );
 }
 
+function cleanHeadingToId(text: string): string {
+  const plain = text.replace(/<[^>]+>/g, "").trim().toLowerCase();
+  return plain
+    .replace(/[^\w\u0400-\u04FF\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+}
+
 function Block({ block }: { block: EditorBlock }) {
   switch (block.type) {
     case "header":
-      return <HeaderBlock data={block.data} />;
+      return <HeaderBlock data={block.data} blockId={block.id} />;
     case "paragraph":
       return <ParagraphBlock data={block.data} />;
     case "list":
@@ -89,14 +97,17 @@ function RawBlock({ data }: { data: any }) {
   );
 }
 
-function HeaderBlock({ data }: { data: any }) {
+function HeaderBlock({ data, blockId }: { data: any; blockId?: string }) {
   if (!data || !data.text) return null;
   
   const { text, level = 2 } = data;
   const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
+  const id = cleanHeadingToId(text) || blockId;
 
   return (
     <Tag 
+      id={id}
+      className="scroll-mt-24 group"
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
     />
   );

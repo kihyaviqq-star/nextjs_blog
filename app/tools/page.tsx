@@ -6,7 +6,9 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import { Button } from "@/components/ui/button";
-
+import { CompareButton } from "@/components/tools/compare-button";
+import { BookmarkButton } from "@/components/blog/bookmark-button";
+import { SubmitToolModal } from "@/components/tools/submit-tool-modal";
 import { ToolsSidebar } from "@/components/tools/tools-sidebar";
 
 export const metadata: Metadata = {
@@ -144,7 +146,7 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
         {/* MAIN CONTENT */}
         <div className="flex-1 min-w-0">
           
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h2 className="text-2xl font-bold">
               {category && category !== 'all' 
                 ? categories.find(c => c.slug === category)?.name 
@@ -152,9 +154,12 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
                   ? `Результаты поиска: "${search}"` 
                   : "Все нейросети"}
             </h2>
-            <span className="text-muted-foreground font-medium bg-secondary px-3 py-1 rounded-full text-sm">
-              Найдено: {totalItems}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground font-medium bg-secondary px-3 py-1 rounded-full text-sm">
+                Найдено: {totalItems}
+              </span>
+              <SubmitToolModal categories={categories} defaultIsAi={true} />
+            </div>
           </div>
 
           {categories.length === 0 && tools.length === 0 && !search && !category && (
@@ -176,7 +181,7 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
           {view === 'list' && tools.length > 0 && (
             <div className="flex flex-col gap-4">
               {tools.map((tool) => (
-                <Link href={`/tools/${tool.slug}`} key={tool.id} className="group flex flex-col sm:flex-row items-center sm:items-start gap-6 p-5 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
+                <div key={tool.id} className="group relative flex flex-col sm:flex-row items-center sm:items-start gap-6 p-5 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/30 overflow-hidden">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white dark:bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden shadow-sm border border-border/50 group-hover:scale-105 transition-transform duration-500 p-2">
                     <FallbackImage 
                       src={tool.logoUrl} 
@@ -187,23 +192,45 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
                   </div>
                   
                   <div className="flex-1 min-w-0 flex flex-col items-center sm:items-start text-center sm:text-left">
-                    <h3 className="text-xl font-bold group-hover:text-primary transition-colors truncate w-full">{tool.name}</h3>
+                    <h3 className="text-xl font-bold group-hover:text-primary transition-colors truncate w-full">
+                      <Link href={`/tools/${tool.slug}`} className="hover:underline">
+                        {tool.name}
+                      </Link>
+                    </h3>
                     <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed mt-1 mb-3">
                       {tool.shortDesc}
                     </p>
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-auto">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-auto w-full">
                       <span className="px-2.5 py-0.5 rounded-full bg-secondary text-xs font-medium text-muted-foreground border border-border/50">
                         {tool.category.name}
                       </span>
                       <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
                         {tool.pricing}
                       </span>
-                      <span className="text-primary text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 ml-auto">
-                        Подробнее →
-                      </span>
+                      
+                      <div className="flex items-center gap-2 ml-auto">
+                        <CompareButton
+                          item={{
+                            id: tool.id,
+                            slug: tool.slug,
+                            name: tool.name,
+                            logoUrl: tool.logoUrl,
+                            pricing: tool.pricing,
+                            isAi: true,
+                            categoryName: tool.category.name,
+                            shortDesc: tool.shortDesc,
+                          }}
+                        />
+                        <BookmarkButton softwareId={tool.id} size="sm" showLabel={false} />
+                        <Button asChild size="sm" variant="ghost" className="text-xs">
+                          <Link href={`/tools/${tool.slug}`}>
+                            Подробнее →
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -212,38 +239,64 @@ export default async function ToolsDirectoryPage({ searchParams }: ToolsPageProp
           {view === 'grid' && tools.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {tools.map((tool) => (
-                <Link href={`/tools/${tool.slug}`} key={tool.id} className="group flex flex-col p-6 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-lg transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative z-10 flex items-start gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white dark:bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden shadow-sm border border-border/50 group-hover:scale-105 transition-transform duration-500 p-2">
-                      <FallbackImage 
-                        src={tool.logoUrl} 
-                        alt={tool.name} 
-                        className="w-full h-full object-contain" 
-                        fallback={<Sparkles className="w-8 h-8 text-muted-foreground" />} 
-                      />
+                <div key={tool.id} className="group flex flex-col p-6 rounded-3xl bg-card border border-border/40 shadow-sm hover:shadow-lg transition-all duration-300 hover:border-primary/30 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                  
+                  <div className="relative z-10 flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden shadow-sm border border-border/50 group-hover:scale-105 transition-transform duration-500 p-2">
+                        <FallbackImage 
+                          src={tool.logoUrl} 
+                          alt={tool.name} 
+                          className="w-full h-full object-contain" 
+                          fallback={<Sparkles className="w-7 h-7 text-muted-foreground" />} 
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold group-hover:text-primary transition-colors line-clamp-1">
+                          <Link href={`/tools/${tool.slug}`} className="hover:underline">
+                            {tool.name}
+                          </Link>
+                        </h3>
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-secondary text-[11px] font-medium text-muted-foreground mt-1 border border-border/50">
+                          {tool.category.name}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold group-hover:text-primary transition-colors line-clamp-2">{tool.name}</h3>
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-secondary text-xs font-medium text-muted-foreground mt-1.5 border border-border/50">
-                        {tool.category.name}
-                      </span>
-                    </div>
+
+                    <BookmarkButton softwareId={tool.id} size="icon" variant="ghost" showLabel={false} className="h-8 w-8 shrink-0" />
                   </div>
                   
                   <p className="text-muted-foreground line-clamp-3 text-sm flex-1 mb-5 relative z-10 leading-relaxed">
                     {tool.shortDesc}
                   </p>
                   
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/30 relative z-10">
-                    <span className="font-semibold text-sm px-3 py-1 rounded-full bg-primary/10 text-primary">
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/30 relative z-10 gap-2">
+                    <span className="font-semibold text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                       {tool.pricing}
                     </span>
-                    <span className="text-primary text-sm font-medium opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                      Подробнее →
-                    </span>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <CompareButton
+                        item={{
+                          id: tool.id,
+                          slug: tool.slug,
+                          name: tool.name,
+                          logoUrl: tool.logoUrl,
+                          pricing: tool.pricing,
+                          isAi: true,
+                          categoryName: tool.category.name,
+                          shortDesc: tool.shortDesc,
+                        }}
+                      />
+                      <Button asChild size="sm" variant="ghost" className="text-xs h-8 px-2">
+                        <Link href={`/tools/${tool.slug}`}>
+                          →
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

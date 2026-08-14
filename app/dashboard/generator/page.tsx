@@ -18,8 +18,8 @@ import {
   publishArticleAction 
 } from "./actions";
 import { NewsItem as NewsItemType, RSSSource } from "@/lib/news-fetcher";
-import { GeneratedArticle } from "@/lib/ai-client";
-import { Sparkles, Loader2, CheckCircle2, ExternalLink, Settings, Globe, Trash2, Plus as PlusIcon } from "lucide-react";
+import { GeneratedArticle, AVAILABLE_AI_MODELS, ARTICLE_STYLE_PRESETS, ArticleStyle } from "@/lib/ai-client";
+import { Sparkles, Loader2, CheckCircle2, ExternalLink, Settings, Globe, Trash2, Plus as PlusIcon, Cpu, BookText } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import type { OutputData } from "@editorjs/editorjs";
@@ -83,6 +83,8 @@ export default function GeneratorPage() {
     elapsed: number;
   } | null>(null);
   const [urlInput, setUrlInput] = useState("");
+  const [selectedModel, setSelectedModel] = useState<string>("google/gemini-2.0-flash-thinking:free");
+  const [selectedStyle, setSelectedStyle] = useState<ArticleStyle>("news");
   const parsingStartTimeRef = useRef<number | null>(null);
   const parsingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [newSourceName, setNewSourceName] = useState("");
@@ -464,7 +466,7 @@ export default function GeneratorPage() {
         } : null);
       }, 30000));
 
-      const result = await generateArticleFromUrlAction(urlInput.trim());
+      const result = await generateArticleFromUrlAction(urlInput.trim(), selectedModel, selectedStyle);
       
       if (!result.success || !result.data) {
         throw new Error(result.error || "Ошибка генерации");
@@ -530,7 +532,7 @@ export default function GeneratorPage() {
     try {
       // Генерируем статью
       const context = newsItem.snippet || newsItem.title || '';
-      const articleResult = await generateArticleAction(newsItem.title, context);
+      const articleResult = await generateArticleAction(newsItem.title, context, selectedModel, selectedStyle);
       
       if (!articleResult.success || !articleResult.data) {
         throw new Error(articleResult.error || "Ошибка генерации");
@@ -712,11 +714,76 @@ export default function GeneratorPage() {
       </div>
       
       <main className="flex-1 container mx-auto px-4 pb-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Генератор статей ИИ</h1>
-          <p className="text-muted-foreground">
-            Выберите новость и сгенерируйте статью с помощью искусственного интеллекта
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Генератор статей ИИ</h1>
+            <p className="text-muted-foreground">
+              Выберите новость или вставьте URL и сгенерируйте статью с помощью искусственного интеллекта
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard/tools-moderation">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span>Модерация софта</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/dashboard">
+                <ArrowLeft className="w-4 h-4" />
+                <span>Панель управления</span>
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* AI Model & Writing Style Selector Card */}
+        <div className="mb-8 p-4 sm:p-5 rounded-2xl border border-primary/20 bg-card/60 backdrop-blur-md shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Cpu className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">
+              Параметры нейросети и тональность статьи
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+                <span>Модель LLM (OpenRouter)</span>
+                <span className="text-[11px] text-primary">Высокая точность</span>
+              </label>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-border bg-background/80 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 font-medium"
+              >
+                {AVAILABLE_AI_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.provider})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+                <span>Стиль и формат статьи</span>
+                <span className="text-[11px] text-muted-foreground">{ARTICLE_STYLE_PRESETS[selectedStyle].description}</span>
+              </label>
+              <select
+                value={selectedStyle}
+                onChange={(e) => setSelectedStyle(e.target.value as ArticleStyle)}
+                className="w-full h-10 px-3 rounded-xl border border-border bg-background/80 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 font-medium"
+              >
+                {Object.entries(ARTICLE_STYLE_PRESETS).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value.label} — {value.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">

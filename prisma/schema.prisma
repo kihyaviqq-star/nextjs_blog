@@ -44,6 +44,8 @@ model User {
   reviews       Review[]
   accounts      Account[]
   sessions      Session[]
+  bookmarks     Bookmark[]
+  reactions     PostReaction[]
 }
 
 // Auth.js models
@@ -101,6 +103,8 @@ model Post {
   author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   
   comments    Comment[]
+  bookmarks   Bookmark[]
+  reactions   PostReaction[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -223,18 +227,23 @@ model Software {
   // Custom server download link
   localDownloadUrl String?
 
-  
+  // Moderation & Community submission
+  status          String   @default("APPROVED") // APPROVED, PENDING, REJECTED
+  submittedBy     String?  // Username or email of submitter
+
   categoryId  String
   category    SoftwareCategory @relation(fields: [categoryId], references: [id])
   
   reviews     Review[]
   comments    Comment[]
+  bookmarks   Bookmark[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([categoryId])
   @@index([isAi])
+  @@index([status])
   @@index([slug])
   @@index([name])
   @@index([createdAt])
@@ -294,3 +303,41 @@ model AutomationLog {
   @@index([type])
   @@index([createdAt])
 }
+
+// User Bookmarks for Posts and Software/AI Tools
+model Bookmark {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  postId     String?
+  post       Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  softwareId String?
+  software   Software? @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, postId])
+  @@unique([userId, softwareId])
+  @@index([userId])
+  @@index([postId])
+  @@index([softwareId])
+}
+
+// Post Reactions (e.g. FIRE, IDEA, ROCKET, HEART)
+model PostReaction {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  type      String   // "FIRE", "IDEA", "ROCKET", "HEART"
+  ipHash    String   // Hashed IP for anonymous users or userId
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, ipHash, type])
+  @@index([postId])
+  @@index([userId])
+}
+

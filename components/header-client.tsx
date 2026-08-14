@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { MobileMenu } from "@/components/mobile-menu";
+import { CommandPalette } from "@/components/command-palette";
 import { Button } from "@/components/ui/button";
 import { PenSquare, LogIn, Sparkles, Download } from "lucide-react";
 import { SignInModal } from "@/components/signin-modal";
@@ -85,7 +86,8 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
           </nav>
 
           {/* Desktop actions - hidden on mobile */}
-          <div className="hidden md:flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <div className="hidden md:flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <CommandPalette />
             {status === "loading" ? (
               <div className="w-20 h-8 bg-secondary/50 animate-pulse rounded-lg" />
             ) : session?.user ? (
@@ -122,6 +124,7 @@ export function HeaderClient({ siteName, logoUrl }: HeaderClientProps) {
 
           {/* Mobile menu - visible on mobile */}
           <div className="flex md:hidden items-center gap-2 flex-shrink-0">
+            <CommandPalette />
             <MobileMenu 
               session={session}
               status={status}
